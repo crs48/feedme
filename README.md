@@ -89,6 +89,8 @@ See [hosting and first-run setup](docs/hosting.md). A single replica is delibera
 
 Read the [architecture](docs/architecture.md), [data model](docs/data-model.md), and [contributor guide](CONTRIBUTING.md). The `social.feedme.*` namespace is a **draft**; claim a domain you control and finalize lexicon discovery before a public protocol release.
 
+The [verification report](docs/verification.md) records the passing local checks and the remaining real-account acceptance work.
+
 ## What comes next
 
 Recurring memberships and subscription management; organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
