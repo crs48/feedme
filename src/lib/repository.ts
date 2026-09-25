@@ -13,9 +13,9 @@ export const totals = (projectId?: string, publicOnly = true) => {
   const records = supports().filter((s) => (!projectId || s.projectId === projectId) && (!publicOnly || s.visibility === 'public'));
   return { amount: records.reduce((sum, s) => sum + netSupport(s), 0), count: records.filter((s) => netSupport(s) > 0).length };
 };
-const savePublic = (kind: string, id: string, value: object) => transaction(getDb(), () => {
+const savePublic = (kind: string, id: string, value: object, collection = kind) => transaction(getDb(), () => {
   putRecord(getDb(), kind, id, value);
-  if (!config().demo) enqueue(getDb(), 'public', `${NS}.${kind}`, id, { $type: `${NS}.${kind}`, ...value });
+  if (!config().demo) enqueue(getDb(), 'public', `${NS}.${collection}`, id, { $type: `${NS}.${collection}`, ...value });
 });
 export const saveProject = (value: unknown) => { const p = projectSchema.parse(value); savePublic('project', p.id, p); return p; };
 export const saveProfile = (value: unknown) => savePublic('profile', 'self', profileSchema.parse(value));
@@ -25,4 +25,4 @@ export const saveUpdate = (value: unknown) => {
   savePublic('update', u.id, u);
   return u;
 };
-export const saveFriend = (value: unknown) => { const f = friendSchema.parse(value); savePublic('recommendation', f.id, f); putRecord(getDb(), 'friend', f.id, f); };
+export const saveFriend = (value: unknown) => { const f = friendSchema.parse(value); savePublic('friend', f.id, f, 'recommendation'); };

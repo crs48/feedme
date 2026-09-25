@@ -1,0 +1,84 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.support",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "amount",
+          "currency",
+          "visibility",
+          "note",
+          "status",
+          "refundedAmount",
+          "disputed",
+          "createdAt"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "enum": [
+              "USD"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "anonymous",
+              "private",
+              "public"
+            ]
+          },
+          "supporter": {
+            "type": "string",
+            "format": "did"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refunded",
+              "disputed"
+            ]
+          },
+          "refundedAmount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disputed": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          },
+          "paymentIntentId": {
+            "type": "string",
+            "maxLength": 255
+          }
+        }
+      }
+    }
+  }
+}

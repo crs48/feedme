@@ -25,7 +25,7 @@ export const POST: APIRoute = async (context) => {
     const note = String(form.note || '').trim();
     if (note.length > 500) throw new Error('Keep your note to 500 characters.');
     const previous = support(requestId);
-    if (previous && (previous.amount !== amount || previous.visibility !== visibility || previous.note !== note)) throw new Error('This checkout has already started with different details. Reload to start a new one.');
+    if (previous && (previous.amount !== amount || previous.visibility !== visibility || previous.note !== note || previous.supporterDid !== (visibility !== 'anonymous' ? user?.did : undefined))) throw new Error('This checkout has already started with different details. Reload to start a new one.');
     const intent: Support = previous || {
       id: requestId, projectId: id, amount, currency: 'usd', visibility, note,
       ...(visibility !== 'anonymous' ? { supporterDid: user!.did } : {}),

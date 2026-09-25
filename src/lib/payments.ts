@@ -54,7 +54,7 @@ const queueSupport = (db: DatabaseSync, s: Support, ownerDid: string) => {
   if (s.visibility === 'public') enqueue(db, 'public', `${NS}.acknowledgment`, s.id, publicAcknowledgment(s, ownerDid));
 };
 // Called only AFTER verifying Stripe's raw-body signature. Exported for deterministic tests.
-export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string) => {
+export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string, supportIdHint?: string) => {
   if (event.account !== accountId) throw new Error('Unexpected connected account.');
   return transaction(db, () => {
     if (db.prepare('SELECT 1 FROM events WHERE id=?').get(event.id)) return 'duplicate';
@@ -80,11 +80,12 @@ export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid
     } else if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
       const charge = object as Stripe.Charge | Stripe.Dispute;
       const paymentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
-      const stored = listRecords<Support>(db, 'support').find((s) => s.paymentIntentId === paymentId || (event.type === 'charge.refunded' && s.id === charge.metadata?.feedme_support_id));
+      const stored = listRecords<Support>(db, 'support').find((s) => (paymentId && s.paymentIntentId === paymentId) || s.id === supportIdHint || (event.type === 'charge.refunded' && s.id === charge.metadata?.feedme_support_id));
       // Return an error to Stripe so an event delivered before Checkout completion is retried.
       if (!stored) throw new Error('Payment intent has not been reconciled yet.');
-      if (stored.accountId !== event.account) throw new Error('Payment account mismatch.');
+      if (stored.accountId !== event.account || !paymentId || (stored.paymentIntentId && stored.paymentIntentId !== paymentId)) throw new Error('Payment account or intent mismatch.');
       if (event.type === 'charge.refunded') {
+        if (!Number.isSafeInteger((charge as Stripe.Charge).amount_refunded) || (charge as Stripe.Charge).amount_refunded < 0 || (charge as Stripe.Charge).amount_refunded > stored.amount || charge.currency !== stored.currency) throw new Error('Refund does not match the original support.');
         const refundedAmount = Math.max(stored.refundedAmount, (charge as Stripe.Charge).amount_refunded);
         queueSupport(db, { ...stored, refundedAmount, status: refundedAmount >= stored.amount ? 'refunded' : stored.status, paymentIntentId: paymentId }, ownerDid);
       } else {
@@ -94,7 +95,7 @@ export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid
         const closed = event.type === 'charge.dispute.closed';
         if (!last?.closed && (!last || event.created >= last.created)) {
           const disputed = !closed || dispute.status !== 'won';
-          queueSupport(db, { ...stored, disputed, status: stored.refundedAmount >= stored.amount ? 'refunded' : disputed ? 'disputed' : 'paid' }, ownerDid);
+          queueSupport(db, { ...stored, paymentIntentId: paymentId, disputed, status: stored.refundedAmount >= stored.amount ? 'refunded' : disputed ? 'disputed' : 'paid' }, ownerDid);
           setKv(db, 'payment-order', key, { created: event.created, closed });
         }
       }

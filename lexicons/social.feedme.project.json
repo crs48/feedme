@@ -1,0 +1,99 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.project",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "description",
+          "category",
+          "kind",
+          "status",
+          "color",
+          "target",
+          "image",
+          "link",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "Making",
+              "Writing",
+              "Open source",
+              "Community",
+              "Life"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "project",
+              "ongoing"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "active",
+              "complete",
+              "archived"
+            ]
+          },
+          "color": {
+            "type": "string",
+            "maxLength": 1000,
+            "enum": [
+              "peach",
+              "blue",
+              "green",
+              "yellow"
+            ]
+          },
+          "target": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "image": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "link": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

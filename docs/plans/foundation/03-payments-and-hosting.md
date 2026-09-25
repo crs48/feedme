@@ -18,14 +18,14 @@ sequenceDiagram
   Stripe-->>Supporter: Redirect to friends and payment status
 ```
 
-- [ ] Owner-only Connect onboarding and account readiness checks.
-- [ ] Validate amounts, privacy choices, identity, and project state server-side.
-- [ ] Create checkout with a stable idempotency key.
-- [ ] Verify webhook signatures from raw bytes and validate connected-account ownership.
-- [ ] Handle asynchronous success/failure, duplicates, refunds, and disputes.
-- [ ] Display confirmation only after a verified event; redirects alone never mark tips paid.
-- [ ] Ship Docker, Compose, Railway settings, CI, and setup documentation.
-- [ ] Run type checks, unit/integration tests, production build, and browser checks.
+- [x] Owner-only Connect onboarding and account readiness checks.
+- [x] Validate amounts, privacy choices, identity, and project state server-side.
+- [x] Create checkout with a stable idempotency key.
+- [x] Verify webhook signatures from raw bytes and validate connected-account ownership.
+- [x] Handle asynchronous success/failure, duplicates, refunds, and disputes.
+- [x] Display confirmation only after a verified event; redirects alone never mark tips paid.
+- [x] Ship Docker, Compose, Railway settings, CI, and setup documentation.
+- [x] Run type checks, unit/integration tests, production build, and browser checks.
 - [ ] Complete real provider smoke tests with operator credentials before production use.
 
 Deploy one replica with a persistent volume. Use HTTPS for OAuth. A second replica requires distributed session locks and a shared database, so do not suggest horizontal scaling with SQLite. Container startup must not run schema-destructive commands or require provider credentials just to preview the demo.

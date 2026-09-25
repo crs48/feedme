@@ -14,7 +14,7 @@ const total = totals(p.id);
     <div class="flex items-center justify-between mb-3"><span class="tag">{p.category}</span><span class="text-[10px] muted">{p.status === 'complete' ? 'Complete' : 'Made possible together'}</span></div>
     <h3 class="serif"><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
     <div class="card-bottom">
-      <div class="flex justify-between items-end text-xs mb-2"><span><strong class="font-semibold">{money(total.amount)}</strong><span class="muted"> in public support</span></span><span class="text-[10px] muted">{total.count} kind {total.count === 1 ? 'human' : 'humans'}</span></div>
+      <div class="flex justify-between items-end text-xs mb-2"><span><strong class="font-semibold">{money(total.amount)}</strong><span class="muted"> in public support</span></span><span class="text-[10px] muted">{total.count} {total.count === 1 ? 'tip' : 'tips'}</span></div>
       {p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(total.amount, p.target)}><span style={`width:${Math.min(100, total.amount / p.target * 100)}%`}></span></div><div class="text-[10px] muted mt-1.5">{money(p.target)} aspiration · every tip stays with the creator</div></>}
       <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Make a little room for this' : 'See the project'}<Icon name="arrow" size={15}/></a>
     </div>

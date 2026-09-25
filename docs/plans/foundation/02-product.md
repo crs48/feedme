@@ -2,14 +2,14 @@
 
 Render all core interactions as server HTML and ordinary forms. Keep the primary pages usable with JavaScript disabled. Use accessible labels, focus states, canonical URLs, Open Graph metadata, and lightweight inline SVG illustrations.
 
-- [ ] Build creator home, projects, updates, circle, support, success, login, and studio pages.
-- [ ] Persist project creation/editing/archiving, updates, recommendations, and profile settings.
-- [ ] Authenticate with AT Protocol OAuth through the trusted Habitat instance.
-- [ ] Bind OAuth completion to a browser nonce; persist opaque, expiring app sessions.
-- [ ] Authorize every studio mutation by the configured owner DID.
-- [ ] Show demo mode and unavailable integration states explicitly.
-- [ ] Offer explicit Bluesky publication of updates, with a link card to the project.
-- [ ] Test responsive layout and no-JavaScript forms.
+- [x] Build creator home, projects, updates, circle, support, success, login, and studio pages.
+- [x] Persist project creation/editing/archiving, updates, recommendations, and profile settings.
+- [x] Authenticate with AT Protocol OAuth through the trusted Habitat instance.
+- [x] Bind OAuth completion to a browser nonce; persist opaque, expiring app sessions.
+- [x] Authorize every studio mutation by the configured owner DID.
+- [x] Show demo mode and unavailable integration states explicitly.
+- [x] Offer explicit Bluesky publication of updates, with a link card to the project.
+- [x] Test responsive layout and no-JavaScript forms.
 
 ```mermaid
 sequenceDiagram

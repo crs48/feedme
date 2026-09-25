@@ -1,0 +1,10 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.receipts",
+  "defs": {
+    "main": {
+      "type": "token",
+      "description": "Private creator support-receipt space modality. Only the creator is initially a member."
+    }
+  }
+}

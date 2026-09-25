@@ -28,12 +28,12 @@ export const profileSchema = z.object({
 });
 export type Profile = z.infer<typeof profileSchema>;
 export const updateSchema = z.object({
-  id: z.string().uuid(), projectId: z.string().min(1),
+  id: z.uuid(), projectId: z.string().min(1),
   text: z.string().trim().min(3).max(2000), createdAt: z.iso.datetime(),
 });
 export type Update = z.infer<typeof updateSchema>;
 export const friendSchema = z.object({
-  id: z.string().uuid(), name: z.string().trim().min(1).max(80),
+  id: z.uuid(), name: z.string().trim().min(1).max(80),
   did: z.union([z.literal(''), didSchema]), url: httpsUrl.refine(Boolean, 'Enter a URL'),
   description: z.string().trim().min(3).max(180),
 });

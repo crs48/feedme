@@ -1,0 +1,42 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.profile",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": [
+          "name",
+          "handle",
+          "bio",
+          "location",
+          "website"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "handle": {
+            "type": "string",
+            "maxLength": 253
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "website": {
+            "type": "string",
+            "maxLength": 2048
+          }
+        }
+      }
+    }
+  }
+}

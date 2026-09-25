@@ -2,7 +2,7 @@
 interface Props { color: string; title?: string; }
 const { color, title = 'A little room for good things' } = Astro.props;
 ---
-<svg viewBox="0 0 640 380" role="img" aria-label={title} class="artwork">
+<svg viewBox="0 0 640 380" preserveAspectRatio="xMidYMid slice" role="img" aria-label={title} class="artwork">
   {color === 'peach' ? <>
     <rect width="640" height="380" fill="#eee1cc"/>
     <circle cx="468" cy="82" r="37" fill="#f9f0d7"/>

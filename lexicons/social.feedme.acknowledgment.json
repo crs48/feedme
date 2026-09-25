@@ -1,0 +1,50 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.acknowledgment",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "creator",
+          "project",
+          "supporter",
+          "amount",
+          "currency",
+          "createdAt"
+        ],
+        "properties": {
+          "creator": {
+            "type": "string",
+            "format": "did"
+          },
+          "project": {
+            "type": "string",
+            "format": "at-uri"
+          },
+          "supporter": {
+            "type": "string",
+            "format": "did"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "enum": [
+              "USD"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

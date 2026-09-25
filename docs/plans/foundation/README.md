@@ -30,13 +30,13 @@ Public records are deliberately constructed from an allowlist. Private support r
 
 ## Initial scope
 
-- [ ] Typed public and private records, lexicons, SQLite store, durable synchronization.
-- [ ] Creator profile, projects, updates, recommendations, and support forms.
-- [ ] AT Protocol OAuth through Habitat, with secure browser sessions.
-- [ ] Owner studio for project and recommendation management.
-- [ ] Stripe Connect onboarding, one-time Checkout, verified webhooks.
-- [ ] Demo mode that works without external credentials and never charges money.
-- [ ] Docker, VPS, Railway, CI, tests, and operator documentation.
+- [x] Typed public and private records, lexicons, SQLite store, durable synchronization.
+- [x] Creator profile, projects, updates, recommendations, and support forms.
+- [x] AT Protocol OAuth through Habitat, with secure browser sessions.
+- [x] Owner studio for project and recommendation management.
+- [x] Stripe Connect onboarding, one-time Checkout, verified webhooks.
+- [x] Demo mode that works without external credentials and never charges money.
+- [x] Docker, VPS, Railway, CI, tests, and operator documentation.
 
 ## Later work
 
@@ -49,9 +49,9 @@ Public records are deliberately constructed from an allowlist. Private support r
 
 ## Validation
 
-- [ ] Type checks and production build.
-- [ ] Tests for privacy boundaries, integer amounts, duplicate/out-of-order payment events, owner authorization, and outbox retries.
-- [ ] Desktop and mobile browser checks, including forms with JavaScript disabled.
+- [x] Type checks and production build.
+- [x] Tests for privacy boundaries, integer amounts, duplicate/out-of-order payment events, owner authorization, and outbox retries.
+- [x] Desktop and mobile browser checks, including forms with JavaScript disabled.
 - [ ] Real Habitat OAuth/PDS/private-space smoke test using an operator account.
 - [ ] Stripe test-account onboarding and end-to-end payment/webhook test.
 

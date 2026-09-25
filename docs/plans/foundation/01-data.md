@@ -12,12 +12,12 @@ flowchart TD
   Adapter --> Private[Private space]
 ```
 
-- [ ] Define Zod schemas and draft lexicons for projects, profile, updates, recommendations, support receipts, and acknowledgments.
-- [ ] Use integer minor currency units and immutable creator DIDs.
-- [ ] Store credentials and local private records in a protected persistent directory.
-- [ ] Use separate namespaces for demo and live databases.
-- [ ] Persist writes and their outbox entries atomically; use stable record keys for safe retry.
-- [ ] Implement private space creation and bounded outbox draining.
-- [ ] Validate public acknowledgments with an explicit field allowlist.
+- [x] Define Zod schemas and draft lexicons for projects, profile, updates, recommendations, support receipts, and acknowledgments.
+- [x] Use integer minor currency units and immutable creator DIDs.
+- [x] Store credentials and local private records in a protected persistent directory.
+- [x] Use separate namespaces for demo and live databases.
+- [x] Persist writes and their outbox entries atomically; use stable record keys for safe retry.
+- [x] Implement private space creation and bounded outbox draining.
+- [x] Validate public acknowledgments with an explicit field allowlist.
 
 The database is an operational store and write-through cache. Backup remains necessary: a full remote re-indexer is later work. Private space authorization is independent of browser login; the owner must create a private space before enabling payments. Never substitute a public PDS record when private writes fail.

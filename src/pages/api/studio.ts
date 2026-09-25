@@ -4,7 +4,7 @@ import { requireOwner } from '../../lib/auth';
 import { config } from '../../lib/config';
 import { formObject, errorMessage, redirectNotice } from '../../lib/http';
 import { project, saveFriend, saveProfile, saveProject, saveUpdate } from '../../lib/repository';
-import { createPrivateSpace, drainOutbox, habitatCall } from '../../lib/habitat';
+import { createPrivateSpace, drainOutbox } from '../../lib/habitat';
 import { connectStripe } from '../../lib/payments';
 import { getDb, enqueue } from '../../lib/db';
 
@@ -29,7 +29,7 @@ export const POST: APIRoute = async (context) => {
           const uri = `${config().origin}/support/${p.id}`;
           // Explicit opt-in. A stable rkey makes retries idempotent.
           enqueue(getDb(), 'public', 'app.bsky.feed.post', update.id, {
-            $type: 'app.bsky.feed.post', text: update.text.slice(0, 280), createdAt: update.createdAt,
+            $type: 'app.bsky.feed.post', text: Array.from(update.text).slice(0, 280).join(''), createdAt: update.createdAt,
             embed: { $type: 'app.bsky.embed.external', external: { uri, title: p.title, description: p.summary } },
           });
         }
@@ -45,8 +45,6 @@ export const POST: APIRoute = async (context) => {
         const result = await drainOutbox();
         return redirectNotice('/studio', `${result.sent} records synced. ${result.failed ? 'The remaining records are queued for retry.' : 'Your data is up to date.'}`);
       }
-      case 'verify-habitat':
-        await habitatCall('com.atproto.server.getSession', {}); break;
       default: throw new Error('Unknown action.');
     }
     return redirectNotice('/studio', config().demo ? 'Saved to this demo.' : 'Saved. Use Sync records to publish queued changes.');

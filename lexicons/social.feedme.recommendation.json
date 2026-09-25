@@ -1,0 +1,42 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.recommendation",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "record": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "did",
+          "url",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 36
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "did": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 180
+          }
+        }
+      }
+    }
+  }
+}

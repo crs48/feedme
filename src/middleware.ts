@@ -17,6 +17,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   response.headers.set('Cache-Control', 'private, no-store');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   if (cfg.origin.startsWith('https://')) response.headers.set('Strict-Transport-Security', 'max-age=31536000');
-  response.headers.set('Content-Security-Policy', "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  response.headers.set('Content-Security-Policy', "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https:");
   return response;
 });

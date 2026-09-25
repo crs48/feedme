@@ -11,7 +11,11 @@ export const habitatCall = async <T>(method: string, payload: Record<string, unk
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
     signal: AbortSignal.timeout(15_000),
   });
-  if (!response.ok) throw new Error(`Habitat ${method} returned ${response.status}. Reconnect your account and retry.`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({})) as { error?: string };
+    if (method.endsWith('.deleteRecord') && error.error === 'RecordNotFound') return undefined as T;
+    throw new Error(`Habitat ${method} returned ${response.status}. Reconnect your account and retry.`);
+  }
   const body = await response.text();
   return body ? JSON.parse(body) as T : undefined as T;
 };

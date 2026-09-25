@@ -9,3 +9,6 @@ coverage/
 playwright-report/
 test-results/
 .DS_Store
+
+.playwright-cli/
+output/
