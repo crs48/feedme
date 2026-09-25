@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { config } from '../lib/config';
+import { safeReturnPath } from '../lib/http';
+const cfg = config();
+---
+<Layout title="Your identity, your corner of the internet" noindex>
+  <section class="shell py-14"><div class="mx-auto max-w-lg panel"><span class="eyebrow">You already belong here</span><h1 class="serif text-4xl mt-3 mb-4">Bring your identity.<br/>Make yourself at home.</h1><p class="muted text-sm mb-7">Sign in with your Bluesky or other AT Protocol account. Habitat connects to your provider — your password stays there.</p>
+    <form action="/auth/login" method="post"><input type="hidden" name="returnTo" value={safeReturnPath(Astro.url.searchParams.get('returnTo'))}/><label class="field">Your handle<input name="handle" placeholder="you.bsky.social" autocomplete="username" required maxlength="253"/></label><button class="button full">Continue with AT Protocol <Icon name="arrow" size={15}/></button></form>
+    {cfg.demo && <div class="mt-7 border-t border-[#e1e3d9] pt-6"><p class="text-xs muted mb-3">Just looking around? Explore the studio with an example account. Real sign-in requires a public HTTPS URL.</p><form method="post" action="/auth/demo"><button class="button secondary full">Explore the demo studio</button></form></div>}
+    <p class="text-[11px] muted mt-6">Habitat handles identity resolution and permissioned storage. You choose whether your support is public, private, or unlinked to your identity.</p>
+  </div></section>
+</Layout>

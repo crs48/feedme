@@ -1,0 +1,56 @@
+---
+import '../styles/global.css';
+import Icon from '../components/Icon.astro';
+import { config } from '../lib/config';
+import { isOwner } from '../lib/auth';
+interface Props { title?: string; description?: string; noindex?: boolean; }
+const { title = 'Good things grow with a little support', description = 'A home for the things you make and the people who make them possible.', noindex = false } = Astro.props;
+const cfg = config();
+const user = Astro.locals.user;
+const canonical = new URL(Astro.url.pathname, cfg.origin).href;
+const notice = Astro.url.searchParams.get('notice');
+const error = Astro.url.searchParams.get('error');
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{title} · Feedme</title><meta name="description" content={description}/>
+    <link rel="canonical" href={canonical}/><link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+    <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · Feedme`}/>
+    <meta property="og:description" content={description}/><meta property="og:url" content={canonical}/>
+    <meta property="og:image" content={`${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#faf9f5"/>
+    {(cfg.demo || noindex) && <meta name="robots" content="noindex,nofollow"/>}
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    {cfg.demo && <div class="demo-strip">A little preview of what’s possible. <span>Example creator & projects · No real payments</span></div>}
+    <header class="site-header shell">
+      <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol"><Icon name="leaf" size={24}/></span>feedme<span class="brand-dot">.</span></a>
+      <nav aria-label="Main navigation" class="flex items-center gap-7">
+        <a href="/about" class="about-link muted text-xs">Made for a more generous internet</a>
+        {isOwner(user) ? <a class="button secondary" href="/studio">Your studio <Icon name="arrow" size={14}/></a> : user ? <form action="/auth/logout" method="post"><button class="button secondary">Sign out</button></form> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
+      </nav>
+    </header>
+    <main id="main">
+      {(notice || error) && <div class="shell"><div class:list={['notice', { error: Boolean(error) }]} role="status">{(error || notice)?.slice(0, 500)}</div></div>}
+      <slot/>
+    </main>
+    <footer class="shell site-footer">
+      <a href="/about" class="flex items-center gap-2"><Icon name="leaf" size={16}/><span>A little support goes a long way.</span></a>
+      <div class="flex gap-5"><a href="/privacy">Privacy</a><a href="/about">Open source, open possibilities <span aria-hidden="true">↗</span></a></div>
+    </footer>
+  </body>
+</html>
+<style>
+  .demo-strip { background: #e9eedf; text-align: center; padding: 7px 16px; font-size: 10px; color: #4b6247; letter-spacing: .01em; }
+  .demo-strip span { opacity: .7; margin-left: 8px; }
+  .site-header { height: 98px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e4da; }
+  .brand { display: flex; align-items: center; font-weight: 700; font-size: 30px; letter-spacing: -.08em; }
+  .brand-symbol { display: flex; margin-right: 9px; transform: rotate(-15deg); color: #557750; }
+  .brand-dot { color: #8aa170; }
+  .site-footer { padding-block: 32px; margin-top: 75px; border-top: 1px solid #e1e3d9; font-size: 11px; color: #798271; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
+  .skip-link:focus { left: 12px; }
+  @media(max-width:700px) { .site-header { height: 80px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; margin-top: 45px; } .demo-strip span { display: block; margin-left: 0; } }
+</style>

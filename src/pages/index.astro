@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Creator from '../components/Creator.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import Icon from '../components/Icon.astro';
+import { profile, projects, totals, friends } from '../lib/repository';
+const p = profile();
+const list = projects();
+const t = totals();
+---
+<Layout title={`${p.name} — projects & possibilities`} description={p.bio}>
+  <Creator/>
+  <section class="shell intro-row"><div><p class="eyebrow mb-2">Follow the energy</p><h2 class="serif">Help good things <em>grow.</em></h2><p class="muted intro-copy">A few things I’m putting into the world. Your support helps me put more of myself into them.</p></div><span class="growing-note"><Icon name="leaf" size={27}/><span>Less like a transaction.<br/>More like a vote of confidence.</span></span></section>
+  <section class="shell project-grid" aria-label="Projects">{list.map((project) => <ProjectCard project={project}/>)}{!list.length && <div class="panel"><h2 class="section-title mb-3">Something good starts here.</h2><p class="muted mb-5">This creator is making room for their first project.</p><a class="button secondary" href="/studio">Open your studio <Icon name="arrow"/></a></div>}</section>
+  <section class="shell generosity">
+    <div class="generosity-main"><span class="generosity-icon"><Icon name="heart" size={23}/></span><div><h2 class="serif">Support the person. Spark the possibility.</h2><p>No finish lines to hit. No promises to buy. Just a little encouragement to keep making what matters.</p></div></div>
+    <div class="generosity-stat"><strong>{t.count}</strong><span>acts of public generosity</span></div>
+  </section>
+  <section class="shell circle-teaser"><div><p class="eyebrow mb-2">Good things don’t grow alone</p><h2 class="section-title">Meet a few kindred spirits.</h2><p class="muted text-xs mt-3">A small circle of people and projects I’d love you to know.</p></div><a class="button secondary" href="/circle">Explore my circle <Icon name="arrow" size={15}/></a></section>
+  <div class="shell teaser-cards">{friends().slice(0, 2).map((f, i) => <a href={f.url} rel="noopener noreferrer" class="teaser-card"><span class="avatar w-12 h-12"><Icon name={i ? 'spark' : 'leaf'} size={22}/></span><span><strong class="text-xs font-semibold">{f.name}</strong><span class="block text-[11px] muted mt-1">{f.description}</span></span><span class="ml-auto muted">↗</span></a>)}</div>
+</Layout>
+<style>
+  .intro-row { display:flex; justify-content:space-between; align-items:center; gap:36px; margin-top:39px; margin-bottom:28px; }
+  .intro-row h2 { font-size:44px; line-height:1.1; }
+  .intro-row em { color:#778a5d; }
+  .intro-copy { font-size:12px; margin-top:13px; max-width:510px; }
+  .growing-note { display:flex; align-items:center; gap:14px; font-size:11px; color:#8a927b; line-height:1.7; transform:rotate(-3deg); }
+  .project-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:23px; }
+  .generosity { display:flex; justify-content:space-between; align-items:center; gap:30px; padding:27px 30px; background:#edf0e4; border:1px solid #e4e8d9; border-radius:12px; margin-top:34px; }
+  .generosity-main { display:flex; align-items:center; gap:21px; }
+  .generosity-icon { color:#7f9567; }
+  .generosity h2 { font-size:24px; }
+  .generosity p { font-size:11px; color:#7b846d; margin-top:4px; }
+  .generosity-stat { padding-left:30px; border-left:1px solid #d7ddc8; display:flex; flex-direction:column; text-align:center; flex-shrink:0; }
+  .generosity-stat strong { font-size:27px; font-weight:500; line-height:1.2; }
+  .generosity-stat span { font-size:9px; color:#849075; }
+  .circle-teaser { margin-top:48px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+  .teaser-cards { display:grid; grid-template-columns:1fr 1fr; gap:23px; margin-top:23px; }
+  .teaser-card { border:1px solid #e3e5db; border-radius:11px; padding:19px; display:flex; align-items:center; gap:15px; background:#fffefa; }
+  @media(max-width:900px) { .growing-note { display:none; } .project-grid { gap:16px; } .generosity-stat { display:none; } }
+  @media(max-width:700px) { .intro-row h2 { font-size:40px; } .project-grid { grid-template-columns:1fr; gap:25px; } .generosity { padding:23px; } .generosity-main { align-items:flex-start; gap:14px; } .generosity h2 { font-size:23px; } .circle-teaser { align-items:flex-start; flex-direction:column; } .teaser-cards { grid-template-columns:1fr; } }
+</style>

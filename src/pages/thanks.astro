@@ -1,0 +1,9 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import { support, friends } from '../lib/repository';
+import { config } from '../lib/config';
+const s = support(Astro.url.searchParams.get('id') || '');
+const paid = s?.status === 'paid';
+---
+<Layout title={paid ? 'A little generosity, a lot of possibility' : 'Checking your support'} noindex><section class="shell py-14"><div class="max-w-xl mx-auto text-center"><span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={paid ? 'heart' : 'leaf'} size={34}/></span><p class="eyebrow">{config().demo ? 'A little practice in generosity' : 'Thank you for showing up'}</p><h1 class="serif text-5xl my-5">{paid ? 'You made a little room.' : 'Good things take a moment.'}</h1><p class="muted text-sm">{config().demo && paid ? 'Your demo tip is saved. No money changed hands — but you can see how the real experience will feel.' : paid ? 'Your support is confirmed. Thank you for helping someone spend more time on what matters.' : 'Payment is not confirmed yet. This page only shows success after Stripe sends a verified payment event.'}</p>{!paid && <a class="button secondary mt-5" href={Astro.url.pathname + Astro.url.search}>Check payment status</a>}<h2 class="section-title mt-12 mb-5">Keep a good thing going.</h2><p class="muted text-xs mb-6">If you have a little more curiosity to give, meet some friends.</p>{friends().slice(0, 3).map((f) => <a class="panel block text-left mb-4" href={f.url} rel="noopener noreferrer"><strong class="text-sm">{f.name} ↗</strong><p class="text-xs muted mt-1">{f.description}</p></a>)}<a class="button secondary mt-4" href="/">Back to the good things</a></div></section></Layout>

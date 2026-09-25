@@ -1,0 +1,34 @@
+---
+import type { Project } from '../lib/model';
+import { money } from '../lib/model';
+import { totals } from '../lib/repository';
+import Artwork from './Artwork.astro';
+import Icon from './Icon.astro';
+interface Props { project: Project; featured?: boolean; }
+const { project: p, featured = false } = Astro.props;
+const total = totals(p.id);
+---
+<article class:list={['project-card', { featured }]}>
+  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{p.image ? <img src={p.image} alt="" loading="lazy" width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}<span class="art-label"><Icon name={p.kind === 'ongoing' ? 'leaf' : 'spark'} size={11}/>{p.kind === 'ongoing' ? 'An ongoing practice' : 'A work in progress'}</span></a>
+  <div class="card-body">
+    <div class="flex items-center justify-between mb-3"><span class="tag">{p.category}</span><span class="text-[10px] muted">{p.status === 'complete' ? 'Complete' : 'Made possible together'}</span></div>
+    <h3 class="serif"><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
+    <div class="card-bottom">
+      <div class="flex justify-between items-end text-xs mb-2"><span><strong class="font-semibold">{money(total.amount)}</strong><span class="muted"> in public support</span></span><span class="text-[10px] muted">{total.count} kind {total.count === 1 ? 'human' : 'humans'}</span></div>
+      {p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(total.amount, p.target)}><span style={`width:${Math.min(100, total.amount / p.target * 100)}%`}></span></div><div class="text-[10px] muted mt-1.5">{money(p.target)} aspiration · every tip stays with the creator</div></>}
+      <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Make a little room for this' : 'See the project'}<Icon name="arrow" size={15}/></a>
+    </div>
+  </div>
+</article>
+<style>
+  .project-card { border: 1px solid #e0e2d7; border-radius: 13px; overflow: hidden; background: #fffefa; display: flex; flex-direction: column; }
+  .project-art { display: block; position: relative; aspect-ratio: 1.8; overflow: hidden; }
+  .project-art img { width: 100%; height: 100%; object-fit: cover; }
+  .art-label { position:absolute; bottom: 14px; left: 17px; background:#fffdf3e8; padding: 4px 9px; border-radius: 4px; display:flex; align-items:center; gap:5px; font-size:9px; color:#536148; }
+  .card-body { padding: 23px; display: flex; flex-direction: column; flex:1; }
+  h3 { font-size: 28px; line-height: 1.12; margin-bottom: 12px; }
+  .summary { font-size:12px; line-height:1.85; color:#7b8272; margin-bottom: 25px; }
+  .card-bottom { margin-top: auto; }
+  .support-link { display: flex; justify-content: space-between; align-items: center; color: #47613e; font-size: 11px; font-weight: 600; padding-top: 17px; margin-top: 17px; border-top: 1px solid #edf0e5; }
+  .support-link:hover { color: #132f1e; }
+</style>

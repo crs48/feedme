@@ -1,0 +1,8 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Creator from '../components/Creator.astro';
+import { updates, project } from '../lib/repository';
+import { socialFeed } from '../lib/social';
+const posts = await socialFeed();
+---
+<Layout title="Field notes"><Creator/><section class="shell py-10"><div class="max-w-2xl"><span class="eyebrow">A little closer to the process</span><h2 class="serif text-4xl mt-3 mb-8">Notes along the way.</h2>{updates().filter((u) => project(u.projectId)?.status !== 'archived').map((u) => <article class="panel mb-5"><div class="flex items-center justify-between gap-4 mb-5"><a class="tag" href={`/support/${u.projectId}`}>{project(u.projectId)?.title}</a><time class="text-[10px] muted" datetime={u.createdAt}>{new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}</time></div><p class="prose-copy text-sm">{u.text}</p></article>)}{!updates().length && <p class="panel muted">The first field note is still growing.</p>}{posts.length > 0 && <div class="mt-10"><h2 class="section-title mb-5">From the wider social web</h2>{posts.map((post) => <article class="panel mb-4"><p class="prose-copy text-sm">{post.text}</p><a href={post.url} class="text-xs underline block mt-4" rel="noopener noreferrer">Read on Bluesky ↗</a></article>)}</div>}</div></section></Layout>
