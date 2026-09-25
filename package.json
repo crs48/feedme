@@ -20,6 +20,7 @@
   "dependencies": {
     "@astrojs/node": "^11.1.6",
     "@atproto/api": "^0.21.0",
+    "@atproto/common-web": "^0.5.12",
     "@atproto/jwk-jose": "^0.2.4",
     "@atproto/oauth-client-node": "^0.5.7",
     "@habitat-network/habitat": "0.1.0",
