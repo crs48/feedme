@@ -12,14 +12,13 @@ import TipFrequency from './TipFrequency.astro';
 interface Props { projects: Project[]; creatorName: string; }
 const { projects, creatorName } = Astro.props;
 const active = projects.filter((p) => p.status === 'active');
-const defaultAmount = 3000;
+const { demo, tipAmounts, defaultTipAmount: defaultAmount } = config();
 const initial = active.length ? allocateAmount(defaultAmount, active.slice(0, 100).map((p) => ({ projectId: p.id, weight: 100 }))) : [];
 const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
 Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 365 * 86400 });
 setKv(getDb(), 'checkout-form', requestId, { projectIds: active.map((p) => p.id), binding: digest(binding) }, 3600_000);
 const user = Astro.locals.user;
-const demo = config().demo;
 ---
 <form class="support-allocator" data-allocator action="/api/checkout" method="post">
   <input type="hidden" name="requestId" value={requestId}/>
@@ -45,8 +44,8 @@ const demo = config().demo;
     <div class="donation-total" id="donation-total">
       <h2 class="section-title">Your support</h2><p class="donation-subtitle">One amount. More room for good things.</p>
       <TipFrequency split/>
-      <label class="field total-field">Total amount<span class="total-input"><span aria-hidden="true">$</span><input name="amount" type="number" inputmode="decimal" min="1" max="1000" step="0.01" value="30" required aria-label="Total amount in USD"/><span>USD</span></span></label>
-      <div class="amount-presets" data-enhanced hidden aria-label="Suggested amounts">{[10, 30, 50, 100].map((amount) => <button type="button" data-amount={amount} aria-pressed={amount === 30}>{money(amount * 100)}</button>)}</div>
+      <label class="field total-field">Total amount<span class="total-input"><span aria-hidden="true">$</span><input name="amount" type="number" inputmode="decimal" min="1" max="1000" step="0.01" value={defaultAmount / 100} required aria-label="Total amount in USD"/><span>USD</span></span></label>
+      <div class="amount-presets" data-enhanced hidden aria-label="Suggested amounts">{tipAmounts.map((amount) => <button type="button" data-amount={amount / 100} aria-pressed={amount === defaultAmount}>{money(amount)}</button>)}</div>
     </div>
     <div class="donation-checkout" id="donation-checkout">
       <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>{initial.length} projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id}><span>{p.title}</span><strong data-summary-amount={p.id}>{money(initial.find((part) => part.projectId === p.id)?.amount || 0)}</strong></li>)}</ul><p data-allocation-error class="allocation-error" role="status" hidden></p></div>

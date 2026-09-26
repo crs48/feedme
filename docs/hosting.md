@@ -27,6 +27,9 @@ Use `http://127.0.0.1:4321` consistently, including in `PUBLIC_URL`. The applica
 | `HOST` | `0.0.0.0` in containers; loopback behind a host reverse proxy |
 | `PORT` | `4321` or the hosting platform’s assigned port |
 | `SYNC_SECRET` | Optional stable random 32+ character bearer token for an external scheduler |
+| `TIP_AMOUNTS` | Optional four distinct USD suggestions, comma-separated; defaults to `11,22,44,88`. The second value is prefilled on homepage and project forms. |
+
+For example, set `TIP_AMOUNTS=5,15,35,75` in `.env` or your deployment environment to change the suggestions and prefill $15. Each value must be between $1 and $1,000 with up to two decimal places; supporters can still type a custom amount. Restart the app after changes; no rebuild is needed. These settings change new forms, not existing subscriptions.
 
 Generate the encryption key locally:
 

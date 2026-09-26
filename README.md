@@ -25,6 +25,14 @@ pnpm build
 pnpm start
 ```
 
+Suggested tips default to **$11, $22, $44, and $88**, with **$22** prefilled. To customize them, set four comma-separated USD amounts in `.env` or your hosting environment, then restart the app:
+
+```dotenv
+TIP_AMOUNTS=11,22,44,88
+```
+
+The second amount is the starting amount on both the homepage and project pages. Use four distinct values between $1 and $1,000, with up to two decimal places. Supporters can always enter a custom amount. The suggestions apply to one-time, monthly, and yearly tips; existing recurring payments keep their saved amounts.
+
 ## What works in this release
 
 - Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the allocation preview is a small progressive enhancement, and the optional video player loads on demand.

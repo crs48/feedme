@@ -49,7 +49,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
         {p.status === 'active' ? <form action="/api/checkout" method="post">
           <input type="hidden" name="projectId" value={p.id}/><input type="hidden" name="requestId" value={requestId}/>
           <TipFrequency/>
-          <label class="field amount-field">Amount<span class="amount-input"><span aria-hidden="true">$</span><input name="amount" inputmode="decimal" type="number" min="1" max="1000" step="0.01" value="15" required aria-describedby="amount-currency"/><span id="amount-currency">USD</span></span></label>
+          <label class="field amount-field">Amount<span class="amount-input"><span aria-hidden="true">$</span><input name="amount" inputmode="decimal" type="number" min="1" max="1000" step="0.01" value={cfg.defaultTipAmount / 100} required aria-describedby="amount-currency"/><span id="amount-currency">USD</span></span></label>
           <fieldset class="privacy-options"><legend>Support visibility</legend>
             <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
             <label><input type="radio" name="visibility" value="private" disabled={!user}/><span><strong>Private</strong><small>Your DID is shared only with the creator.</small></span></label>
