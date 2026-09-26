@@ -1,44 +1,16 @@
 ---
-interface Props { color: string; title?: string; }
-const { color, title = 'A little room for good things' } = Astro.props;
+interface Props { color: string; title: string; }
+const { color, title } = Astro.props;
+const kind = color === 'peach' ? 'house' : color === 'blue' ? 'code' : 'book';
+const paths = {
+  house: 'M7 19V9l5-4 5 4v10H7ZM4 11l8-7 8 7M10 19v-6h4v6M9 2V0m3 2V0m3 2V0',
+  code: 'm8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16',
+  book: 'M5 3h12a2 2 0 0 1 2 2v16H7a3 3 0 0 1 0-6h12M5 3v15M9 7h6M9 10h4',
+};
 ---
-<svg viewBox="0 0 640 380" preserveAspectRatio="xMidYMid slice" role="img" aria-label={title} class="artwork">
-  {color === 'peach' ? <>
-    <rect width="640" height="380" fill="#eee1cc"/>
-    <circle cx="468" cy="82" r="37" fill="#f9f0d7"/>
-    <path d="M0 280Q170 240 325 278T640 260V380H0" fill="#b5bd97"/>
-    <path d="M505 289V168M474 231l31-83 33 83M480 207l25-79 27 79" fill="#657a53" stroke="#657a53" stroke-width="7"/>
-    <path d="M109 291V179M82 241l27-75 31 75M89 217l20-70 24 70" fill="#879a6c" stroke="#879a6c" stroke-width="6"/>
-    <path d="m189 176 121-72 135 75v132H189" fill="#b9784d"/>
-    <path d="m311 111 123 69v121H311" fill="#995c3e"/>
-    <path d="M202 187h96m-96 17h96m-96 17h96m-96 17h96m-96 17h96m-96 17h96m-96 17h96M324 198h100m-100 18h100m-100 18h100m-100 18h100m-100 18h100m-100 18h100" stroke="#754834" stroke-width="2" opacity=".38"/>
-    <path d="m174 176 137-85 149 84-13 16-136-74-125 75Z" fill="#435e4b"/>
-    <path d="M350 132V80h19v63" fill="#425249"/><path d="M358 66c-17-19 12-25 0-44m14 46c-10-13 5-21 0-30" stroke="#fff9e9" stroke-width="5" fill="none" stroke-linecap="round"/>
-    <rect x="227" y="186" width="53" height="63" rx="2" fill="#f4d391" stroke="#714b35" stroke-width="8"/>
-    <path d="M253 187v59m-24-29h48" stroke="#714b35" stroke-width="4"/>
-    <path d="M352 221h45v87h-45" fill="#503f32"/><path d="M360 230h27v35h-27" fill="#d6b987"/><circle cx="388" cy="283" r="3" fill="#e1bc78"/>
-    <path d="M211 313h218v9H211m133 0h66v9h-66" fill="#927459"/>
-    <path d="M0 345q130-16 238 3t402-6V380H0" fill="#9eae80"/>
-    <path d="m140 341-5-21m5 21 10-15m363 20 4-26m-4 26-10-14" stroke="#687f58" stroke-width="3"/>
-  </> : color === 'blue' ? <>
-    <rect width="640" height="380" fill="#dce8ee"/>
-    <circle cx="113" cy="84" r="32" fill="#f2f1d9"/>
-    <rect x="157" y="73" width="329" height="207" rx="14" fill="#6c898f" transform="rotate(-5 320 180)"/>
-    <rect x="170" y="85" width="303" height="177" rx="5" fill="#f5f6e8" transform="rotate(-5 320 180)"/>
-    <path d="m278 130-33 30 33 25m78-62 32 25-32 29m-30-66-20 80" stroke="#45745f" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="m148 295 347-30 43 42-428 36Z" fill="#809ca0"/><path d="m269 298 91-7 18 15-127 11Z" fill="#b7cccd"/>
-    <path d="M72 290h58l-7 52H81Z" fill="#a8b890"/><path d="M98 291v-49m0 22c-37 0-29-36-29-36 30 0 29 36 29 36m1-6c0-30 28-39 28-39s9 36-28 39" fill="#62856e" stroke="#62856e" stroke-width="4"/>
-    <path d="m520 103 5-16 6 15 16 5-16 6-5 16-6-16-15-4Z" fill="#d2a955"/>
-    <path d="M526 244h35v39q-18 16-35 0Zm35 6h11v20h-11" fill="#b58567"/>
-  </> : <>
-    <rect width="640" height="380" fill="#e2e8d6"/>
-    <path d="M104 328q151-26 422 0" stroke="#b0b995" stroke-width="3"/>
-    <path d="m148 92 181 20 168-24-10 226-162 20-182-21Z" fill="#f8f6e9" stroke="#b2b895" stroke-width="3"/>
-    <path d="m329 112-4 222" stroke="#c7c7ad" stroke-width="3"/>
-    <path d="m178 148 114 12m-116 9 115 12m-117 10 81 9m-82 20 114 12m-115 9 97 11m-98 10 108 11m72-116 95-13m-96 36 94-13m-95 37 68-10m-69 34 95-13m-96 36 76-11" stroke="#a9b09a" stroke-width="3" stroke-linecap="round"/>
-    <path d="m457 114-27 143 7 23 14-19 26-143Z" fill="#b7804f"/><path d="m430 257 7 23 14-19" fill="#625b3f"/>
-    <path d="M97 119c10-38-12-74-12-74s-25 29 12 74m0 0c-38-2-58-27-58-27s37-10 58 27m-2-19c32-14 37-40 37-40s-34-1-37 40" fill="#8f9f72"/><path d="m97 117 16 48" stroke="#7e9068" stroke-width="3"/>
-    <circle cx="536" cy="290" r="29" fill="#c7b381"/><circle cx="536" cy="290" r="21" fill="#faf5df"/><circle cx="536" cy="290" r="16" fill="#8c7551"/>
-  </>}
+<svg class="project-placeholder" viewBox="0 0 640 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label={title} xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="240" fill="#f6f8fa"/>
+  <rect x="281" y="81" width="78" height="78" rx="18" fill="white" stroke="#e3e8ee"/>
+  <g transform="translate(303 103) scale(1.4)" fill="none" stroke="#635bff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d={paths[kind]}/></g>
 </svg>
-<style>.artwork { width: 100%; height: 100%; display: block; object-fit: cover; }</style>
+<style>.project-placeholder { display: block; width: 100%; height: 100%; object-fit: cover; }</style>

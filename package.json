@@ -9,7 +9,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "node --env-file-if-exists=.env node_modules/astro/astro.js dev --host 127.0.0.1",
+    "dev": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs dev --host 127.0.0.1",
     "build": "astro build",
     "start": "node --env-file-if-exists=.env scripts/start.mjs",
     "check": "astro check",

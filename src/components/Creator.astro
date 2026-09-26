@@ -8,28 +8,31 @@ const current = Astro.url.pathname;
 ---
 <section class="creator shell">
   <div class="creator-info">
-    <div class="creator-avatar avatar">{config().demo ? <svg viewBox="0 0 100 100" width="82" height="82" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="#dce4cc"/><path d="M15 100q2-40 35-40t35 40" fill="#58705a"/><path d="M39 59v16q11 8 22 0V59" fill="#c59064"/><ellipse cx="50" cy="40" rx="21" ry="27" fill="#dfaf7f"/><path d="M29 42q-7-39 23-36 29 2 22 34l-8-18q-18 11-35 5Z" fill="#4c4735"/><path d="M36 50q14 14 29 0-2 22-14 20T36 50" fill="#6e573d"/><path d="M45 51q5 4 10 0" stroke="#f1d1a8" stroke-width="2" fill="none"/><circle cx="41" cy="40" r="1.8" fill="#4c4735"/><circle cx="59" cy="40" r="1.8" fill="#4c4735"/></svg> : <span class="serif text-3xl" aria-hidden="true">{p.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')}</span>}<span class="online-dot" title="Open to support"></span></div>
-    <div><div class="flex items-center gap-2 mb-1"><span class="eyebrow">A corner of the internet by</span></div><h1 class="serif creator-name">{p.name}<span class="little-spark">✳</span></h1><div class="handle">{p.handle ? `@${p.handle}` : 'Independent by design'}</div></div>
+    <div class="creator-avatar avatar" aria-hidden="true">{p.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')}</div>
+    <div class="min-w-0"><h1 class="display creator-name">{p.name}</h1><div class="handle">{p.handle ? `@${p.handle}` : 'Independent creator'}</div></div>
   </div>
-  <div class="creator-bio"><p>{p.bio}</p><div class="flex flex-wrap gap-5 mt-4 text-xs muted">{p.location && <span class="flex items-center gap-1.5"><Icon name="location" size={13}/>{p.location}</span>}<span class="flex items-center gap-1.5"><Icon name="globe" size={13}/>Part of the open social web</span>{p.website && <a href={p.website} rel="noopener noreferrer">My website ↗</a>}</div><div class="mt-5"><FollowButton kind="creator" subject={config().ownerDid} title={p.name}/></div></div>
+  <div class="creator-bio"><p>{p.bio}</p><div class="creator-meta">{p.location && <span><Icon name="location" size={14}/>{p.location}</span>}{p.website && <a href={p.website} rel="noopener noreferrer">Website ↗</a>}</div></div>
+  <div class="creator-follow"><FollowButton kind="creator" subject={config().ownerDid} title={p.name}/></div>
 </section>
-<div class="shell flex tabs" role="navigation" aria-label="Creator sections">
-  <a class="tab" aria-current={current === '/' ? 'page' : undefined} href="/">Projects & possibilities</a>
-  <a class="tab" aria-current={current === '/updates' ? 'page' : undefined} href="/updates">Field notes</a>
-  <a class="tab" aria-current={current === '/circle' ? 'page' : undefined} href="/circle">My circle <span aria-hidden="true">↗</span></a>
-  <span class="ml-auto flex items-center gap-1.5 text-[10px] muted protocol"><span class="h-1.5 w-1.5 rounded-full bg-[#8aa170]"></span>{config().demo ? 'An open social prototype' : 'Powered by AT Protocol'}</span>
-</div>
+<nav class="shell tabs" aria-label="Creator sections">
+  <a class="tab" aria-current={current === '/' ? 'page' : undefined} href="/">Projects</a>
+  <a class="tab" aria-current={current === '/updates' ? 'page' : undefined} href="/updates">Updates</a>
+  <a class="tab" aria-current={current === '/circle' ? 'page' : undefined} href="/circle">Circle</a>
+  <span class="protocol"><Icon name="globe" size={13}/>Connected through AT Protocol</span>
+</nav>
 <style>
-  .creator { display: grid; grid-template-columns: 1fr 1fr; gap: 68px; align-items: center; padding-top: 51px; padding-bottom: 42px; }
-  .creator-info { display: flex; align-items: center; gap: 23px; }
-  .creator-avatar { width: 94px; height: 94px; position: relative; border: 5px solid #edf0e5; }
-  .creator-avatar svg { border-radius: 50%; }
-  .online-dot { position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; background: #83a36f; border: 3px solid #faf9f5; border-radius: 50%; }
-  .creator-name { font-size: 43px; line-height: 1.2; }
-  .little-spark { color: #96a77d; font-family: sans-serif; margin-left: 13px; font-size: 27px; vertical-align: middle; }
-  .handle { color: #819071; font-size: 12px; margin-top: 4px; }
-  .creator-bio { font-size: 13px; color: #687362; line-height: 1.8; max-width: 490px; }
-  .tabs { border-bottom: 1px solid #e0e3d7; }
-  @media(max-width:900px) { .creator { gap: 28px; } .creator-name { font-size: 36px; } .protocol { display:none; } }
-  @media(max-width:700px) { .creator { grid-template-columns: 1fr; padding-top: 33px; gap: 22px; padding-bottom: 24px; } .creator-name { font-size: 37px; } .creator-avatar { width:80px; height:80px; } .creator-bio { max-width: 100%; } .tabs { overflow-x: auto; white-space: nowrap; } .tab { font-size:12px; } }
+  .creator { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 48px; padding-top: 40px; padding-bottom: 28px; }
+  .creator-info { display: flex; align-items: center; gap: 16px; }
+  .creator-avatar { width: 64px; height: 64px; font-size: 22px; font-weight: 600; letter-spacing: -.04em; }
+  .creator-name { font-size: 30px; line-height: 1.2; }
+  .handle { color: var(--color-muted); font-size: 14px; margin-top: 5px; overflow-wrap: anywhere; }
+  .creator-bio { grid-column: 1; font-size: 15px; color: var(--color-muted); line-height: 1.7; max-width: 600px; margin-top: 20px; }
+  .creator-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin-top: 8px; font-size: 13px; }
+  .creator-meta > * { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
+  .creator-meta a { min-height: 44px; }
+  .creator-follow { grid-column: 2; grid-row: 1 / span 2; align-self: center; max-width: 230px; }
+  .creator-follow:empty { display: none; }
+  .tabs { display: flex; border-bottom: 1px solid var(--color-border); }
+  .protocol { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: var(--color-muted); }
+  @media(max-width:700px) { .creator { grid-template-columns: 1fr; padding-top: 28px; padding-bottom: 20px; } .creator-name { font-size: 26px; } .creator-avatar { width: 56px; height: 56px; font-size: 20px; } .creator-bio { margin-top: 16px; } .creator-follow { grid-column: 1; grid-row: 3; max-width: 100%; margin-top: 16px; } .protocol { display: none; } .tab { flex: 1; justify-content: center; margin-right: 0; } }
 </style>

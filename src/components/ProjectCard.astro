@@ -4,31 +4,35 @@ import { money } from '../lib/model';
 import { totals } from '../lib/repository';
 import Artwork from './Artwork.astro';
 import Icon from './Icon.astro';
-interface Props { project: Project; featured?: boolean; }
-const { project: p, featured = false } = Astro.props;
+interface Props { project: Project; }
+const { project: p } = Astro.props;
 const total = totals(p.id);
 ---
-<article class:list={['project-card', { featured }]}>
-  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{p.image ? <img src={p.image} alt="" loading="lazy" width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}<span class="art-label"><Icon name={p.kind === 'ongoing' ? 'leaf' : 'spark'} size={11}/>{p.kind === 'ongoing' ? 'An ongoing practice' : 'A work in progress'}</span></a>
+<article class="project-card">
+  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{p.image ? <img src={p.image} alt="" loading="lazy" width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</a>
   <div class="card-body">
-    <div class="flex items-center justify-between mb-3"><span class="tag">{p.category}</span><span class="text-[10px] muted">{p.status === 'complete' ? 'Complete' : 'Made possible together'}</span></div>
-    <h3 class="serif"><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
+    <div class="card-meta"><span class="tag">{p.category}</span><span>{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
+    <h3><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
     <div class="card-bottom">
-      <div class="flex justify-between items-end text-xs mb-2"><span><strong class="font-semibold">{money(total.amount)}</strong><span class="muted"> in public support</span></span><span class="text-[10px] muted">{total.count} {total.count === 1 ? 'tip' : 'tips'}</span></div>
-      {p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(total.amount, p.target)}><span style={`width:${Math.min(100, total.amount / p.target * 100)}%`}></span></div><div class="text-[10px] muted mt-1.5">{money(p.target)} aspiration · every tip stays with the creator</div></>}
-      <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Make a little room for this' : 'See the project'}<Icon name="arrow" size={15}/></a>
+      <div class="support-total"><span><strong>{money(total.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{total.count} {total.count === 1 ? 'tip' : 'tips'}</span></div>
+      {p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(total.amount, p.target)}><span style={`width:${Math.min(100, total.amount / p.target * 100)}%`}></span></div><p class="target-label">{money(p.target)} aspiration</p></>}
+      <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Support project' : 'View project'}<Icon name="arrow" size={16}/></a>
     </div>
   </div>
 </article>
 <style>
-  .project-card { border: 1px solid #e0e2d7; border-radius: 13px; overflow: hidden; background: #fffefa; display: flex; flex-direction: column; }
-  .project-art { display: block; position: relative; aspect-ratio: 1.8; overflow: hidden; }
+  .project-card { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; background: white; display: flex; flex-direction: column; box-shadow: 0 2px 4px #1a1f3603; }
+  .project-art { display: block; aspect-ratio: 2.65; overflow: hidden; border-bottom: 1px solid var(--color-border); }
   .project-art img { width: 100%; height: 100%; object-fit: cover; }
-  .art-label { position:absolute; bottom: 14px; left: 17px; background:#fffdf3e8; padding: 4px 9px; border-radius: 4px; display:flex; align-items:center; gap:5px; font-size:9px; color:#536148; }
-  .card-body { padding: 23px; display: flex; flex-direction: column; flex:1; }
-  h3 { font-size: 28px; line-height: 1.12; margin-bottom: 12px; }
-  .summary { font-size:12px; line-height:1.85; color:#7b8272; margin-bottom: 25px; }
+  .card-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; font-size: 12px; color: var(--color-muted); }
+  h3 { font-size: 19px; font-weight: 600; letter-spacing: -.025em; line-height: 1.35; margin-bottom: 10px; }
+  h3 a { display: inline-block; padding-block: 4px; }
+  .summary { font-size: 14px; line-height: 1.65; color: var(--color-muted); margin-bottom: 24px; }
   .card-bottom { margin-top: auto; }
-  .support-link { display: flex; justify-content: space-between; align-items: center; color: #47613e; font-size: 11px; font-weight: 600; padding-top: 17px; margin-top: 17px; border-top: 1px solid #edf0e5; }
-  .support-link:hover { color: #132f1e; }
+  .support-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+  .support-total strong { font-size: 14px; font-weight: 600; }
+  .target-label { font-size: 12px; color: var(--color-muted); margin-top: 7px; }
+  .support-link { display: flex; min-height: 44px; justify-content: space-between; align-items: center; color: #5146e8; font-size: 14px; font-weight: 600; padding-top: 12px; margin-top: 16px; border-top: 1px solid var(--color-border); }
+  .support-link:hover { color: #3e35be; }
 </style>

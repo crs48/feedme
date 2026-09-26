@@ -19,18 +19,18 @@ const error = Astro.url.searchParams.get('error');
     <link rel="canonical" href={canonical}/><link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
     <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · Feedme`}/>
     <meta property="og:description" content={description}/><meta property="og:url" content={canonical}/>
-    <meta property="og:image" content={`${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#faf9f5"/>
+    <meta property="og:image" content={`${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#ffffff"/>
     {(cfg.demo || noindex) && <meta name="robots" content="noindex,nofollow"/>}
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
-    {cfg.demo && <div class="demo-strip">A little preview of what’s possible. <span>Example creator & projects · No real payments</span></div>}
+    {cfg.demo && <div class="demo-strip"><span class="demo-label">Demo</span> Explore Feedme. No real payments.</div>}
     <header class="site-header shell">
-      <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol"><Icon name="leaf" size={24}/></span>feedme<span class="brand-dot">.</span></a>
+      <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol" aria-hidden="true">f</span>feedme</a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">
-        <a href="/about" class="about-link muted text-xs">Made for a more generous internet</a>
-        {user && <a href="/following" class="text-xs">Following</a>}
-        {isOwner(user) ? <a class="button secondary" href="/studio">Your studio <Icon name="arrow" size={14}/></a> : user ? <form action="/auth/logout" method="post"><button class="button secondary">Sign out</button></form> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
+        <a href="/about" class="about-link muted nav-link">About</a>
+        {user && <a href="/following" class="nav-link">Following</a>}
+        {isOwner(user) ? <a class="button secondary" href="/studio">Studio</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary">Sign out</button></form> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
       </nav>
     </header>
     <main id="main">
@@ -38,20 +38,22 @@ const error = Astro.url.searchParams.get('error');
       <slot/>
     </main>
     <footer class="shell site-footer">
-      <a href="/about" class="flex items-center gap-2"><Icon name="leaf" size={16}/><span>A little support goes a long way.</span></a>
-      <div class="flex gap-5"><a href="/privacy">Privacy</a><a href="/about">Open source, open possibilities <span aria-hidden="true">↗</span></a></div>
+      <a href="/about">Feedme · Independent work, supported.</a>
+      <div class="flex gap-5"><a href="/privacy">Privacy</a><a href="/about">Open source <span aria-hidden="true">↗</span></a></div>
     </footer>
   </body>
 </html>
 <style>
-  .demo-strip { background: #e9eedf; text-align: center; padding: 7px 16px; font-size: 10px; color: #4b6247; letter-spacing: .01em; }
-  .demo-strip span { opacity: .7; margin-left: 8px; }
-  .site-header { height: 98px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e4da; }
-  .brand { display: flex; align-items: center; font-weight: 700; font-size: 30px; letter-spacing: -.08em; }
-  .brand-symbol { display: flex; margin-right: 9px; transform: rotate(-15deg); color: #557750; }
-  .brand-dot { color: #8aa170; }
-  .site-footer { padding-block: 32px; margin-top: 75px; border-top: 1px solid #e1e3d9; font-size: 11px; color: #798271; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .demo-strip { background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: center; padding: 8px 12px; font-size: 12px; color: var(--color-muted); }
+  .demo-label { display: inline-block; margin-right: 8px; border: 1px solid #d8dce5; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .site-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--color-border); }
+  .brand { display: flex; align-items: center; min-height: 44px; font-weight: 700; font-size: 23px; letter-spacing: -.06em; }
+  .brand-symbol { display: grid; place-items: center; width: 27px; height: 29px; margin-right: 8px; border-radius: 6px; background: var(--color-primary); color: white; font-size: 25px; font-weight: 700; line-height: 1; letter-spacing: 0; }
+  .nav-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; }
+  .site-footer { padding-block: 24px; margin-top: 64px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-muted); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
-  @media(max-width:700px) { .site-header { height: 80px; gap:16px; } .site-header nav { gap:12px; } .site-header .button { padding:10px 12px; } .brand { font-size:27px; } .brand-symbol { margin-right:6px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; margin-top: 45px; } .demo-strip span { display: block; margin-left: 0; } }
+  @media(max-width:700px) { .site-header { min-height: 68px; gap: 12px; } .site-header nav { gap: 14px; } .site-header .button { padding: 8px 12px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; gap: 0; margin-top: 40px; } }
+  @media(max-width:359px) { .brand { font-size: 21px; } .brand-symbol { display: none; } .site-header nav { gap: 10px; } }
 </style>
