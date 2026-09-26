@@ -3,7 +3,7 @@
 | Check | Result |
 | --- | --- |
 | `pnpm check` | No errors, warnings, or hints |
-| `pnpm test` | 104 tests across fifteen suites |
+| `pnpm test` | 109 tests across sixteen suites |
 | `pnpm build` | Production Node build passes |
 | Production health endpoint | HTTP 200 |
 | Cross-origin studio POST | HTTP 403 |
@@ -101,12 +101,21 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - [x] With JavaScript disabled, the server rejects a 1% allocation and accepts a complete 50/50 split of $22.01; the demo receipt records $11.01 and $11, conserving the entered total.
 - [x] `pnpm check`, all 104 tests, and `pnpm build` pass.
 
+## Deployment setup
+
+- [x] Render Blueprint validates against Render's official JSON Schema; Fly TOML parses with matching port and persistent-data mount settings.
+- [x] Generated provider domains and explicit custom-domain overrides are covered by five tests; request Host headers are not trusted for origin discovery.
+- [x] `pnpm check`, all 109 tests, and `pnpm build` pass.
+- [x] GitHub repository is private and enabled as a template repository.
+- [ ] New container startup/persistence smoke check passes in GitHub Actions. Local Docker daemon is unavailable.
+- [ ] Provider-side deployment and redeployment on Render, Railway, Fly.io, Coolify, Dokploy, or Koyeb. The configurations and setup guides are prepared; no paid services were provisioned for this verification.
+
 ## Not verified
 
 - Real Habitat OAuth and live PDS/private-space interoperability using creator and supporter accounts, including the Bluesky AppView proxy.
 - Live photo/video import and playback from an authenticated creator account. Native media contracts and sanitization are fixture-tested.
 - Real Stripe test-account onboarding, hosted payment/webhook delivery, recurring renewals, and Customer Portal/email recovery.
-- Docker image build/runtime locally: the Docker daemon was unavailable. The build is configured in CI.
+- Docker image build/runtime locally: the Docker daemon was unavailable. Container build and runtime checks are configured in CI.
 - A deployed Railway/VPS instance, live load testing, remote re-indexing, or organization administration.
 
 Use the [operator acceptance checklist](hosting.md#live-acceptance-checklist) before taking real payments. Mocked provider contracts and local demo flows do not replace that checklist.

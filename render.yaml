@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Starts in the app's demo mode. Add live settings in the dashboard when ready.
+services:
+  - type: web
+    name: feedme
+    runtime: docker
+    plan: 0.5c-512mb
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "4321"
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: feedme-data
+      mountPath: /data
+      sizeGB: 1

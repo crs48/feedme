@@ -51,7 +51,7 @@ The second amount is the starting amount on both the homepage and project pages.
 - One-time USD support with anonymous, creator-private, or public identity choices.
 - Stripe Connect hosted onboarding, direct-charge hosted Checkout, signed webhooks, and refund/dispute reconciliation.
 - Habitat private receipt storage and public PDS records, backed by an encrypted operational database and a durable retry queue.
-- Docker, Compose, Railway configuration, and GitHub Actions checks.
+- Docker/Compose, a Render Blueprint, Fly.io and Railway configuration, and GitHub Actions checks.
 
 **Integration status:** the real provider adapters are implemented and tested with fixtures. Live Habitat OAuth/space writes and Stripe test-account onboarding/payment have **not** been exercised with an operator account. Complete the [live acceptance checklist](docs/hosting.md#live-acceptance-checklist) before taking real payments. Habitat is actively changing; the SDK and the source revision reviewed here are documented in [the data model](docs/data-model.md).
 
@@ -77,19 +77,64 @@ Private and anonymous tips **do not affect public counters**. Anonymous means Fe
 
 ## Host it
 
-| Option | Shape | Best fit |
+**Start with Render for the shortest setup, or Railway if you already use it.** Feedme runs as one Node server with a persistent disk. You do not need to host your own PDS or Habitat server.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fcrs48%2Ffeedme)
+[![Set up on Railway](https://img.shields.io/badge/Railway-Setup-0B0D0E?style=for-the-badge&logo=railway)](https://railway.com/new)
+[![Fly.io setup](https://img.shields.io/badge/Fly.io-Setup-7C3AED?style=for-the-badge&logo=flydotio)](docs/hosting.md#flyio)
+[![Coolify setup](https://img.shields.io/badge/Coolify-Setup-6B16ED?style=for-the-badge)](docs/hosting.md#coolify)
+[![Dokploy setup](https://img.shields.io/badge/Dokploy-Setup-111827?style=for-the-badge)](docs/hosting.md#dokploy)
+[![Docker Compose setup](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](docs/hosting.md#docker-compose)
+
+The **Render button provisions a service and persistent disk** from [render.yaml](render.yaml); review the paid resources before deploying. The other buttons open guided setup. All routes start with a demo unless you configure live mode. A hosted demo has a shared, editable studio: use sample data only.
+
+This repository is currently **private**. You need repository access and must authorize your host's GitHub integration. [Use this GitHub template](https://github.com/crs48/feedme/generate) to make your own copy; update `crs48/feedme` in the Render and Koyeb button URLs to deploy your copy. The Render Blueprint itself uses whichever repository contains it.
+
+| Option | Included setup | What you provide |
 | --- | --- | --- |
-| Node on a VPS | One process, persistent data directory, HTTPS reverse proxy | Smallest stack; full control |
-| Docker Compose | One application container and a named volume | Reproducible personal hosting |
-| Railway | Dockerfile + volume at `/data` + public domain | Managed deployment from a GitHub fork |
-| Fully static hosting | Public mirror only; needs a separate transaction backend | Future architecture, not supported by this release |
+| [Render](docs/hosting.md#render) | Deploy button; Docker server, 1 GB disk, health check, one instance | Render account, GitHub access; paid service and disk |
+| [Railway](docs/hosting.md#railway) | Docker build, health check, one replica via [railway.json](railway.json) | Select repo, attach `/data` volume, generate domain; usage billing |
+| [Fly.io](docs/hosting.md#flyio) | [fly.toml](fly.toml), volume mount, HTTPS, health check | Fly CLI/account, unique app name, one Machine and volume |
+| [Coolify](docs/hosting.md#coolify) | Existing Dockerfile | Coolify server, GitHub connection, `/data` volume, domain |
+| [Dokploy](docs/hosting.md#dokploy) | Existing Dockerfile | Dokploy server, GitHub connection, `/data` volume, domain |
+| [Docker Compose](docs/hosting.md#docker-compose) | [compose.yaml](compose.yaml), named volume and health check | VPS, Docker, HTTPS reverse proxy |
+| [Node on a VPS](docs/hosting.md#vps-with-node) | `pnpm build` + `pnpm start` | Node 24, process supervisor, persistent directory, HTTPS |
+
+**Render:** click the button, connect GitHub, review the Blueprint, and deploy. The app uses Render's generated HTTPS URL automatically. Open it to try the demo. Automatic source redeploys are off; enable them for your own fork if desired. [Render instructions](docs/hosting.md#render).
+
+**Railway:** click Setup → GitHub repository → select Feedme. Attach a volume at `/data`, generate a domain targeting port `4321`, and deploy with one replica. The app picks up the generated domain automatically. A saved Railway one-click template has not been created yet; [the guide includes the exact template recipe](docs/hosting.md#railway-template-recipe).
+
+**Your own server:** clone your copy, then:
 
 ```sh
 cp .env.example .env
+# Set PUBLIC_URL to your HTTPS origin in .env before hosting publicly.
 docker compose up --build -d
 ```
 
-See [hosting and first-run setup](docs/hosting.md). A single replica is deliberate: OAuth session locking and SQLite live in one process. Habitat can be managed separately or self-hosted; running Feedme does not require you to run a public PDS yourself.
+Compose builds the app itself; Node and pnpm do not need to be installed on the host. Point an HTTPS reverse proxy at `127.0.0.1:4321`. Keep the named volume when upgrading.
+
+### Turn on real support
+
+After deploying, set these in your host's secret/environment settings:
+
+1. `FEEDME_MODE=live`, `OWNER_DID=your permanent AT Protocol DID`, and a `DATA_ENCRYPTION_KEY` generated with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Back up the key separately from the disk.
+2. `PUBLIC_URL=https://your-custom-domain` if using a custom domain or VPS. Render, Railway, Fly.io, and Koyeb generated domains are detected automatically when this variable is absent. Don't copy the local `.env` URL to a hosted instance.
+3. Stripe test credentials: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Sign in as the owner, create Habitat private storage, and finish Stripe Connect onboarding in the studio.
+
+Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the deployment configurations). A handle alone is not yet sufficient for live setup: the current release uses your permanent DID and provider credentials. Follow [identity/payment setup and the live acceptance checklist](docs/hosting.md#live-configuration) before taking real payments.
+
+### Koyeb demo button
+
+[![Deploy a demo to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com%2Fcrs48%2Ffeedme&branch=main&name=feedme&builder=dockerfile&dockerfile=Dockerfile&instance_type=free&ports=4321%3Bhttp%3B%2F&env%5BFEEDME_MODE%5D=demo&env%5BPORT%5D=4321)
+
+This launches a **disposable demo**. Its filesystem is ephemeral, and Koyeb currently describes its volumes as testing-only public preview, so this is not a live-payment hosting recommendation. [Details and storage limitations](docs/hosting.md#koyeb-demo).
+
+### Can this run on GitHub Pages?
+
+**The complete app cannot run on GitHub Pages today.** Pages serves static files; Feedme needs server endpoints for OAuth sessions, checkout creation, payment webhooks, and private storage synchronization, plus durable SQLite data. A nightly build cannot replace those endpoints. See [GitHub's Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+
+A future static public profile/project mirror could run separately from a hosted Feedme backend. That exporter and cross-origin integration are not implemented. Never publish the `.data` directory or private Habitat/payment records in a Pages artifact. [Architecture and hosting boundaries](docs/hosting.md#static-hosting-and-github-pages).
 
 ## Build on it
 

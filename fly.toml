@@ -1,0 +1,36 @@
+# `fly launch --no-deploy` supplies your unique app name and chosen region.
+# Keep one Machine: SQLite and OAuth locks are local to this instance.
+kill_signal = "SIGTERM"
+kill_timeout = "10s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "4321"
+  DATA_DIR = "/data"
+
+[mounts]
+  source = "feedme_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[http_service]
+  internal_port = 4321
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/api/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

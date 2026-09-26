@@ -19,3 +19,4 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: docker build -t feedme:test .
+      - run: sh scripts/check-container.sh
