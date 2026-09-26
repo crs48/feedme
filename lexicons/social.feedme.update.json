@@ -24,11 +24,17 @@
           },
           "text": {
             "type": "string",
-            "maxLength": 2000
+            "maxLength": 8000,
+            "maxGraphemes": 2000
           },
           "createdAt": {
             "type": "string",
             "format": "datetime"
+          },
+          "postUri": {
+            "type": "string",
+            "format": "at-uri",
+            "description": "Optional reference to the creator\u2019s native app.bsky.feed.post. Render the current public post, including its media, instead of the legacy text snapshot."
           }
         }
       }

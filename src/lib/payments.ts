@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { enqueue, getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
-import { NS, privateReceipt, publicAcknowledgment, type Support } from './model';
+import { NS, privateReceipt, publicAcknowledgment, publicTipActivity, type Support } from './model';
 import { privateSpace } from './habitat';
 
 export const stripeClient = () => {
@@ -52,6 +52,7 @@ const queueSupport = (db: DatabaseSync, s: Support, ownerDid: string) => {
   putRecord(db, 'support', s.id, s);
   enqueue(db, 'private', `${NS}.support`, s.id, privateReceipt(s));
   if (s.visibility === 'public') enqueue(db, 'public', `${NS}.acknowledgment`, s.id, publicAcknowledgment(s, ownerDid));
+  if (s.activityId && (s.visibility === 'public' || s.announceAnonymously)) enqueue(db, 'public', `${NS}.activity`, s.activityId, publicTipActivity(s, ownerDid));
 };
 // Called only AFTER verifying Stripe's raw-body signature. Exported for deterministic tests.
 export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string, supportIdHint?: string) => {

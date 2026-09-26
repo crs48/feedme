@@ -4,7 +4,7 @@ Feedme separates the HTML experience, domain decisions, provider adapters, and o
 
 ## Rendering and hosting
 
-Astro compiles components to HTML. There are no hydrated components, React dependencies, client-side routers, or checkout scripts. Navigation and mutations use links and forms. Tailwind compiles at build time, and the illustrations are small inline SVGs. Canonical metadata and server-rendered content are available before any JavaScript could run.
+Astro compiles components to HTML. There are no hydrated components, React dependencies, client-side routers, or checkout scripts. Navigation and mutations use links and forms. Native post videos have an optional player that dynamically loads HLS support after a play action. Tailwind compiles at build time, and the illustrations are small inline SVGs. Canonical metadata and server-rendered content are available before any JavaScript could run.
 
 The server performs the operations a static host cannot: OAuth callbacks, session handling, secret-bearing Checkout creation, private reads, and webhook verification. Production consists of one Node process and one durable directory. `scripts/start.mjs` starts the built server and drains the outbox approximately every 30 seconds; completion-based scheduling avoids overlap. The studio can also request an immediate drain.
 

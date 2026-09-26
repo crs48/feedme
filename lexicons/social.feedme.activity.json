@@ -1,0 +1,23 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.activity",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "description": "An explicitly permitted supporter timeline entry. Anonymous entries MUST omit supporter, amount, and currency. Its record key must not be a payment or receipt identifier.",
+      "record": {
+        "type": "object",
+        "required": ["project", "createdAt", "visibility"],
+        "properties": {
+          "project": { "type": "string", "format": "at-uri" },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "visibility": { "type": "string", "enum": ["public", "anonymous"] },
+          "supporter": { "type": "string", "format": "did" },
+          "amount": { "type": "integer", "minimum": 1 },
+          "currency": { "type": "string", "enum": ["USD"] }
+        }
+      }
+    }
+  }
+}

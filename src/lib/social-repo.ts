@@ -17,7 +17,7 @@ export const socialClient = async (actor: string) => {
   if (session.did !== actor) throw new Error('Reconnect your AT Protocol account.');
   const signal = AbortSignal.timeout(10_000);
   return async (method: string, params: Record<string, unknown>, write = false, appview = false): Promise<unknown> => {
-    const query = write ? '' : `?${new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]))}`;
+    const query = write ? '' : `?${new URLSearchParams(Object.entries(params).flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).map((item) => [key, String(item)])))}`;
     const response = await session.fetchHandler(`/xrpc/${method}${query}`, {
       method: write ? 'POST' : 'GET', signal,
       headers: { ...(write ? { 'content-type': 'application/json' } : {}), ...(appview ? { 'atproto-proxy': 'did:web:api.bsky.app#bsky_appview' } : {}) },
@@ -106,7 +106,7 @@ export const publishedPost = (actor: string, operation: string) => getKv<SavedPo
 export const publishPost = (actor: string, operation: string, record: Record<string, unknown>) => withSocialLock(actor, async () => {
   const key = `${actor}:${operation}`;
   const previous = publishedPost(actor, operation);
-  if (previous && previous.record.text !== record.text) throw new Error('This post already started with different text. Retry the saved message.');
+  if (previous && ['text', 'embed', 'tags'].some((key) => JSON.stringify(previous.record[key]) !== JSON.stringify(record[key]))) throw new Error('This post already started with different text or project details. Retry the saved message.');
   if (previous?.uri) return previous.uri;
   const pending = previous || { rkey: TID.nextStr(), record };
   setKv(getDb(), 'social-post', key, pending);

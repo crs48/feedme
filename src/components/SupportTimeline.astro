@@ -1,0 +1,25 @@
+---
+import Icon from './Icon.astro';
+import { config } from '../lib/config';
+import { supports, project } from '../lib/repository';
+import { money } from '../lib/model';
+import { parseProjectUri } from '../lib/social-model';
+import { supporterTimeline } from '../lib/support-timeline';
+interface Props { projectId?: string; }
+const { projectId } = Astro.props;
+const feed = supporterTimeline(supports(), config().ownerDid, projectId, Number(Astro.url.searchParams.get('tipsPage')) || 0);
+const href = (page: number) => { const params = new URLSearchParams(Astro.url.search); params.set('tipsPage', String(page)); return `${Astro.url.pathname}?${params}#supporters`; };
+---
+<section id="supporters" class="supporter-timeline mt-12" aria-label="Recent supporters">
+  <div class="flex items-start justify-between gap-4 mb-6"><div><p class="eyebrow mb-2">Good things grow together</p><h2 class="section-title">A little encouragement, lately.</h2><p class="text-xs muted mt-3">{projectId ? 'The people making room for this project.' : 'Small acts of support, across the things I’m making.'}</p></div><span class="avatar w-12 h-12"><Icon name="heart" size={21}/></span></div>
+  <div class="panel">{feed.entries.length ? <ol>{feed.entries.map((entry) => { const target = parseProjectUri(entry.project); const p = target ? project(target.id) : undefined; const anonymous = entry.visibility === 'anonymous'; return <li class="tip-row"><span class="tip-mark"><Icon name={anonymous ? 'leaf' : 'heart'} size={16}/></span><div class="min-w-0 flex-1"><div class="flex flex-wrap justify-between gap-2"><strong class="text-xs">{anonymous ? 'Anonymous' : config().demo ? 'A kind human · demo supporter' : <a href={`https://bsky.app/profile/${encodeURIComponent(entry.supporter!)}`} rel="noopener noreferrer" class="underline break-all">{entry.supporter}</a>}</strong>{!anonymous && <span class="text-sm font-semibold">{money(entry.amount!)}</span>}</div><p class="text-xs muted mt-1">Supported {p ? <a class="underline" href={`/support/${p.id}`}>{p.title}</a> : 'a project'}</p><time class="block text-[10px] muted mt-2" datetime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</time></div></li>; })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
+    {(feed.hasOlder || feed.hasNewer) && <nav aria-label="Supporter timeline pages" class="flex justify-between gap-5 mt-6 pt-5 border-t border-[#e1e3d9]">{feed.hasNewer ? <a class="button secondary" href={href(feed.page - 1)}>← Newer tips</a> : <span/>}{feed.hasOlder && <a class="button secondary" href={href(feed.page + 1)}>Older tips →</a>}</nav>}
+  </div>
+  <p class="text-[10px] muted mt-3">Public tips show the amount remaining after refunds. Anonymous entries appear only with permission; their identity and amount stay hidden. Private tips stay off this timeline.</p>
+</section>
+<style>
+  .tip-row { display:flex; align-items:flex-start; gap:16px; padding:19px 0; }
+  .tip-row:first-child { padding-top:0; } .tip-row:last-child { padding-bottom:0; }
+  .tip-row + .tip-row { border-top:1px solid #e8ebdf; }
+  .tip-mark { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; color:#6d8a5e; background:#eff2e9; flex-shrink:0; }
+</style>

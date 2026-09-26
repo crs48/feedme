@@ -2,6 +2,10 @@
 import { randomUUID } from 'node:crypto';
 import Layout from '../../layouts/Layout.astro';
 import Artwork from '../../components/Artwork.astro';
+import Markdown from '../../components/Markdown.astro';
+import PostCard from '../../components/PostCard.astro';
+import SupportTimeline from '../../components/SupportTimeline.astro';
+import { projectLog } from '../../lib/project-log';
 import Icon from '../../components/Icon.astro';
 import FollowButton from '../../components/FollowButton.astro';
 import { projectUri } from '../../lib/social-model';
@@ -20,13 +24,15 @@ const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
 Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 86400 });
 setKv(getDb(), 'checkout-form', requestId, { projectId: p.id, binding: digest(binding) }, 3600_000);
-const notes = updates().filter((u) => u.projectId === p.id);
+const legacyNotes = cfg.demo ? [] : updates().filter((u) => u.projectId === p.id && !u.postUri);
+const linkedPage = Math.max(0, Math.min(1000, Number.parseInt(Astro.url.searchParams.get('logPage') || '0') || 0));
+const log = await projectLog(p.id, Astro.url.searchParams.get('cursor')?.slice(0, 2048), linkedPage);
+const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } : {}), logPage: String(linkedPage + 1) });
 ---
 <Layout title={p.title} description={p.summary}>
   <div class="shell pt-8"><a href="/" class="text-xs muted">← Back to {creator.name}’s projects</a></div>
   <div class="shell support-layout">
-    <article><div class="detail-art">{p.image ? <img src={p.image} alt={p.title} width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</div><div class="flex items-center gap-3 mt-7"><span class="tag">{p.category}</span><span class="text-xs muted">{p.kind === 'ongoing' ? 'An ongoing practice' : 'A work in progress'}</span></div><h1 class="serif text-4xl md:text-5xl leading-tight mt-4 mb-6">{p.title}</h1><p class="prose-copy">{p.description}</p>{p.link && <a class="button secondary mt-6" href={p.link} rel="noopener noreferrer">Explore the project ↗</a>}
-      {notes.length > 0 && <div class="mt-10"><h2 class="section-title mb-6">Notes along the way</h2>{notes.map((n) => <div class="panel mb-4"><time class="eyebrow" datetime={n.createdAt}>{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}</time><p class="prose-copy text-sm mt-3">{n.text}</p></div>)}</div>}
+    <article><div class="detail-art">{p.image ? <img src={p.image} alt={p.title} width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</div><div class="flex items-center gap-3 mt-7"><span class="tag">{p.category}</span><span class="text-xs muted">{p.kind === 'ongoing' ? 'An ongoing practice' : 'A work in progress'}</span></div><h1 class="serif text-4xl md:text-5xl leading-tight mt-4 mb-6">{p.title}</h1><nav class="flex gap-5 text-xs muted mb-8" aria-label="Project sections"><a class="underline" href="#story">The story</a><a class="underline" href="#project-log">Project log</a><a class="underline" href="#supporters">Supporters</a></nav><div id="story"><Markdown content={p.description}/></div>{p.link && <a class="button secondary mt-6" href={p.link} rel="noopener noreferrer">Explore the project ↗</a>}
     </article>
     <aside><div class="panel support-panel"><span class="eyebrow">A little fuel for the journey</span><h2 class="section-title mt-2 mb-2">Make this possible.</h2><p class="muted text-xs mb-6">A tip for {creator.name}. A nudge toward more of this.</p>
       <div class="flex justify-between text-xs mb-2"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><div class="progress"><span style={`width:${Math.min(100, t.amount / p.target * 100)}%`}></span></div><p class="muted text-[10px] mt-2 mb-6">{money(p.target)} aspiration. Tips are kept regardless of progress.</p></>}
@@ -38,6 +44,7 @@ const notes = updates().filter((u) => u.projectId === p.id);
           <label><input type="radio" name="visibility" value="private" disabled={!user}/><span><strong>Just between us</strong><small>Your DID is shared with the creator.</small></span></label>
           <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Cheering from the rooftops</strong><small>Your DID, project, amount, and date become public.</small></span></label>
         </fieldset>
+        <label class="flex items-start gap-2 text-xs muted mb-5"><input class="mt-1" type="checkbox" name="announceAnonymously" value="yes"/><span>If giving anonymously, show “Anonymous” with this project and the date on the public supporter timeline. Keep my amount hidden.</span></label>
         {!user && <p class="text-xs muted mb-5"><a class="underline" href={`/login?returnTo=/support/${p.id}`}>Sign in with your AT Protocol account</a> to choose a named tip.</p>}
         <label class="field">A little note <span class="muted font-normal">Optional · only the creator sees this</span><textarea name="note" maxlength="500" rows="3" placeholder="A few words of encouragement…"></textarea></label>
         <button class="button full" type="submit"><Icon name="heart" size={16}/>{cfg.demo ? 'Try a demo tip' : 'Continue to Stripe'}</button>
@@ -45,18 +52,25 @@ const notes = updates().filter((u) => u.projectId === p.id);
         <p class="text-[10px] muted mt-5">Anonymous here means no social identity in Feedme. Stripe and the recipient may still see billing information. Public records can be copied across the open network.</p>
       </form> : <div class="notice">This project is complete. Thank you for helping it grow.</div>}
     </div><p class="flex gap-2 items-center justify-center mt-5 text-[11px] muted"><Icon name="lock" size={13}/>Your tip note always stays private.</p><div class="panel mt-6"><p class="eyebrow mb-2">Stay for the story</p><h2 class="section-title mb-3">See what grows from here.</h2><p class="muted text-xs mb-5">Follow this project, with or without a tip. You can write a separate public message after supporting it.</p><FollowButton kind="project" subject={projectUri(cfg.ownerDid, p.id)} title={p.title}/></div></aside>
+    <div class="project-community">
+      <section id="project-log" class="mt-12"><p class="eyebrow mb-2">A living notebook</p><h2 class="section-title mb-3">The project, as it happens.</h2><p class="muted text-xs mb-6">Public posts from {creator.name}, with the conversation living on Bluesky.</p>{log.unavailable && <p class="notice" role="status">Some Bluesky posts could not be loaded. Try refreshing in a moment.</p>}{log.posts.map((post) => <PostCard post={post}/>)}{!log.posts.length && !log.unavailable && <p class="panel muted text-sm">No project posts in this batch yet. Follow along for the next small milestone.</p>}{(log.cursor || log.moreLinked) && <a class="button secondary" href={`${Astro.url.pathname}?${olderLog}#project-log`}>Older project posts →</a>}{legacyNotes.length > 0 && <details class="mt-6"><summary class="text-xs muted">Earlier field notes</summary><div class="mt-5">{legacyNotes.map((n) => <article class="panel mb-4"><time class="eyebrow" datetime={n.createdAt}>{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}</time><p class="prose-copy text-sm mt-3">{n.text}</p></article>)}</div></details>}</section>
+      <SupportTimeline projectId={p.id}/>
+    </div>
   </div>
 </Layout>
 <style>
   .support-layout { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:54px; margin-top:28px; }
+  .support-layout > article { grid-column:1; grid-row:1; }
+  .support-layout > aside { grid-column:2; grid-row:1 / span 2; }
+  .project-community { grid-column:1; grid-row:2; min-width:0; }
   .detail-art { overflow:hidden; border-radius:14px; aspect-ratio:1.68; }
   .detail-art img { width:100%; height:100%; object-fit:cover; }
-  .support-panel { position:sticky; top:20px; }
+  .support-panel { position:static; }
   .privacy-options { border:0; margin:0 0 15px; padding:0; }
   .privacy-options label { display:flex; align-items:flex-start; gap:10px; margin:12px 0; }
   .privacy-options input { margin-top:5px; flex-shrink:0; }
   .privacy-options strong { display:block; font-size:12px; font-weight:500; }
   .privacy-options small { display:block; color:#7a8373; font-size:10px; line-height:1.5; }
   .privacy-options label:has(input:disabled) { opacity:.55; }
-  @media(max-width:800px) { .support-layout { grid-template-columns:1fr; gap:32px; } .support-panel { position:static; } }
+  @media(max-width:800px) { .support-layout { grid-template-columns:1fr; gap:32px; } .support-panel { position:static; } .support-layout > aside { grid-column:1; grid-row:2; } .project-community { grid-row:3; } }
 </style>

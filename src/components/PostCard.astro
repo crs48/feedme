@@ -1,0 +1,24 @@
+---
+import type { PostView } from '../lib/bsky-content';
+import PostVideo from './PostVideo.astro';
+interface Props { post: PostView; projectTitle?: string; }
+const { post, projectTitle } = Astro.props;
+---
+<article class="panel mb-5">
+  <div class="flex flex-wrap items-center gap-2 mb-4"><strong class="text-xs">{post.author}</strong><span class="muted text-xs">·</span><time class="muted text-[11px]" datetime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time>{projectTitle && <span class="tag">{projectTitle}</span>}{post.demo && <span class="tag">Demo post</span>}</div>
+  <div class:list={{ 'sensitive-post': post.sensitive }}>
+    {post.sensitive && <p class="text-xs muted mb-3">This post has a content warning. Open it on Bluesky to view it with your moderation settings.</p>}
+    {!post.sensitive && <><p class="prose-copy text-sm">{post.segments.map((segment) => segment.href ? <a href={segment.href} class="underline" rel="noopener noreferrer ugc">{segment.text}</a> : segment.text)}</p>
+      {post.images.length > 0 && <div class:list={['post-images mt-5', { multiple: post.images.length > 1 }]}>{post.images.map((image) => <a href={image.url} rel="noopener noreferrer"><img src={image.url} alt={image.alt} loading="lazy" decoding="async" referrerpolicy="no-referrer"/></a>)}</div>}
+      {post.video && <div class="mt-5"><PostVideo {...post.video}/></div>}
+      {post.external && <a class="link-card mt-5" href={post.external.url} rel="noopener noreferrer ugc">{post.external.image && <img src={post.external.image} alt="" loading="lazy" referrerpolicy="no-referrer"/>}<div><strong class="text-sm">{post.external.title || new URL(post.external.url).hostname}</strong><p class="text-xs muted mt-1">{post.external.description}</p><span class="text-[10px] muted block mt-2">{new URL(post.external.url).hostname} ↗</span></div></a>}
+    </>}
+  </div>
+  <a class="text-xs underline muted inline-block mt-5" href={post.url} rel="noopener noreferrer">{post.demo ? 'Explore the project' : 'Reply, like, or repost on Bluesky'} ↗</a>
+</article>
+<style>
+  .post-images { display:grid; gap:8px; } .post-images.multiple { grid-template-columns:1fr 1fr; }
+  .post-images img { width:100%; max-height:500px; object-fit:cover; border-radius:9px; }
+  .link-card { display:block; overflow:hidden; border:1px solid #dfe4d5; border-radius:10px; }
+  .link-card img { width:100%; max-height:250px; object-fit:cover; } .link-card > div { padding:16px; }
+</style>

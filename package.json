@@ -26,6 +26,9 @@
     "@habitat-network/habitat": "0.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "astro": "^7.3.5",
+    "hls.js": "^1.7.3",
+    "marked": "^18.0.14",
+    "sanitize-html": "^2.17.7",
     "stripe": "^22.6.2",
     "tailwindcss": "^4.3.3",
     "zod": "^4.6.5"
@@ -34,6 +37,7 @@
     "@astrojs/check": "^0.9.10",
     "@atproto/lexicon": "^0.7.14",
     "@types/node": "^24.13.6",
+    "@types/sanitize-html": "^2.16.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.2"
   }

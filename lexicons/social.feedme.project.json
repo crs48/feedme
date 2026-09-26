@@ -36,7 +36,9 @@
           },
           "description": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 120000,
+            "maxGraphemes": 30000,
+            "description": "Project story in Markdown. Raw HTML must not be trusted by renderers."
           },
           "category": {
             "type": "string",

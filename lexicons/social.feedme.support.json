@@ -76,6 +76,10 @@
           "paymentIntentId": {
             "type": "string",
             "maxLength": 255
+          },
+          "announceAnonymously": {
+            "type": "boolean",
+            "description": "Explicit consent to a public timeline entry with project and date only."
           }
         }
       }

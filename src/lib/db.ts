@@ -35,6 +35,15 @@ export const getDb = () => {
       setKv(database, 'app', 'initialized', true);
     });
   }
+  if (cfg.demo && !getKv(database, 'app', 'social-demo-seed')) {
+    transaction(database, () => {
+      for (const friend of demoFriends) {
+        const existing = readRecord<{ did: string }>(database, 'friend', friend.id);
+        if (existing && !existing.did) putRecord(database, 'friend', friend.id, { ...existing, did: friend.did });
+      }
+      setKv(database, 'app', 'social-demo-seed', true);
+    });
+  }
   return database;
 };
 

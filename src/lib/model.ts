@@ -8,7 +8,7 @@ export const projectSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
   title: z.string().trim().min(3).max(100),
   summary: z.string().trim().min(10).max(240),
-  description: z.string().trim().min(10).max(5000),
+  description: z.string().trim().min(10).max(30000),
   category: z.enum(['Making', 'Writing', 'Open source', 'Community', 'Life']),
   kind: z.enum(['project', 'ongoing']),
   status: z.enum(['active', 'complete', 'archived']),
@@ -29,7 +29,8 @@ export const profileSchema = z.object({
 export type Profile = z.infer<typeof profileSchema>;
 export const updateSchema = z.object({
   id: z.uuid(), projectId: z.string().min(1),
-  text: z.string().trim().min(3).max(2000), createdAt: z.iso.datetime(),
+  text: z.string().trim().min(1).max(2000), createdAt: z.iso.datetime(),
+  postUri: z.string().regex(/^at:\/\/did:[^/]+\/app\.bsky\.feed\.post\/[234567abcdefghijklmnopqrstuvwxyz]{13}$/).optional(),
 });
 export type Update = z.infer<typeof updateSchema>;
 export const friendSchema = z.object({
@@ -45,6 +46,7 @@ export type Support = {
   status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed';
   refundedAmount: number; disputed: boolean; createdAt: string;
   checkoutId?: string; paymentIntentId?: string; accountId?: string;
+  announceAnonymously?: boolean; activityId?: string;
 };
 
 export const centsFromInput = (input: unknown): number => {
@@ -75,4 +77,14 @@ export const privateReceipt = (support: Support) => ({
   note: support.note, status: support.status, refundedAmount: support.refundedAmount,
   disputed: support.disputed, createdAt: support.createdAt,
   ...(support.paymentIntentId ? { paymentIntentId: support.paymentIntentId } : {}),
+  ...(support.announceAnonymously ? { announceAnonymously: true } : {}),
 });
+
+// Public timeline projections are explicit allowlists, never serialized receipts.
+export const publicTipActivity = (support: Support, creatorDid: string) => {
+  if (netSupport(support) === 0 || support.visibility === 'private') return null;
+  const common = { $type: `${NS}.activity`, project: `at://${creatorDid}/${NS}.project/${support.projectId}`, createdAt: support.createdAt };
+  if (support.visibility === 'public' && support.supporterDid) return { ...common, visibility: 'public' as const, supporter: support.supporterDid, amount: netSupport(support), currency: 'USD' };
+  if (support.visibility === 'anonymous' && support.announceAnonymously && support.activityId) return { ...common, visibility: 'anonymous' as const };
+  return null;
+};

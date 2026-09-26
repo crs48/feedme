@@ -16,7 +16,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-Open [127.0.0.1:4321](http://127.0.0.1:4321). The default **demo** includes an example creator, editable projects, field notes, a private studio, and simulated tips. Choose **Sign in → Explore the demo studio**. No accounts, credentials, or money required. Demo state persists in `.data/demo.sqlite`; live state uses a separate database.
+Open [127.0.0.1:4321](http://127.0.0.1:4321). The default **demo** includes an example creator, editable projects, field notes, a private studio, and simulated tips. Choose **Sign in → Explore the demo studio** or **Explore as a supporter**. No accounts, credentials, or money required. Demo state persists in `.data/demo.sqlite`; live state uses a separate database.
 
 ```sh
 pnpm check
@@ -27,11 +27,13 @@ pnpm start
 
 ## What works in this release
 
-- Server-rendered, responsive HTML pages with **zero application JavaScript**. Core forms work with JavaScript disabled.
+- Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the optional video player loads on demand.
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
 - Creator studio with project/profile editing, field notes, support breakdowns, and friend recommendations.
-- Explicit Bluesky sharing of field notes as a short post with a project link card, plus a read-only Bluesky feed.
+- Native creator/friend follows, portable project subscriptions, a Following feed, and explicit public messages after tipping.
+- Markdown project stories with safe images and video embeds. Project logs use native Bluesky posts, including imported photo/video posts.
+- Profile and project supporter timelines with public amounts and separately permitted anonymous entries. Private tips stay hidden.
 - One-time USD support with anonymous, creator-private, or public identity choices.
 - Stripe Connect hosted onboarding, direct-charge hosted Checkout, signed webhooks, and refund/dispute reconciliation.
 - Habitat private receipt storage and public PDS records, backed by an encrypted operational database and a durable retry queue.
@@ -57,7 +59,7 @@ flowchart LR
 
 Tips go to the creator regardless of progress. An aspiration is not an escrow threshold. Direct charges live on the creator’s connected Stripe account. Feedme adds no application fee; Stripe and hosting fees still apply.
 
-Private and anonymous tips **do not affect public counters**. Anonymous means Feedme stores no supporter DID, not that the payment is anonymous to Stripe or the recipient. Notes are always private. Public acknowledgment requires sign-in and explicit consent, and public records can be copied by the network.
+Private and anonymous tips **do not affect public counters**. Anonymous means Feedme stores no supporter DID, not that the payment is anonymous to Stripe or the recipient. Tip notes are always private. Anonymous timeline entries require a separate opt-in and expose only the project and date. Public acknowledgment requires sign-in and explicit consent, and public records can be copied by the network.
 
 ## Host it
 
@@ -87,7 +89,7 @@ See [hosting and first-run setup](docs/hosting.md). A single replica is delibera
 | `lexicons/` | Draft public and private wire contracts |
 | `docs/plans/foundation/` | Checked implementation plan and later work |
 
-Read the [architecture](docs/architecture.md), [data model](docs/data-model.md), and [contributor guide](CONTRIBUTING.md). The `social.feedme.*` namespace is a **draft**; claim a domain you control and finalize lexicon discovery before a public protocol release.
+Read the [architecture](docs/architecture.md), [data model](docs/data-model.md), [social protocol](docs/social-protocol.md), [project content](docs/project-content.md), and [contributor guide](CONTRIBUTING.md). The `social.feedme.*` namespace is a **draft**; claim a domain you control and finalize lexicon discovery before a public protocol release.
 
 The [verification report](docs/verification.md) records the passing local checks and the remaining real-account acceptance work.
 

@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { randomUUID } from 'node:crypto';
 import { config } from '../../lib/config';
 import { currentUser, digest } from '../../lib/auth';
 import { getDb, getKv, putRecord, setKv } from '../../lib/db';
@@ -23,13 +24,15 @@ export const POST: APIRoute = async (context) => {
     const user = currentUser(context);
     if (visibility !== 'anonymous' && !user) throw new Error('Sign in to attach your AT Protocol identity.');
     const note = String(form.note || '').trim();
+    const announceAnonymously = visibility === 'anonymous' && form.announceAnonymously === 'yes';
     if (note.length > 500) throw new Error('Keep your note to 500 characters.');
     const previous = support(requestId);
-    if (previous && (previous.amount !== amount || previous.visibility !== visibility || previous.note !== note || previous.supporterDid !== (visibility !== 'anonymous' ? user?.did : undefined))) throw new Error('This checkout has already started with different details. Reload to start a new one.');
+    if (previous && (previous.amount !== amount || previous.visibility !== visibility || previous.note !== note || Boolean(previous.announceAnonymously) !== announceAnonymously || previous.supporterDid !== (visibility !== 'anonymous' ? user?.did : undefined))) throw new Error('This checkout has already started with different details. Reload to start a new one.');
     const intent: Support = previous || {
       id: requestId, projectId: id, amount, currency: 'usd', visibility, note,
       ...(visibility !== 'anonymous' ? { supporterDid: user!.did } : {}),
       status: 'pending', refundedAmount: 0, disputed: false, createdAt: new Date().toISOString(),
+      announceAnonymously, activityId: randomUUID(),
     };
     // A browser capability is kept locally, never in a public record or receipt.
     setKv(getDb(), 'checkout-owner', intent.id, digest(browser), 7 * 86400_000);

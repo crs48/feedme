@@ -1,0 +1,35 @@
+---
+interface Props { url: string; poster?: string; alt: string; }
+const { url, poster, alt } = Astro.props;
+---
+<div data-post-video>
+  <video src={url} poster={poster} controls playsinline preload="none" aria-label={alt} class="w-full rounded-xl" style="max-height:520px" data-hls={url}></video>
+  <button class="button secondary mt-3" type="button" data-play-video hidden>Play video</button>
+  <p class="text-xs muted mt-2" data-video-error hidden>Playback is unavailable here. Use the Bluesky link below to watch.</p>
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-post-video]').forEach((container) => {
+    const video = container.querySelector<HTMLVideoElement>('video')!;
+    const button = container.querySelector<HTMLButtonElement>('[data-play-video]')!;
+    if (video.canPlayType('application/vnd.apple.mpegurl')) return;
+    const source = video.dataset.hls!;
+    video.removeAttribute('src');
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        // The playback library is fetched only after the visitor asks to watch.
+        const { default: Hls } = await import('hls.js/light');
+        if (!Hls.isSupported()) throw new Error('unsupported');
+        const player = new Hls({ enableWorker: false });
+        player.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) { player.destroy(); container.querySelector<HTMLElement>('[data-video-error]')!.hidden = false; }
+        });
+        player.loadSource(source); player.attachMedia(video);
+        player.on(Hls.Events.MANIFEST_PARSED, () => { void video.play().catch(() => {}); });
+        button.hidden = true;
+        window.addEventListener('pagehide', () => player.destroy(), { once: true });
+      } catch { container.querySelector<HTMLElement>('[data-video-error]')!.hidden = false; button.hidden = true; }
+    }, { once: true });
+  });
+</script>

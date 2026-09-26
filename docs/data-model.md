@@ -61,3 +61,7 @@ An anonymous receipt omits the supporter DID even if an upstream object accident
 - [Space create schema](https://github.com/habitat-network/habitat/blob/85654a07dec6931925763e66c835f65d0cdf1e30/lexicons/network/habitat/simplespace/createSpace.json)
 - [Private record write schema](https://github.com/habitat-network/habitat/blob/85654a07dec6931925763e66c835f65d0cdf1e30/lexicons/network/habitat/space/putRecord.json)
 - [AT Protocol data model](https://atproto.com/specs/data-model)
+
+## Social and project-log records
+
+See [social protocol](social-protocol.md) for actor-owned native follows, project subscriptions, and explicit tip posts. See [project content](project-content.md) for Markdown descriptions, native post associations, media rendering, and `social.feedme.activity` timeline projections. Anonymous activity requires separate consent and includes only project and date; private receipts never become public records.

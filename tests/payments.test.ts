@@ -33,6 +33,16 @@ describe('verified Stripe events', () => {
     applyStripeEvent(db, event('evt_1'), owner, 'acct_creator');
     expect(pendingWrites(db).map((x) => x.destination)).toEqual(['private']);
   });
+  it('publishes only consented anonymous activity and removes it on a full refund', () => {
+    putRecord(db, 'support', initial.id, { ...initial, visibility: 'anonymous', announceAnonymously: true, activityId: 'independent-public-key' });
+    applyStripeEvent(db, event('evt_anon_paid'), owner, 'acct_creator');
+    const activity = pendingWrites(db).find((row) => row.collection === 'social.feedme.activity')!;
+    expect(activity.rkey).toBe('independent-public-key');
+    expect(Object.keys(activity.value as object).sort()).toEqual(['$type', 'createdAt', 'project', 'visibility']);
+    expect(JSON.stringify(activity.value)).not.toMatch(/Private|2500|bbbb|pi_|cs_/);
+    applyStripeEvent(db, event('evt_anon_refund', 'charge.refunded', { amount_refunded: 2500 }), owner, 'acct_creator');
+    expect(pendingWrites(db).find((row) => row.collection === 'social.feedme.activity')?.value).toBeNull();
+  });
   it('rejects a mismatched amount, currency, account, or checkout without recording the event', () => {
     for (const overrides of [{ amount_total: 50 }, { currency: 'eur' }, { mode: 'subscription' }, { client_reference_id: 'another' }]) {
       expect(() => applyStripeEvent(db, event('evt_bad', undefined, overrides), owner, 'acct_creator')).toThrow();
