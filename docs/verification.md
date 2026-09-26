@@ -3,7 +3,7 @@
 | Check | Result |
 | --- | --- |
 | `pnpm check` | No errors, warnings, or hints |
-| `pnpm test` | 101 tests across fifteen suites |
+| `pnpm test` | 104 tests across fifteen suites |
 | `pnpm build` | Production Node build passes |
 | Production health endpoint | HTTP 200 |
 | Cross-origin studio POST | HTTP 403 |
@@ -11,7 +11,7 @@
 | Anonymous studio page | Redirects to sign-in |
 | Sync without bearer token | HTTP 401 |
 | Sync with correct bearer token, without browser Origin | HTTP 200 |
-| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,582 bytes gzipped) |
+| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (2,040 bytes gzipped) |
 | Browser assets | Static CSS; a small video initializer on post pages, with a 1,093-byte gzipped initializer and a 113,161-byte gzipped HLS light bundle loaded only on demand |
 | Desktop browser | Creator follow, project follow, Following feed, native demo post, and Markdown editing verified |
 | Mobile browser, JavaScript disabled | Anonymous tip with timeline consent, sign-in return, and explicit public post verified |
@@ -61,6 +61,8 @@ The real Stripe test-account visual comparison remains pending below; the hosted
 
 ## Homepage split support
 
+This section records the earlier relative-weight interface. The current percentage behavior is documented below.
+
 - [x] `pnpm check`, all 75 tests across twelve suites, and `pnpm build` pass.
 - [x] Replaced homepage project cover cards with a text-first project list and relative sliders; images remain on project detail pages.
 - [x] Production browser verifies $30 split equally with all sliders at maximum, $30 to one selected project, a 2:1 split of $20/$10, and a $1 split of $0.34/$0.33/$0.33. All-zero selection disables checkout and explains why.
@@ -88,6 +90,16 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - [x] Escape dismisses the tooltip. It bobs twice and disables animation under reduced-motion preferences.
 - [x] Slider positions stay unchanged when the hint disappears. No horizontal overflow at 320, 390, and 1440px; screenshots reviewed under `output/playwright/slider-hint-*`.
 - [x] `pnpm check`, all 101 tests, and `pnpm build` pass.
+
+## Linked percentage sliders
+
+- [x] Shared percentage math previews 1% of $22 as $0.22 and 30% as $6.60 without expanding either selection to the whole tip.
+- [x] The changed slider stops at the remaining percentage; other selections stay fixed. Native maxima remain 100, and the only route to a lone 100% allocation is moving that slider to the end.
+- [x] Pointer and keyboard controls enforce the combined 100% cap. Clearing, splitting evenly (34/33/33), amount presets, and billing-interval changes preserve the stated percentage rules.
+- [x] The page shows remaining percentage and money; incomplete allocations keep checkout disabled. Server tests reject incomplete or excessive splits before creating a payment, and old relative-weight forms must reload.
+- [x] No horizontal overflow at 320, 390, 768, and 1440px, including a partial monthly $999.99 tip. Desktop and mobile screenshots visually reviewed under `output/playwright/percentage-partial-*`.
+- [x] With JavaScript disabled, the server rejects a 1% allocation and accepts a complete 50/50 split of $22.01; the demo receipt records $11.01 and $11, conserving the entered total.
+- [x] `pnpm check`, all 104 tests, and `pnpm build` pass.
 
 ## Not verified
 

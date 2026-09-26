@@ -5,7 +5,7 @@ import { currentUser, digest } from '../../lib/auth';
 import { getDb, getKv, putRecord, setKv } from '../../lib/db';
 import { project, support } from '../../lib/repository';
 import { centsFromInput, type Support, type Visibility } from '../../lib/model';
-import { allocateAmount, weightsFromForm } from '../../lib/allocation';
+import { allocateAmount, percentagesFromForm } from '../../lib/allocation';
 import { errorMessage, formObject, redirectNotice } from '../../lib/http';
 import { checkout } from '../../lib/payments';
 import { billingFrequency, billingInterval } from '../../lib/billing-frequency';
@@ -16,13 +16,14 @@ export const POST: APIRoute = async (context) => {
   let returnTo = '/';
   try {
     const requestId = String(form.requestId || '');
-    const token = getKv<{ projectId?: string; projectIds?: string[]; binding: string }>(getDb(), 'checkout-form', requestId);
+    const token = getKv<{ projectId?: string; projectIds?: string[]; allocationMode?: string; binding: string }>(getDb(), 'checkout-form', requestId);
     const browser = context.cookies.get('feedme_checkout')?.value;
     if (!token || !browser || token.binding !== digest(browser)) throw new Error('This form expired. Please try again.');
+    if (token.projectIds && token.allocationMode !== 'percentages') throw new Error('The allocation form changed. Reload to choose project percentages.');
     if (token.projectId) returnTo = `/support/${token.projectId}`;
     const amount = centsFromInput(form.amount);
     const frequency = billingFrequency(form.frequency);
-    const parts = token.projectIds ? allocateAmount(amount, weightsFromForm(form, token.projectIds))
+    const parts = token.projectIds ? allocateAmount(amount, percentagesFromForm(form, token.projectIds))
       : token.projectId && token.projectId === form.projectId ? [{ projectId: token.projectId, amount }] : undefined;
     if (!parts) throw new Error('This form expired. Please try again.');
     if (billingInterval(frequency) && parts.length > 20) throw new Error('Recurring support can include up to 20 projects.');

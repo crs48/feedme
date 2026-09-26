@@ -25,11 +25,13 @@ The homepage lists projects without cover images, alongside a sticky support pan
 
 ## Allocating one tip
 
-Each slider is a relative weight from 0 to 100 and starts at zero, so supporters choose which projects to include. Equal weights split the total equally; one nonzero slider receives the whole total. Zero-weight projects are excluded. Dollar amounts and percentages update immediately, and checkout stays disabled until at least one project is selected. “Split evenly” and amount presets are conveniences; native sliders and the total field remain usable without JavaScript.
+Each slider runs from 0% to 100% of the entered tip total and starts at zero. A lone slider at 30% receives 30% of the total; it reaches the whole amount only at 100%. The slider being moved stops at the percentage left after the other selections, while every track keeps a fixed 0–100% scale. Lower another slider to free up room. The page shows the unallocated percentage and dollar amount; checkout is enabled only when exactly 100% is assigned.
+
+“Split evenly” divides 100 whole percentage points as evenly as possible (for example, 34% / 33% / 33%). Changing the total or billing interval preserves the percentages. The homepage and mobile review bar show allocation progress. Native sliders remain usable without JavaScript; the server requires a complete, valid split before opening Checkout.
 
 When all sliders are zero, a small “Move a slider to start” tooltip points to the first slider. It bobs twice, disappears when any project is selected, and returns when the sliders are cleared. Escape dismisses it, reduced-motion preferences disable its animation, and reserved space keeps the slider from shifting during a drag. Without JavaScript, the native selection instructions remain visible instead.
 
-The browser and server share the same integer-cent allocation function. Leftover cents go to the largest fractional shares, with ties resolved in the displayed project order. The server recomputes the amounts rather than trusting the displayed values. See [split support](split-support.md) for the payment and refund behavior.
+The browser and server share the same integer-cent allocation function. Amounts follow the chosen percentages. Leftover cents go to the largest fractional shares, with ties resolved in the displayed project order. The server recomputes the amounts rather than trusting the displayed values. See [split support](split-support.md) for the payment and refund behavior.
 
 ## Portraits and photography
 

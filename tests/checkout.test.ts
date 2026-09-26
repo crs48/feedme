@@ -13,7 +13,7 @@ import { POST } from '../src/pages/api/checkout';
 import { support, supports, totals } from '../src/lib/repository';
 
 const run = (extra: Record<string, string> = {}, browser = 'browser') => POST({
-  request: new Request('https://feedme.example/api/checkout', { method: 'POST', body: new URLSearchParams({ requestId: 'request', amount: '30', visibility: 'anonymous', 'weight:one': '100', 'weight:two': '50', ...extra }) }),
+  request: new Request('https://feedme.example/api/checkout', { method: 'POST', body: new URLSearchParams({ requestId: 'request', amount: '30', visibility: 'anonymous', 'percentage:one': '60', 'percentage:two': '40', ...extra }) }),
   cookies: { get: () => ({ value: browser }) }, redirect: (url: string, status: number) => new Response(null, { status, headers: { location: url } }),
 } as unknown as APIContext);
 
@@ -21,29 +21,42 @@ describe('allocated checkout requests', () => {
   beforeEach(() => {
     db = openDatabase(':memory:'); state.demo = true; state.user = undefined; state.checkout.mockReset().mockResolvedValue('https://checkout.stripe.com/test');
     for (const id of ['one', 'two']) putRecord(db, 'project', id, { id, title: id, status: 'active' });
-    setKv(db, 'checkout-form', 'request', { projectIds: ['one', 'two'], binding: createHash('sha256').update('browser').digest('hex') });
+    setKv(db, 'checkout-form', 'request', { projectIds: ['one', 'two'], allocationMode: 'percentages', binding: createHash('sha256').update('browser').digest('hex') });
   });
   afterEach(() => db.close());
   it('records one payment, two shares, and private totals without publishing anonymous money', async () => {
     expect((await run()).headers.get('location')).toBe('/thanks?id=request');
     expect(support('request')?.amount).toBe(3000);
-    expect(supports().map((s) => s.amount)).toEqual([2000, 1000]);
-    expect(totals('one', false).amount).toBe(2000);
-    expect(totals('two', false).amount).toBe(1000);
+    expect(supports().map((s) => s.amount)).toEqual([1800, 1200]);
+    expect(totals('one', false).amount).toBe(1800);
+    expect(totals('two', false).amount).toBe(1200);
     expect(totals().amount).toBe(0);
   });
   it('reuses a repeated submission but rejects changes to an existing split', async () => {
     await run(); const saved = support('request');
     await run(); expect(support('request')).toEqual(saved);
-    expect((await run({ 'weight:one': '50', 'weight:two': '100' })).headers.get('location')).toContain('different%20details');
+    expect((await run({ 'percentage:one': '40', 'percentage:two': '60' })).headers.get('location')).toContain('different%20details');
     expect(support('request')).toEqual(saved);
   });
   it('rejects an all-zero split, unknown or closed project, and mismatched browser', async () => {
-    expect((await run({ 'weight:one': '0', 'weight:two': '0' })).headers.get('location')).toContain('above%20zero');
-    expect((await run({ 'weight:other': '100' })).headers.get('location')).toContain('project%20list%20changed');
+    expect((await run({ 'percentage:one': '0', 'percentage:two': '0' })).headers.get('location')).toContain('100%25');
+    expect((await run({ 'percentage:other': '100' })).headers.get('location')).toContain('project%20list%20changed');
     expect((await run({}, 'other')).headers.get('location')).toContain('expired');
     putRecord(db, 'project', 'two', { id: 'two', title: 'two', status: 'complete' });
     expect((await run()).headers.get('location')).toContain('no%20longer%20accepting');
+    expect(support('request')).toBeUndefined();
+  });
+  it('rejects partial and overallocated submissions without creating or charging a tip', async () => {
+    state.demo = false;
+    for (const percentages of [{ 'percentage:one': '30', 'percentage:two': '0' }, { 'percentage:one': '70', 'percentage:two': '40' }]) {
+      expect((await run(percentages)).headers.get('location')).toContain('100%25');
+      expect(support('request')).toBeUndefined();
+    }
+    expect(state.checkout).not.toHaveBeenCalled();
+  });
+  it('asks an older relative-weight form to reload instead of reinterpreting its choices', async () => {
+    setKv(db, 'checkout-form', 'request', { projectIds: ['one', 'two'], binding: createHash('sha256').update('browser').digest('hex') });
+    expect((await run()).headers.get('location')).toContain('form%20changed');
     expect(support('request')).toBeUndefined();
   });
   it('preserves consent per part and requires a signed-in identity for public support', async () => {
@@ -57,7 +70,7 @@ describe('allocated checkout requests', () => {
     state.demo = false;
     const response = await run();
     expect(response.headers.get('location')).toBe('https://checkout.stripe.com/test');
-    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'one', amount: 2000 }, { title: 'two', amount: 1000 }]);
+    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'one', amount: 1800 }, { title: 'two', amount: 1200 }]);
     expect(support('request')?.status).toBe('pending');
     await run(); expect(state.checkout).toHaveBeenCalledTimes(1);
     expect(totals(undefined, false).amount).toBe(0);

@@ -15,29 +15,29 @@ const { demo, tipAmounts, defaultTipAmount: defaultAmount } = config();
 const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
 Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 365 * 86400 });
-setKv(getDb(), 'checkout-form', requestId, { projectIds: active.map((p) => p.id), binding: digest(binding) }, 3600_000);
+setKv(getDb(), 'checkout-form', requestId, { projectIds: active.map((p) => p.id), allocationMode: 'percentages', binding: digest(binding) }, 3600_000);
 const user = Astro.locals.user;
 ---
 <form class="support-allocator" data-allocator action="/api/checkout" method="post">
   <input type="hidden" name="requestId" value={requestId}/>
   <section class="allocation-projects" aria-labelledby="allocation-heading">
-    <div class="allocation-heading"><div><h2 id="allocation-heading" class="section-title">Where should your support go?</h2><p>Move the sliders to put more behind what matters to you.</p></div></div>
-    {active.length > 0 && <div class="allocation-tools"><span>Equal sliders = an equal split</span><div data-enhanced hidden><button type="button" data-even>Split evenly</button><button type="button" data-clear>Clear</button></div></div>}
-    <noscript><p class="notice">Sliders set relative shares of your total. Move at least one slider above zero to select a project. Your exact dollar breakdown will appear at checkout.</p></noscript>
+    <div class="allocation-heading"><div><h2 id="allocation-heading" class="section-title">Where should your support go?</h2><p>Choose what percentage of your tip goes to each project.</p></div></div>
+    {active.length > 0 && <div class="allocation-tools"><span data-percentage-status data-enhanced hidden>100% left to allocate</span><div data-enhanced hidden><button type="button" data-even>Split evenly</button><button type="button" data-clear>Clear</button></div></div>}
+    <noscript><p class="notice">Each slider runs from 0% to 100% of your total. Set the percentages to add up to exactly 100% before continuing. Your dollar breakdown will appear at checkout.</p></noscript>
     <div class="project-list">{projects.map((p) => { const t = totals(p.id); return <article class="allocation-project" data-project={p.id}>
       <div class="project-topline"><span class="tag">{p.category}</span><span class="project-status">{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
       <h3><a href={`/support/${p.id}`}>{p.title}<Icon name="arrow" size={16}/></a></h3>
       <p class="project-summary">{p.summary}</p>
       <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
       {p.status === 'active' ? <div class="project-allocation">
-        <div class="allocation-label"><label for={`weight-${p.id}`}>Your allocation</label><output for={`weight-${p.id}`} data-project-output={p.id} data-enhanced hidden>{money(0)} <span>0%</span></output></div>
+        <div class="allocation-label"><label for={`percentage-${p.id}`}>Your allocation</label><output for={`percentage-${p.id}`} data-project-output={p.id} data-enhanced hidden>0% <span>{money(0)}</span></output></div>
         {p.id === active[0]?.id && <div class="slider-hint-slot" data-enhanced hidden><span id="allocation-nudge" class="slider-hint" data-slider-hint role="tooltip" hidden>Move a slider to start</span></div>}
-        <input class="project-slider" type="range" name={`weight:${p.id}`} id={`weight-${p.id}`} min="0" max="100" step="1" value="0" data-weight={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
-        <div class="slider-scale" aria-hidden="true"><span>None</span><span>More</span></div>
+        <input class="project-slider" type="range" name={`percentage:${p.id}`} id={`percentage-${p.id}`} min="0" max="100" step="1" value="0" data-percentage={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
+        <div class="slider-scale" aria-hidden="true"><span>0%</span><span>100%</span></div>
       </div> : <a class="completed-link" href={`/support/${p.id}`}>View project <Icon name="arrow" size={14}/></a>}
     </article>; })}</div>
     {!projects.length && <div class="panel"><h3 class="section-title mb-3">The first project is on its way.</h3><p class="muted text-sm">This creator is getting ready to share their work.</p></div>}
-    <p id="allocation-help" class="allocation-help">Sliders set relative shares. Select just one project to give it your full amount. Every tip goes to {creatorName}, regardless of a project’s progress.</p>
+    <p id="allocation-help" class="allocation-help">Sliders share a 100% limit. Lower one to make room for another, or move a single slider to 100% to give it everything. Every tip goes to {creatorName}, regardless of a project’s progress.</p>
   </section>
   {active.length > 0 && <aside class="donation-panel" aria-label="Your support">
     <div class="donation-total" id="donation-total">
@@ -47,7 +47,7 @@ const user = Astro.locals.user;
       <div class="amount-presets" data-enhanced hidden aria-label="Suggested amounts">{tipAmounts.map((amount) => <button type="button" data-amount={amount / 100} aria-pressed={amount === defaultAmount}>{money(amount)}</button>)}</div>
     </div>
     <div class="donation-checkout" id="donation-checkout">
-      <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>0 projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id} hidden><span>{p.title}</span><strong data-summary-amount={p.id}>{money(0)}</strong></li>)}</ul><p data-allocation-error class="allocation-error" role="status" hidden></p></div>
+      <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>0 projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id} hidden><span>{p.title}</span><strong data-summary-amount={p.id}>{money(0)}</strong></li>)}</ul><div class="unallocated-row" data-remaining-row><span>Not allocated <span data-remaining-percentage>100%</span></span><strong data-remaining-amount>{money(defaultAmount)}</strong></div><p class="allocation-guidance" data-allocation-guidance>Allocate the full 100% to continue.</p><p data-allocation-error class="allocation-error" role="status" hidden></p></div>
       <details class="support-options"><summary>Visibility & note <span data-visibility-label>Anonymous</span></summary>
         <fieldset class="allocation-privacy"><legend class="sr-only">Support visibility</legend>
           <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
@@ -64,21 +64,27 @@ const user = Astro.locals.user;
       <p class="allocation-disclosure">Anonymous tips stay off the public timeline unless you opt in. Stripe and the recipient may still see billing details.</p>
     </div>
   </aside>}
-  {active.length > 0 && <div class="allocation-mobile-bar" data-enhanced hidden><div><span>Your total</span><strong data-total-output>{money(defaultAmount)}</strong></div><a class="button" href="#donation-checkout">Review support <Icon name="arrow" size={16}/></a></div>}
+  {active.length > 0 && <div class="allocation-mobile-bar" data-enhanced hidden><div><span data-mobile-allocation>0% allocated</span><strong data-total-output>{money(defaultAmount)}</strong></div><a class="button" href="#donation-checkout">Review support <Icon name="arrow" size={16}/></a></div>}
 </form>
 <script>
-  import { allocateAmount } from '../lib/allocation';
+  import { previewAllocation, changePercentage, evenPercentages } from '../lib/allocation';
   import { billingFrequency, frequencySuffix } from '../lib/billing-frequency';
   const form = document.querySelector<HTMLFormElement>('[data-allocator]');
   if (form) {
     const total = form.querySelector<HTMLInputElement>('[name="amount"]');
-    const sliders = [...form.querySelectorAll<HTMLInputElement>('[data-weight]')];
+    const sliders = [...form.querySelectorAll<HTMLInputElement>('[data-percentage]')];
     const hint = form.querySelector<HTMLElement>('[data-slider-hint]');
     let hintDismissed = false;
+    const readPercentages = () => sliders.map((slider) => ({ projectId: slider.dataset.percentage!, percentage: Number(slider.value) }));
+    const writePercentages = (values: ReturnType<typeof readPercentages>) => sliders.forEach((slider) => {
+      slider.value = String(values.find((part) => part.projectId === slider.dataset.percentage)?.percentage || 0);
+    });
     const currency = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
     const update = () => {
       if (!total) return;
-      const allZero = sliders.length > 0 && sliders.every((slider) => Number(slider.value) === 0);
+      const percentages = readPercentages();
+      const allocated = percentages.reduce((sum, part) => sum + part.percentage, 0);
+      const allZero = sliders.length > 0 && allocated === 0;
       if (!allZero) hintDismissed = false;
       if (hint) {
         hint.hidden = !allZero || hintDismissed;
@@ -87,37 +93,57 @@ const user = Astro.locals.user;
       const amount = Math.round(Number(total.value) * 100);
       const frequency = billingFrequency(form.querySelector<HTMLInputElement>('[name="frequency"]:checked')?.value);
       const suffix = frequencySuffix(frequency);
-      let parts: ReturnType<typeof allocateAmount> = [];
+      let preview: ReturnType<typeof previewAllocation> | undefined;
       let error = '';
       try {
         if (!total.value || !total.validity.valid) throw new Error('Choose a total between $1 and $1,000.');
-        parts = allocateAmount(amount, sliders.map((slider) => ({ projectId: slider.dataset.weight!, weight: Number(slider.value) })));
-        if (frequency !== 'once' && parts.length > 20) throw new Error('Recurring support can include up to 20 projects.');
+        preview = previewAllocation(amount, percentages);
+        if (frequency !== 'once' && preview.allocations.length > 20) throw new Error('Recurring support can include up to 20 projects.');
       } catch (cause) { error = (cause as Error).message; }
       for (const slider of sliders) {
-        const part = parts.find((part) => part.projectId === slider.dataset.weight);
+        const part = preview?.allocations.find((part) => part.projectId === slider.dataset.percentage);
         const cents = part?.amount || 0;
-        const share = parts.length ? `${Number((cents / amount * 100).toFixed(1))}%` : '0%';
-        slider.style.setProperty('--fill', `${slider.value}%`);
-        slider.setAttribute('aria-valuetext', `${currency(cents)}${suffix}, ${share} of your total`);
-        const output = form.querySelector<HTMLOutputElement>(`[data-project-output="${slider.dataset.weight}"]`);
-        if (output) { output.replaceChildren(document.createTextNode(`${currency(cents)}${suffix} `)); const percentage = document.createElement('span'); percentage.textContent = share; output.append(percentage); }
-        const row = form.querySelector<HTMLElement>(`[data-summary-row="${slider.dataset.weight}"]`);
-        if (row) row.hidden = !part;
-        const value = form.querySelector<HTMLElement>(`[data-summary-amount="${slider.dataset.weight}"]`);
-        if (value) value.textContent = currency(cents) + suffix;
+        const percentage = Number(slider.value);
+        const share = `${percentage}%`;
+        slider.style.setProperty('--fill', share);
+        slider.setAttribute('aria-valuetext', `${share} of your total${preview ? `, ${currency(cents)}${suffix}` : ''}`);
+        const output = form.querySelector<HTMLOutputElement>(`[data-project-output="${slider.dataset.percentage}"]`);
+        if (output) { output.replaceChildren(document.createTextNode(`${share} `)); const label = document.createElement('span'); label.textContent = preview ? currency(cents) + suffix : '—'; output.append(label); }
+        const row = form.querySelector<HTMLElement>(`[data-summary-row="${slider.dataset.percentage}"]`);
+        if (row) row.hidden = !percentage;
+        const value = form.querySelector<HTMLElement>(`[data-summary-amount="${slider.dataset.percentage}"]`);
+        if (value) value.textContent = preview ? currency(cents) + suffix : '—';
       }
       form.querySelectorAll('[data-total-output]').forEach((output) => { output.textContent = total.value && total.validity.valid ? currency(amount) + suffix : '—'; });
-      const count = form.querySelector('[data-project-count]');
-      if (count) count.textContent = `${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`;
+      const count = percentages.filter((part) => part.percentage > 0).length;
+      const countLabel = form.querySelector('[data-project-count]');
+      if (countLabel) countLabel.textContent = `${count} ${count === 1 ? 'project' : 'projects'}`;
+      const status = form.querySelector('[data-percentage-status]');
+      if (status) status.textContent = allocated === 100 ? '100% allocated' : `${100 - allocated}% left to allocate`;
+      const mobileStatus = form.querySelector('[data-mobile-allocation]');
+      if (mobileStatus) mobileStatus.textContent = `${allocated}% allocated`;
+      const remainingRow = form.querySelector<HTMLElement>('[data-remaining-row]');
+      if (remainingRow) remainingRow.hidden = allocated === 100;
+      const remainingPercentage = form.querySelector('[data-remaining-percentage]');
+      if (remainingPercentage) remainingPercentage.textContent = `${100 - allocated}%`;
+      const remainingAmount = form.querySelector('[data-remaining-amount]');
+      if (remainingAmount) remainingAmount.textContent = preview ? currency(preview.unallocatedAmount) + suffix : '—';
+      const guidance = form.querySelector<HTMLElement>('[data-allocation-guidance]');
+      if (guidance) { guidance.hidden = allocated === 100; guidance.textContent = `Allocate the remaining ${100 - allocated}% to continue.`; }
       const message = form.querySelector<HTMLElement>('[data-allocation-error]');
       if (message) { message.textContent = error; message.hidden = !error; }
       const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
-      if (submit) submit.disabled = Boolean(error);
+      if (submit) submit.disabled = Boolean(error) || allocated !== 100;
       form.querySelectorAll<HTMLButtonElement>('[data-amount]').forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.amount) === Number(total.value))));
     };
     form.querySelectorAll<HTMLElement>('[data-enhanced]').forEach((element) => { element.hidden = false; });
-    form.addEventListener('input', update);
+    form.addEventListener('input', (event) => {
+      const slider = event.target;
+      if (slider instanceof HTMLInputElement && slider.dataset.percentage) {
+        writePercentages(changePercentage(readPercentages(), slider.dataset.percentage, Number(slider.value)));
+      }
+      update();
+    });
     form.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && hint && !hint.hidden) { hintDismissed = true; update(); }
     });
@@ -126,7 +152,11 @@ const user = Astro.locals.user;
       const selected = form.querySelector<HTMLInputElement>('[name="visibility"]:checked')?.value || 'anonymous';
       if (label) label.textContent = selected[0].toUpperCase() + selected.slice(1);
     });
-    form.querySelector('[data-even]')?.addEventListener('click', () => { sliders.forEach((slider, index) => { slider.value = index < 100 ? '50' : '0'; }); update(); });
+    form.querySelector('[data-even]')?.addEventListener('click', () => {
+      const frequency = billingFrequency(form.querySelector<HTMLInputElement>('[name="frequency"]:checked')?.value);
+      writePercentages(evenPercentages(sliders.map((slider) => slider.dataset.percentage!), frequency === 'once' ? 100 : 20));
+      update();
+    });
     form.querySelector('[data-clear]')?.addEventListener('click', () => { hintDismissed = false; sliders.forEach((slider) => { slider.value = '0'; }); update(); });
     form.querySelectorAll<HTMLButtonElement>('[data-amount]').forEach((button) => button.addEventListener('click', () => { if (total) total.value = button.dataset.amount!; update(); }));
     update();
@@ -139,26 +169,26 @@ const user = Astro.locals.user;
   .allocation-heading p { color: var(--color-muted); font-size: 14px; margin-top: 8px; }
   .allocation-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 14px 6px; font-size: 12px; color: var(--color-muted); }
   .allocation-tools > div { display: flex; gap: 16px; }
-  .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-percentage: 600; white-space: nowrap; }
   .project-list { border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; }
   .allocation-project { padding: 22px 24px 20px; }
   .allocation-project + .allocation-project { border-top: 1px solid var(--color-border); }
   .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
   .project-status { color: var(--color-muted); font-size: 12px; }
-  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-weight: 650; line-height: 1.4; letter-spacing: -.02em; }
+  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-percentage: 650; line-height: 1.4; letter-spacing: -.02em; }
   h3 a:hover { color: var(--color-primary); }
   h3 a svg { color: var(--color-muted); }
   .project-summary { font-size: 14px; line-height: 1.6; color: var(--color-muted); margin-top: 4px; }
   .project-funding { font-size: 12px; color: var(--color-muted); margin-top: 12px; }
-  .project-funding strong { font-weight: 600; color: var(--color-ink); }
+  .project-funding strong { font-percentage: 600; color: var(--color-ink); }
   .project-allocation { margin-top: 20px; }
   .allocation-label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
   .allocation-label label { color: var(--color-muted); font-size: 12px; }
-  .allocation-label output { color: var(--color-primary); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
-  .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-weight: 400; margin-left: 5px; }
+  .allocation-label output { color: var(--color-primary); font-size: 16px; font-percentage: 650; font-variant-numeric: tabular-nums; }
+  .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-percentage: 400; margin-left: 5px; }
   /* Keep the track in place when the hint disappears during a drag. */
   .slider-hint-slot { position: relative; height: 38px; }
-  .slider-hint { position: absolute; left: 0; bottom: -6px; max-width: 100%; padding: 7px 11px; border-radius: 8px; background: var(--color-primary); color: white; font-size: 12px; font-weight: 500; line-height: 1.4; box-shadow: 0 3px 10px #0866ff20; pointer-events: none; animation: slider-nudge 1.8s ease-in-out 2; }
+  .slider-hint { position: absolute; left: 0; bottom: -6px; max-width: 100%; padding: 7px 11px; border-radius: 8px; background: var(--color-primary); color: white; font-size: 12px; font-percentage: 500; line-height: 1.4; box-shadow: 0 3px 10px #0866ff20; pointer-events: none; animation: slider-nudge 1.8s ease-in-out 2; }
   .slider-hint::after { content: ''; position: absolute; bottom: -4px; left: 7px; width: 8px; height: 8px; background: inherit; transform: rotate(45deg); }
   @keyframes slider-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
   @media (prefers-reduced-motion: reduce) { .slider-hint { animation: none; } }
@@ -179,24 +209,28 @@ const user = Astro.locals.user;
   .total-input:focus-within { outline: 3px solid #0866ff26; border-color: var(--color-primary); }
   .total-input > span:first-child { font-size: 25px; color: var(--color-muted); }
   .total-input > span:last-child { font-size: 12px; color: var(--color-muted); }
-  .total-input input { min-height: 60px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 30px; font-weight: 600; }
+  .total-input input { min-height: 60px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 30px; font-percentage: 600; }
   .amount-presets { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-weight: 600; }
+  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-percentage: 600; }
   .amount-presets button[aria-pressed='true'] { color: var(--color-primary); border-color: var(--color-primary); background: #f2f7ff; }
   .split-summary { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
   .split-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--color-muted); margin-bottom: 10px; }
-  .split-heading h3 { color: var(--color-ink); font-size: 13px; font-weight: 600; }
+  .split-heading h3 { color: var(--color-ink); font-size: 13px; font-percentage: 600; }
   .split-summary li { display: flex; justify-content: space-between; gap: 16px; padding-block: 7px; font-size: 12px; line-height: 1.5; }
   .split-summary li span { color: var(--color-muted); }
-  .split-summary li strong { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .split-summary li strong { white-space: nowrap; font-percentage: 600; font-variant-numeric: tabular-nums; }
+  .unallocated-row { display: flex; justify-content: space-between; gap: 12px; border-top: 1px dashed var(--color-border); margin-top: 8px; padding-top: 12px; font-size: 12px; color: var(--color-muted); }
+  .unallocated-row strong { white-space: nowrap; font-weight: 600; }
+  .unallocated-row [data-remaining-percentage] { margin-left: 4px; }
+  .allocation-guidance { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--color-muted); }
   .allocation-error { font-size: 13px; color: #a12727; padding-block: 8px; }
   .support-options { margin-block: 16px; border-block: 1px solid var(--color-border); }
-  .support-options summary { padding-block: 12px; font-size: 13px; font-weight: 500; }
-  .support-options summary > span { float: right; color: var(--color-muted); font-size: 12px; font-weight: 400; }
+  .support-options summary { padding-block: 12px; font-size: 13px; font-percentage: 500; }
+  .support-options summary > span { float: right; color: var(--color-muted); font-size: 12px; font-percentage: 400; }
   .allocation-privacy { border: 0; padding: 0; margin: 4px 0 16px; }
   .allocation-privacy label, .anonymous-consent { display: flex; align-items: flex-start; gap: 8px; padding-block: 10px; cursor: pointer; }
   .allocation-privacy input, .anonymous-consent input { margin-top: 2px; }
-  .allocation-privacy strong { display: block; font-size: 13px; font-weight: 500; }
+  .allocation-privacy strong { display: block; font-size: 13px; font-percentage: 500; }
   .allocation-privacy small, .anonymous-consent { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
   .allocation-privacy label:has(input:disabled) { opacity: .6; cursor: not-allowed; }
   form:has(input[name='visibility']:checked:not([value='anonymous'])) .anonymous-consent { display: none; }

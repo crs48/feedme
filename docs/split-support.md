@@ -1,11 +1,11 @@
 # Split support
 
-A supporter chooses one USD total ($1–$1,000) and relative project weights on the homepage. Every selected project belongs to the same creator and connected Stripe account. The allocations express where the supporter wants that creator to spend their energy; they do not create multiple payouts.
+A supporter chooses one USD total ($1–$1,000) and explicit project percentages on the homepage. Every selected project belongs to the same creator and connected Stripe account. The allocations express where the supporter wants that creator to spend their energy; they do not create multiple payouts.
 
 ```mermaid
 flowchart LR
-  Form[Total + native project sliders] --> Preview[Shared integer-cent allocator]
-  Form --> Server[Validate browser capability and active projects]
+  Form[Total + 0–100% project sliders] --> Preview[Percentage preview + unallocated amount]
+  Form --> Server[Validate exactly 100%, browser capability and active projects]
   Server --> Intent[One pending payment with saved allocations]
   Intent --> Checkout[One Stripe Checkout with project line items]
   Checkout --> Webhook[Verified payment event]
@@ -14,16 +14,18 @@ flowchart LR
 
 ## Allocation rules
 
-- Sliders are integer weights from 0 to 100; the amount is distributed in proportion to their sum.
-- Equal nonzero weights receive equal shares, apart from unavoidable rounding cents. A lone nonzero weight receives everything.
-- All-zero selections are rejected. One-time support allows up to 100 selected projects; recurring support allows up to 20. These match Stripe’s [Checkout line-item limit](https://docs.stripe.com/api/checkout/sessions/create).
-- Calculations use integer cents. Largest fractional remainders receive the leftover cents; ties use the order saved with the form. Shares rounded to zero cents are omitted.
+- Sliders represent whole percentages from 0 to 100 and start at zero. They are not normalized: 30% of a $22 tip previews $6.60, leaving $15.40 unallocated.
+- The changed slider is capped at `100 - sum(other percentages)`. Other selections stay fixed, and every track retains a native maximum of 100. Lower another slider to free capacity.
+- Checkout requires exactly 100%. Partial and excessive totals are rejected by the server before an intent or Stripe session is created.
+- “Split evenly” distributes 100 percentage points in display order, giving leftover points to the earliest projects. Three projects receive 34% / 33% / 33%; two receive 50% / 50%. The action selects up to the applicable project limit.
+- One-time support allows up to 100 selected projects; recurring support allows up to 20. These match Stripe’s [Checkout line-item limit](https://docs.stripe.com/api/checkout/sessions/create).
+- Calculations use integer cents and divide each amount by the fixed denominator 100. A partial preview rounds its allocated subtotal once; that subtotal plus the unallocated amount always equals the entered total. Largest fractional remainders receive leftover cents; ties use display order. Completed allocations conserve the full total. Shares rounded to zero cents are omitted.
 - Archived and completed projects cannot receive new support. The server validates selected projects again when the form is submitted.
-- With JavaScript disabled, native range inputs still submit their weights. The exact split appears in hosted Checkout (or on the simulated demo receipt). The page hides stale calculated outputs.
+- With JavaScript disabled, native range inputs still submit percentages. They must total exactly 100%; the server rejects under- and overallocated submissions. The exact split appears in hosted Checkout (or on the simulated demo receipt). The page hides stale calculated outputs. Keyboard users can use arrow keys for one percentage point and Home/End for the track endpoints.
 
 ## Payment and privacy
 
-The browser capability binds a short-lived form to its project set. The server freezes the total, frequency, allocations, visibility, identity, and private note before contacting Stripe. Repeated identical submissions reuse the same intent and Checkout idempotency key; changed details require a fresh form.
+The browser capability binds a short-lived form to its project set and percentage-allocation mode. Forms opened before the move from relative weights must be reloaded, so old values cannot be silently reinterpreted. The server freezes the total, frequency, allocations, visibility, identity, and private note before contacting Stripe. Repeated identical submissions reuse the same intent and Checkout idempotency key; changed details require a fresh form.
 
 The operational `Support` record stores one overall amount and an optional allocation array. Stripe’s metadata references that parent intent. Checkout has a separate line item for each nonzero allocation, and the webhook validates the overall paid amount, currency, session, and connected account. Redirects never settle payments. For monthly/yearly support, all recurring line items share the chosen interval; each paid invoice gets a separate parent contribution and independent project receipts. See [recurring support](recurring-support.md).
 
@@ -41,4 +43,4 @@ Disputes affect all allocations together. A full refund or lost dispute removes 
 
 ## Validation
 
-Unit and route tests cover even and weighted splits, single-project selection, cent conservation, invalid and zero weights, project changes, browser binding, repeated submissions, privacy, exact Stripe line items, webhook races, refunds, and disputes. Browser checks exercise the production build with JavaScript enabled and disabled. Live Stripe test-account Checkout and webhook delivery still require operator acceptance.
+Unit and route tests cover partial previews, linked slider caps, even percentage splits, single-project selection, cent conservation, invalid percentages, incomplete totals, old form rejection, project changes, browser binding, repeated submissions, privacy, exact Stripe line items, webhook races, refunds, and disputes. Browser checks exercise the production build with JavaScript enabled and disabled. Live Stripe test-account Checkout and webhook delivery still require operator acceptance.
