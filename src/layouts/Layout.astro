@@ -53,5 +53,5 @@ const error = Astro.url.searchParams.get('error');
   .site-footer { padding-block: 32px; margin-top: 75px; border-top: 1px solid #e1e3d9; font-size: 11px; color: #798271; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
-  @media(max-width:700px) { .site-header { height: 80px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; margin-top: 45px; } .demo-strip span { display: block; margin-left: 0; } }
+  @media(max-width:700px) { .site-header { height: 80px; gap:16px; } .site-header nav { gap:12px; } .site-header .button { padding:10px 12px; } .brand { font-size:27px; } .brand-symbol { margin-right:6px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; margin-top: 45px; } .demo-strip span { display: block; margin-left: 0; } }
 </style>

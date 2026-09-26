@@ -9,7 +9,7 @@ flowchart LR
   Follow --> Project[social.feedme.follow: project AT URI]
   Native --> PDS[Supporter's public PDS through Habitat OAuth]
   Project --> PDS
-  Creator[Creator field note] --> OptIn[Optional Bluesky post with stable project tag]
+  Creator[Creator project post] --> OptIn[Explicit publish with stable project tag]
   OptIn --> Feed[Following: creator timeline and project updates]
   PDS --> Feed
   Tip[Confirmed tip] --> Compose[Separate, optional public composer]
@@ -19,13 +19,13 @@ flowchart LR
 
 ## Implementation checklist
 
-- [ ] Native creator/friend follows, including existing follows and unfollow.
-- [ ] Portable project subscriptions and deterministic project tags.
-- [ ] Following page with creator timeline and project updates.
-- [ ] Keep-me-updated controls alongside tipping and after payment.
-- [ ] Explicit public tip posts, with separate text and verified receipt access.
-- [ ] Actor-scoped writes, idempotent retries, pagination, and privacy tests.
-- [ ] Accessible HTML forms, demo supporter, desktop/mobile browser verification.
+- [x] Native creator/friend follows, including existing follows and unfollow.
+- [x] Portable project subscriptions and deterministic project tags.
+- [x] Following page with creator timeline and project updates.
+- [x] Keep-me-updated controls alongside tipping and after payment.
+- [x] Explicit public tip posts, with separate text and verified receipt access.
+- [x] Actor-scoped writes, idempotent retries, pagination, and privacy tests.
+- [x] Accessible HTML forms, demo supporter, desktop/mobile browser verification.
 
 ## Protocol contracts
 

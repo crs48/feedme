@@ -47,11 +47,11 @@ The server renders twelve entries per page, newest first with a stable tie-break
 
 ## Acceptance checklist
 
-- [ ] Markdown sanitization, safe embeds, and rich text facet tests.
-- [ ] Native post media parsing, ownership checks, and pagination tests.
-- [ ] Public/anonymous/private timeline and refund behavior tests.
-- [ ] Desktop and mobile browser verification, including JavaScript disabled.
-- [ ] Production build and type checks.
+- [x] Markdown sanitization, safe embeds, and rich text facet tests.
+- [x] Native post media parsing, ownership checks, and pagination tests.
+- [x] Public/anonymous/private timeline and refund behavior tests.
+- [x] Desktop and mobile browser verification, including JavaScript disabled.
+- [x] Production build and type checks.
 - [ ] Live Habitat/Bluesky creator and supporter account exercise.
 
 ## References
