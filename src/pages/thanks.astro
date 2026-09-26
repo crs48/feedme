@@ -1,9 +1,41 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
-import { support, friends } from '../lib/repository';
+import FollowButton from '../components/FollowButton.astro';
+import { support, friends, project } from '../lib/repository';
 import { config } from '../lib/config';
+import { canAccessTip, canShareTip } from '../lib/tip-sharing';
+import { publishedPost } from '../lib/social-repo';
+import { blueskyPostUrl, projectUri } from '../lib/social-model';
 const s = support(Astro.url.searchParams.get('id') || '');
 const paid = s?.status === 'paid';
+const user = Astro.locals.user;
+const browser = Astro.cookies.get('feedme_checkout')?.value;
+const accessible = canAccessTip(s, user, browser);
+const shareable = canShareTip(s, user, browser);
+const p = accessible && s ? project(s.projectId) : undefined;
+const saved = shareable && user && s ? publishedPost(user.did, `tip:${s.id}`) : undefined;
+const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
 ---
-<Layout title={paid ? 'A little generosity, a lot of possibility' : 'Checking your support'} noindex><section class="shell py-14"><div class="max-w-xl mx-auto text-center"><span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={paid ? 'heart' : 'leaf'} size={34}/></span><p class="eyebrow">{config().demo ? 'A little practice in generosity' : 'Thank you for showing up'}</p><h1 class="serif text-5xl my-5">{paid ? 'You made a little room.' : 'Good things take a moment.'}</h1><p class="muted text-sm">{config().demo && paid ? 'Your demo tip is saved. No money changed hands — but you can see how the real experience will feel.' : paid ? 'Your support is confirmed. Thank you for helping someone spend more time on what matters.' : 'Payment is not confirmed yet. This page only shows success after Stripe sends a verified payment event.'}</p>{!paid && <a class="button secondary mt-5" href={Astro.url.pathname + Astro.url.search}>Check payment status</a>}<h2 class="section-title mt-12 mb-5">Keep a good thing going.</h2><p class="muted text-xs mb-6">If you have a little more curiosity to give, meet some friends.</p>{friends().slice(0, 3).map((f) => <a class="panel block text-left mb-4" href={f.url} rel="noopener noreferrer"><strong class="text-sm">{f.name} ↗</strong><p class="text-xs muted mt-1">{f.description}</p></a>)}<a class="button secondary mt-4" href="/">Back to the good things</a></div></section></Layout>
+<Layout title={paid ? 'A little generosity, a lot of possibility' : 'Checking your support'} noindex>
+  <section class="shell py-14"><div class="max-w-xl mx-auto text-center">
+    <span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={paid ? 'heart' : 'leaf'} size={34}/></span><p class="eyebrow">{config().demo ? 'A little practice in generosity' : 'Thank you for showing up'}</p><h1 class="serif text-5xl my-5">{paid ? 'You made a little room.' : 'Good things take a moment.'}</h1><p class="muted text-sm">{config().demo && paid ? 'Your demo tip is saved. No money changed hands — but you can see how the real experience will feel.' : paid ? 'Your support is confirmed. Thank you for helping someone spend more time on what matters.' : 'Payment is not confirmed yet. This page only shows success after Stripe sends a verified payment event.'}</p>
+    {!paid && <a class="button secondary mt-5" href={returnTo}>Check payment status</a>}
+    {paid && p && <div class="panel text-left mt-8"><p class="eyebrow mb-2">Stay for the story</p><h2 class="section-title mb-4">See what you helped grow.</h2><FollowButton kind="project" subject={projectUri(config().ownerDid, p.id)} title={p.title} returnTo={returnTo}/></div>}
+    {paid && accessible && !user && <p class="notice text-sm"><a class="underline" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</a> to follow this project or write a public message about your support.</p>}
+    {shareable && user && s && <div class="panel text-left mt-6">
+      <p class="eyebrow mb-2">Let a little encouragement travel</p><h2 class="section-title mb-4">{saved?.uri ? 'A kind word, out in the world.' : 'Leave a public message.'}</h2>
+      {saved?.uri ? <><p class="prose-copy text-sm mb-4">{String(saved.record.text)}</p><a class="button secondary" href={config().demo ? '/following?view=people' : blueskyPostUrl(saved.uri)} rel="noopener noreferrer">{config().demo ? 'View your demo post' : 'View on Bluesky'} ↗</a></> : <form method="post" action="/api/social">
+        <input type="hidden" name="action" value="post"/><input type="hidden" name="supportId" value={s.id}/>
+        <label class="field">Your public words<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…">{saved ? String(saved.record.text) : ''}</textarea></label>
+        <p class="muted text-xs mb-4">Up to 300 characters. Includes a link to this project. Your private tip note and amount are never copied here.</p>
+        <p class="text-[11px] muted mb-4 break-all">Posting as {user.did}</p>
+        <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this message publicly under my AT Protocol identity. This identifies me even if my tip was anonymous.</span></label>
+        <button class="button">{config().demo ? 'Try a demo public post' : 'Publish on Bluesky'}</button>
+      </form>}
+    </div>}
+    <h2 class="section-title mt-12 mb-5">Keep a good thing going.</h2><p class="muted text-xs mb-6">If you have a little more curiosity to give, meet some friends.</p>
+    {friends().slice(0, 3).map((f) => <article class="panel text-left mb-4"><a href={f.url} rel="noopener noreferrer"><strong class="text-sm">{f.name} ↗</strong><p class="text-xs muted mt-1">{f.description}</p></a>{f.did && <div class="mt-4"><FollowButton kind="creator" subject={f.did} title={f.name} returnTo={returnTo}/></div>}</article>)}
+    <a class="button secondary mt-4" href="/">Back to the good things</a>
+  </div></section>
+</Layout>

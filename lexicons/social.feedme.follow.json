@@ -1,0 +1,20 @@
+{
+  "lexicon": 1,
+  "id": "social.feedme.follow",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "description": "A public subscription to a project, stored in the follower's repository. The subject must identify a social.feedme.project record.",
+      "record": {
+        "type": "object",
+        "required": ["subject", "createdAt"],
+        "properties": {
+          "subject": { "type": "string", "format": "at-uri" },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "title": { "type": "string", "maxLength": 400, "maxGraphemes": 100, "description": "Optional display hint; not authoritative project data." }
+        }
+      }
+    }
+  }
+}

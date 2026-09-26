@@ -1,5 +1,6 @@
 ---
 import Icon from './Icon.astro';
+import FollowButton from './FollowButton.astro';
 import { profile } from '../lib/repository';
 import { config } from '../lib/config';
 const p = profile();
@@ -10,7 +11,7 @@ const current = Astro.url.pathname;
     <div class="creator-avatar avatar">{config().demo ? <svg viewBox="0 0 100 100" width="82" height="82" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="#dce4cc"/><path d="M15 100q2-40 35-40t35 40" fill="#58705a"/><path d="M39 59v16q11 8 22 0V59" fill="#c59064"/><ellipse cx="50" cy="40" rx="21" ry="27" fill="#dfaf7f"/><path d="M29 42q-7-39 23-36 29 2 22 34l-8-18q-18 11-35 5Z" fill="#4c4735"/><path d="M36 50q14 14 29 0-2 22-14 20T36 50" fill="#6e573d"/><path d="M45 51q5 4 10 0" stroke="#f1d1a8" stroke-width="2" fill="none"/><circle cx="41" cy="40" r="1.8" fill="#4c4735"/><circle cx="59" cy="40" r="1.8" fill="#4c4735"/></svg> : <span class="serif text-3xl" aria-hidden="true">{p.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')}</span>}<span class="online-dot" title="Open to support"></span></div>
     <div><div class="flex items-center gap-2 mb-1"><span class="eyebrow">A corner of the internet by</span></div><h1 class="serif creator-name">{p.name}<span class="little-spark">✳</span></h1><div class="handle">{p.handle ? `@${p.handle}` : 'Independent by design'}</div></div>
   </div>
-  <div class="creator-bio"><p>{p.bio}</p><div class="flex flex-wrap gap-5 mt-4 text-xs muted">{p.location && <span class="flex items-center gap-1.5"><Icon name="location" size={13}/>{p.location}</span>}<span class="flex items-center gap-1.5"><Icon name="globe" size={13}/>Part of the open social web</span>{p.website && <a href={p.website} rel="noopener noreferrer">My website ↗</a>}</div></div>
+  <div class="creator-bio"><p>{p.bio}</p><div class="flex flex-wrap gap-5 mt-4 text-xs muted">{p.location && <span class="flex items-center gap-1.5"><Icon name="location" size={13}/>{p.location}</span>}<span class="flex items-center gap-1.5"><Icon name="globe" size={13}/>Part of the open social web</span>{p.website && <a href={p.website} rel="noopener noreferrer">My website ↗</a>}</div><div class="mt-5"><FollowButton kind="creator" subject={config().ownerDid} title={p.name}/></div></div>
 </section>
 <div class="shell flex tabs" role="navigation" aria-label="Creator sections">
   <a class="tab" aria-current={current === '/' ? 'page' : undefined} href="/">Projects & possibilities</a>

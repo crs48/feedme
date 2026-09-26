@@ -29,6 +29,7 @@ const error = Astro.url.searchParams.get('error');
       <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol"><Icon name="leaf" size={24}/></span>feedme<span class="brand-dot">.</span></a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">
         <a href="/about" class="about-link muted text-xs">Made for a more generous internet</a>
+        {user && <a href="/following" class="text-xs">Following</a>}
         {isOwner(user) ? <a class="button secondary" href="/studio">Your studio <Icon name="arrow" size={14}/></a> : user ? <form action="/auth/logout" method="post"><button class="button secondary">Sign out</button></form> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
       </nav>
     </header>

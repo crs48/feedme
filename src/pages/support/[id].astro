@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import Layout from '../../layouts/Layout.astro';
 import Artwork from '../../components/Artwork.astro';
 import Icon from '../../components/Icon.astro';
+import FollowButton from '../../components/FollowButton.astro';
+import { projectUri } from '../../lib/social-model';
 import { profile, project, totals, updates } from '../../lib/repository';
 import { money } from '../../lib/model';
 import { config } from '../../lib/config';
@@ -42,7 +44,7 @@ const notes = updates().filter((u) => u.projectId === p.id);
         <p class="text-[10px] muted text-center mt-3">{cfg.demo ? 'A pretend tip. No card details, no charge.' : 'Secure, hosted checkout. Available payment methods appear on Stripe.'}</p>
         <p class="text-[10px] muted mt-5">Anonymous here means no social identity in Feedme. Stripe and the recipient may still see billing information. Public records can be copied across the open network.</p>
       </form> : <div class="notice">This project is complete. Thank you for helping it grow.</div>}
-    </div><p class="flex gap-2 items-center justify-center mt-5 text-[11px] muted"><Icon name="lock" size={13}/>Your note always stays private.</p></aside>
+    </div><p class="flex gap-2 items-center justify-center mt-5 text-[11px] muted"><Icon name="lock" size={13}/>Your tip note always stays private.</p><div class="panel mt-6"><p class="eyebrow mb-2">Stay for the story</p><h2 class="section-title mb-3">See what grows from here.</h2><p class="muted text-xs mb-5">Follow this project, with or without a tip. You can write a separate public message after supporting it.</p><FollowButton kind="project" subject={projectUri(cfg.ownerDid, p.id)} title={p.title}/></div></aside>
   </div>
 </Layout>
 <style>

@@ -1,0 +1,22 @@
+---
+import { readFollows } from '../lib/social-repo';
+import type { FollowKind } from '../lib/social-model';
+import { safeReturnPath } from '../lib/http';
+interface Props { kind: FollowKind; subject: string; title: string; label?: string; returnTo?: string; }
+const { kind, subject, title, label = kind === 'project' ? 'Keep me updated' : 'Follow on Bluesky', returnTo = Astro.url.pathname } = Astro.props;
+const user = Astro.locals.user;
+const path = safeReturnPath(returnTo);
+let following = false;
+let unavailable = false;
+if (user && subject !== user.did) {
+  try { following = (await readFollows(user.did, kind)).some(({ value }) => value.subject === subject); }
+  catch { unavailable = true; }
+}
+---
+{subject !== user?.did && <div class="follow-control">
+  {user ? <form method="post" action="/api/social">
+    <input type="hidden" name="action" value="follow"/><input type="hidden" name="kind" value={kind}/><input type="hidden" name="subject" value={subject}/><input type="hidden" name="title" value={title}/><input type="hidden" name="returnTo" value={path}/><input type="hidden" name="enabled" value={following ? 'no' : 'yes'}/>
+    <button class="button secondary" disabled={unavailable} aria-label={`${following ? 'Unfollow' : label} · ${title}`}>{following ? 'Following ✓ · Unfollow' : label}</button>
+  </form> : <a class="button secondary" href={`/login?returnTo=${encodeURIComponent(path)}`}>{label}</a>}
+  <p class="text-[10px] muted mt-2">{unavailable ? 'Follow status is unavailable. Refresh or reconnect your account.' : kind === 'project' ? 'A public project follow. Updates appear in Feedme’s Following page.' : 'A public account follow. New posts appear in your Bluesky timeline.'}</p>
+</div>}

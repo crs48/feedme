@@ -7,6 +7,9 @@ import { project, saveFriend, saveProfile, saveProject, saveUpdate } from '../..
 import { createPrivateSpace, drainOutbox } from '../../lib/habitat';
 import { connectStripe } from '../../lib/payments';
 import { getDb, enqueue } from '../../lib/db';
+import { TID } from '@atproto/common-web';
+import { POST as POST_COLLECTION, projectPost, projectUri, shortPostText } from '../../lib/social-model';
+import { publishPost } from '../../lib/social-repo';
 
 export const POST: APIRoute = async (context) => {
   try {
@@ -24,14 +27,13 @@ export const POST: APIRoute = async (context) => {
       case 'friend': saveFriend({ ...form, id: randomUUID() }); break;
       case 'update': {
         const update = saveUpdate({ ...form, id: randomUUID(), createdAt: new Date().toISOString() });
-        if (form.share === 'yes' && !config().demo) {
+        if (form.share === 'yes') {
           const p = project(update.projectId)!;
-          const uri = `${config().origin}/support/${p.id}`;
-          // Explicit opt-in. A stable rkey makes retries idempotent.
-          enqueue(getDb(), 'public', 'app.bsky.feed.post', update.id, {
-            $type: 'app.bsky.feed.post', text: Array.from(update.text).slice(0, 280).join(''), createdAt: update.createdAt,
-            embed: { $type: 'app.bsky.embed.external', external: { uri, title: p.title, description: p.summary } },
-          });
+          const record = projectPost(shortPostText(update.text), {
+            title: p.title, summary: p.summary, uri: projectUri(config().ownerDid, p.id), url: `${config().origin}/support/${p.id}`,
+          }, update.createdAt);
+          if (config().demo) await publishPost(config().ownerDid, `update:${update.id}`, record);
+          else enqueue(getDb(), 'public', POST_COLLECTION, TID.nextStr(), record);
         }
         break;
       }

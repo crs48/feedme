@@ -16,8 +16,8 @@ export const demoUpdates: Update[] = [
   { id: '98d3c0e0-87f3-4d8e-82a2-91cf8b668a32', projectId: 'open-source', text: 'A small milestone: the new offline mode is ready. Thanks to everyone who made a little more time for this work possible.', createdAt: '2026-09-22T15:00:00.000Z' },
 ];
 export const demoFriends: Friend[] = [
-  { id: '68d3c0e0-87f3-4d8e-82a2-91cf8b668a31', name: 'The neighborhood garden', did: '', url: 'https://example.com/garden', description: 'Growing good food and better friendships, one Saturday at a time.' },
-  { id: '68d3c0e0-87f3-4d8e-82a2-91cf8b668a32', name: 'An independent press', did: '', url: 'https://example.com/press', description: 'Small books with big feelings. Stories that deserve a little more room.' },
+  { id: '68d3c0e0-87f3-4d8e-82a2-91cf8b668a31', name: 'The neighborhood garden', did: 'did:plc:dddddddddddddddddddddddd', url: 'https://example.com/garden', description: 'Growing good food and better friendships, one Saturday at a time.' },
+  { id: '68d3c0e0-87f3-4d8e-82a2-91cf8b668a32', name: 'An independent press', did: 'did:plc:eeeeeeeeeeeeeeeeeeeeeeee', url: 'https://example.com/press', description: 'Small books with big feelings. Stories that deserve a little more room.' },
 ];
 export const demoSupports: Support[] = [
   ...Array.from({ length: 12 }, (_, i) => ({ projectId: 'backyard-sauna', amount: i === 0 ? 25000 : 7500 })),

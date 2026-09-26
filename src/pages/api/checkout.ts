@@ -31,6 +31,8 @@ export const POST: APIRoute = async (context) => {
       ...(visibility !== 'anonymous' ? { supporterDid: user!.did } : {}),
       status: 'pending', refundedAmount: 0, disputed: false, createdAt: new Date().toISOString(),
     };
+    // A browser capability is kept locally, never in a public record or receipt.
+    setKv(getDb(), 'checkout-owner', intent.id, digest(browser), 7 * 86400_000);
     if (config().demo) {
       putRecord(getDb(), 'support', intent.id, { ...intent, status: 'paid' });
       return context.redirect(`/thanks?id=${intent.id}`, 303);
