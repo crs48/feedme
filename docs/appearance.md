@@ -23,7 +23,7 @@ Project grids move from three to two to one column. The project page places its 
 
 Post avatars come from the Bluesky AppView's `author.avatar`, including project logs and the Following feed. Only credential-free HTTPS avatar URLs pass normalization; labeled profile images use the fallback. This uses the author data already fetched with each post, with no additional profile lookups. Creator/recommendation cards and supporter activity use sample portraits in demo mode and initials in live mode until profile metadata is available to those views.
 
-Demo mode includes six locally served 160px portraits, three project photos in 480px and 960px WebP variants, and photographs in the original sample updates. Authored posts and uploaded project covers are preserved. Below-the-fold project/post photos load lazily, and `srcset` lets the browser choose an appropriate size. Demo assets are illustrative, are never published to a real PDS, and have [source credits and licenses](../public/demo/CREDITS.md).
+Demo mode includes six locally served 160px portraits, three project photos in 480px and 960px WebP variants, and photographs in the original sample updates. Authored posts and creator-provided covers are preserved. Below-the-fold project/post photos load lazily, and `srcset` lets the browser choose an appropriate size. Demo assets are illustrative, are never published to a real PDS, and have [source credits and licenses](../public/demo/CREDITS.md).
 
 ## Hosted Checkout
 

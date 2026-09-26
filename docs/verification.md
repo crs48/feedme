@@ -3,7 +3,7 @@
 | Check | Result |
 | --- | --- |
 | `pnpm check` | No errors, warnings, or hints |
-| `pnpm test` | 56 tests across nine suites |
+| `pnpm test` | 58 tests across nine suites |
 | `pnpm build` | Production Node build passes |
 | Production health endpoint | HTTP 200 |
 | Cross-origin studio POST | HTTP 403 |
@@ -19,7 +19,7 @@
 
 The test suites cover integer amount parsing, private/public field projections, anonymous identity stripping, refund/dispute totals, owner authorization, redirect validation, encryption, expiry, transaction rollback, outbox revision races, duplicate and out-of-order Stripe events, actual Stripe signature verification, Habitat endpoint payloads, private write failure without public fallback, lexicon validation, and form/service authentication boundaries.
 
-Additional coverage includes actor-scoped OAuth writes, complete follow-list pagination, stable TID retries, receipt access before public posting, UTF-8 facets, safe Markdown/media rendering, native post ownership and deletion behavior, anonymous consent, and supporter timeline ordering/pagination.
+Additional coverage includes actor-scoped OAuth writes, complete follow-list pagination, stable TID retries, receipt access before public posting, UTF-8 facets, safe Markdown/media rendering, native post ownership and deletion behavior, anonymous consent, supporter timeline ordering/pagination, and preservation of safe avatar metadata and profile moderation labels through feed normalization.
 
 The anonymous browser test created a permitted timeline entry, and the public HTML contained neither its private note nor its amount. The separate public message started empty and was posted only after explicit confirmation. The mobile project layout places the support form before the growing log and supporter history.
 
@@ -30,7 +30,7 @@ Browser screenshots are generated locally under ignored `output/playwright/`. Th
 - [x] `pnpm check`, all 56 tests, and `pnpm build` pass after the redesign.
 - [x] Production profile, project, circle, updates, Following, login, and studio pages return HTTP 200 at 320, 390, 768, and 1440px widths (28 checks).
 - [x] Those pages have no horizontal document overflow, primary buttons below 44px, or visible text inputs below 16px.
-- [x] Desktop and mobile screenshots visually reviewed. At 390px, the project support form starts at 429px; the full Markdown story follows the form. Decorative placeholders are hidden on mobile project headers.
+- [x] Desktop and mobile screenshots visually reviewed. In the placeholder-only layout at 390px, the project support form starts at 429px; the full Markdown story follows the form. Decorative placeholders are hidden on mobile project headers; actual cover photos remain visible.
 - [x] Visibility selection shows anonymous timeline consent only when anonymous support is selected; named support remains disabled for signed-out visitors.
 - [x] With JavaScript disabled and touch emulation enabled, a signed-out visitor can expand the native note field, submit an anonymous demo tip, and reach its confirmation. Neither the private note nor anonymous amount appears in the public profile HTML.
 - [x] Keyboard focus reaches the skip link with a visible outline. The production homepage still contains zero script tags; no extra browser JavaScript or web fonts were added.
@@ -38,6 +38,15 @@ Browser screenshots are generated locally under ignored `output/playwright/`. Th
 - [ ] Visually compare a real connected-account Stripe test Checkout session with the local support page, including the merchant's existing logo and business name.
 
 See the [appearance guide](appearance.md) for the tokens, responsive behavior, and Stripe source documentation. Screenshots for this pass use the `stripe-` filename prefix in `output/playwright/`.
+
+## Avatars and sample photography
+
+- [x] All 58 tests, Astro checks, and the production build pass.
+- [x] Profile, updates, project, Following, and circle pages verified at 320, 390, 768, and 1440px (20 checks), with no horizontal overflow. Every displayed demo post has its author's portrait.
+- [x] Six stock portraits and three responsive project photos load from the local server; the demo makes no image-service requests. A fresh 390px browser selects the 480px project renditions.
+- [x] Public demo support uses consistent fictional identities and portraits; anonymous entries have no portrait and retain a generic icon. The original public support totals remain unchanged.
+- [x] Simulated a failed creator portrait request with JavaScript disabled. Initials render at the same 64px size, without a broken-image icon or added scripts. The homepage still has zero script tags.
+- [x] Desktop profile, mobile post, supporter timeline, and failure-fallback screenshots visually reviewed under `output/playwright/avatars-*` and `avatar-fallback-mobile.png`.
 
 ## Not verified
 
