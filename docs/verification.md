@@ -48,6 +48,17 @@ See the [appearance guide](appearance.md) for the tokens, responsive behavior, a
 - [x] Simulated a failed creator portrait request with JavaScript disabled. Initials render at the same 64px size, without a broken-image icon or added scripts. The homepage still has zero script tags.
 - [x] Desktop profile, mobile post, supporter timeline, and failure-fallback screenshots visually reviewed under `output/playwright/avatars-*` and `avatar-fallback-mobile.png`.
 
+## Bluesky and Stripe appearance
+
+- [x] `pnpm check`, all 58 tests, and `pnpm build` pass.
+- [x] Profile, updates, project, Following, circle, login, and studio pages return HTTP 200 at 320, 390, 768, and 1440px (28 checks), with no horizontal overflow, primary controls below 44px, or visible text inputs below 16px.
+- [x] Desktop and mobile screenshots reviewed for the cover/portrait profile, underlined tabs, compact feed, public supporter rows, and payment form. Artifacts use the `bluesky-stripe-` prefix in `output/playwright/`.
+- [x] With JavaScript disabled and touch emulation at 390px, followed a demo project, verified its two posts and avatars in Following, then unfollowed to restore the original state.
+- [x] Signed-out mobile profile renders the blue pill-shaped follow action, and the homepage still has zero script tags. Anonymous support keeps the generic portrait and hidden identity/amount.
+- [x] The shared primary blue (`#0866ff`) provides 4.82:1 white-text contrast and matches the typed per-session hosted Checkout branding. Social buttons use pills; payment controls keep their 6px radius.
+
+The real Stripe test-account visual comparison remains pending below; the hosted branding parameters were verified locally, not through a live payment session.
+
 ## Not verified
 
 - Real Habitat OAuth and live PDS/private-space interoperability using creator and supporter accounts, including the Bluesky AppView proxy.
