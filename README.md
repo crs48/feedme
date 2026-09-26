@@ -6,6 +6,8 @@ An open-source home for the projects, practices, and people you want to make mor
 
 TypeScript · pnpm · Astro · Tailwind CSS · Node · MIT licensed
 
+Repository: [crs48/feedme](https://github.com/crs48/feedme). Private during development, with a public release planned.
+
 ## Try it
 
 Use Node **24 LTS** and pnpm **10.11.1**.
@@ -110,3 +112,7 @@ The [verification report](docs/verification.md) records the passing local checks
 Organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
 
 This repository is a working first release, not an assertion that these later features already exist.
+
+## License
+
+[MIT](LICENSE) · Copyright © 2026 Christopher Smothers. Bundled demo media attribution is listed in [the media credits](public/demo/CREDITS.md).
