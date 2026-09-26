@@ -1,0 +1,211 @@
+---
+import { randomUUID } from 'node:crypto';
+import type { Project } from '../lib/model';
+import { money } from '../lib/model';
+import { allocateAmount } from '../lib/allocation';
+import { config } from '../lib/config';
+import { cookieOptions, digest, randomToken } from '../lib/auth';
+import { getDb, setKv } from '../lib/db';
+import { totals } from '../lib/repository';
+import Icon from './Icon.astro';
+interface Props { projects: Project[]; creatorName: string; }
+const { projects, creatorName } = Astro.props;
+const active = projects.filter((p) => p.status === 'active');
+const defaultAmount = 3000;
+const initial = active.length ? allocateAmount(defaultAmount, active.slice(0, 100).map((p) => ({ projectId: p.id, weight: 100 }))) : [];
+const requestId = randomUUID();
+const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
+Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 86400 });
+setKv(getDb(), 'checkout-form', requestId, { projectIds: active.map((p) => p.id), binding: digest(binding) }, 3600_000);
+const user = Astro.locals.user;
+const demo = config().demo;
+---
+<form class="support-allocator" data-allocator action="/api/checkout" method="post">
+  <input type="hidden" name="requestId" value={requestId}/>
+  <section class="allocation-projects" aria-labelledby="allocation-heading">
+    <div class="allocation-heading"><div><h2 id="allocation-heading" class="section-title">Where should your support go?</h2><p>Move the sliders to put more behind what matters to you.</p></div></div>
+    {active.length > 0 && <div class="allocation-tools"><span>Equal sliders = an equal split</span><div data-enhanced hidden><button type="button" data-even>Split evenly</button><button type="button" data-clear>Clear</button></div></div>}
+    <noscript><p class="notice">Sliders set relative shares of your total. Your exact dollar breakdown will appear at checkout. Set a slider to zero to leave that project out.</p></noscript>
+    <div class="project-list">{projects.map((p) => { const t = totals(p.id); const part = initial.find((part) => part.projectId === p.id); return <article class="allocation-project" data-project={p.id}>
+      <div class="project-topline"><span class="tag">{p.category}</span><span class="project-status">{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
+      <h3><a href={`/support/${p.id}`}>{p.title}<Icon name="arrow" size={16}/></a></h3>
+      <p class="project-summary">{p.summary}</p>
+      <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
+      {p.status === 'active' ? <div class="project-allocation">
+        <div class="allocation-label"><label for={`weight-${p.id}`}>Your allocation</label><output for={`weight-${p.id}`} data-project-output={p.id} data-enhanced hidden>{money(part?.amount || 0)} <span>{((part?.amount || 0) / defaultAmount * 100).toFixed(1)}%</span></output></div>
+        <input class="project-slider" type="range" name={`weight:${p.id}`} id={`weight-${p.id}`} min="0" max="100" step="1" value={part ? 50 : 0} data-weight={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
+        <div class="slider-scale" aria-hidden="true"><span>None</span><span>More</span></div>
+      </div> : <a class="completed-link" href={`/support/${p.id}`}>View project <Icon name="arrow" size={14}/></a>}
+    </article>; })}</div>
+    {!projects.length && <div class="panel"><h3 class="section-title mb-3">The first project is on its way.</h3><p class="muted text-sm">This creator is getting ready to share their work.</p></div>}
+    <p id="allocation-help" class="allocation-help">Sliders set relative shares. Select just one project to give it your full amount. Every tip goes to {creatorName}, regardless of a project’s progress.</p>
+  </section>
+  {active.length > 0 && <aside class="donation-panel" aria-label="Your support">
+    <div class="donation-total" id="donation-total">
+      <h2 class="section-title">Your support</h2><p class="donation-subtitle">One amount. More room for good things.</p>
+      <label class="field total-field">Total amount<span class="total-input"><span aria-hidden="true">$</span><input name="amount" type="number" inputmode="decimal" min="1" max="1000" step="0.01" value="30" required aria-label="Total amount in USD"/><span>USD</span></span></label>
+      <div class="amount-presets" data-enhanced hidden aria-label="Suggested amounts">{[10, 30, 50, 100].map((amount) => <button type="button" data-amount={amount} aria-pressed={amount === 30}>{money(amount * 100)}</button>)}</div>
+      <p class="one-time">A one-time tip for {creatorName}.</p>
+    </div>
+    <div class="donation-checkout" id="donation-checkout">
+      <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>{initial.length} projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id}><span>{p.title}</span><strong data-summary-amount={p.id}>{money(initial.find((part) => part.projectId === p.id)?.amount || 0)}</strong></li>)}</ul><p data-allocation-error class="allocation-error" role="status" hidden></p></div>
+      <details class="support-options"><summary>Visibility & note <span data-visibility-label>Anonymous</span></summary>
+        <fieldset class="allocation-privacy"><legend class="sr-only">Support visibility</legend>
+          <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
+          <label><input type="radio" name="visibility" value="private" disabled={!user}/><span><strong>Private</strong><small>Your identity is shared only with the creator.</small></span></label>
+          <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Public</strong><small>Publish your identity, amount, and date for each selected project.</small></span></label>
+        </fieldset>
+        <label class="anonymous-consent"><input type="checkbox" name="announceAnonymously" value="yes"/><span>Show “Anonymous” on each project’s public timeline. Keep my identity and amounts hidden.</span></label>
+        {!user && <p class="sign-in-hint"><a href="/login?returnTo=/">Sign in with AT Protocol</a> for private or public support.</p>}
+        <label class="field note-field">Private note <span class="muted">(optional)</span><textarea name="note" maxlength="500" rows="3" placeholder="A little encouragement…"></textarea><small class="muted">Only the creator sees this.</small></label>
+      </details>
+      <div class="checkout-total" data-enhanced hidden><span>Total</span><strong data-total-output>{money(defaultAmount)}</strong></div>
+      <button type="submit" class="button full allocation-submit">{demo ? 'Try a demo tip' : 'Continue to Stripe'}<Icon name="arrow" size={16}/></button>
+      <p class="checkout-caption"><Icon name="lock" size={12}/>{demo ? 'Demo only. No card details or charges.' : 'One secure checkout, powered by Stripe.'}</p>
+      <p class="allocation-disclosure">Anonymous tips stay off the public timeline unless you opt in. Stripe and the recipient may still see billing details.</p>
+    </div>
+  </aside>}
+  {active.length > 0 && <div class="allocation-mobile-bar" data-enhanced hidden><div><span>Your total</span><strong data-total-output>{money(defaultAmount)}</strong></div><a class="button" href="#donation-checkout">Review support <Icon name="arrow" size={16}/></a></div>}
+</form>
+<script>
+  import { allocateAmount } from '../lib/allocation';
+  const form = document.querySelector<HTMLFormElement>('[data-allocator]');
+  if (form) {
+    const total = form.querySelector<HTMLInputElement>('[name="amount"]');
+    const sliders = [...form.querySelectorAll<HTMLInputElement>('[data-weight]')];
+    const currency = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
+    const update = () => {
+      if (!total) return;
+      const amount = Math.round(Number(total.value) * 100);
+      let parts: ReturnType<typeof allocateAmount> = [];
+      let error = '';
+      try {
+        if (!total.value || !total.validity.valid) throw new Error('Choose a total between $1 and $1,000.');
+        parts = allocateAmount(amount, sliders.map((slider) => ({ projectId: slider.dataset.weight!, weight: Number(slider.value) })));
+      } catch (cause) { error = (cause as Error).message; }
+      for (const slider of sliders) {
+        const part = parts.find((part) => part.projectId === slider.dataset.weight);
+        const cents = part?.amount || 0;
+        const share = parts.length ? `${Number((cents / amount * 100).toFixed(1))}%` : '0%';
+        slider.style.setProperty('--fill', `${slider.value}%`);
+        slider.setAttribute('aria-valuetext', `${currency(cents)}, ${share} of your total`);
+        const output = form.querySelector<HTMLOutputElement>(`[data-project-output="${slider.dataset.weight}"]`);
+        if (output) { output.replaceChildren(document.createTextNode(`${currency(cents)} `)); const percentage = document.createElement('span'); percentage.textContent = share; output.append(percentage); }
+        const row = form.querySelector<HTMLElement>(`[data-summary-row="${slider.dataset.weight}"]`);
+        if (row) row.hidden = !part;
+        const value = form.querySelector<HTMLElement>(`[data-summary-amount="${slider.dataset.weight}"]`);
+        if (value) value.textContent = currency(cents);
+      }
+      form.querySelectorAll('[data-total-output]').forEach((output) => { output.textContent = total.value && total.validity.valid ? currency(amount) : '—'; });
+      const count = form.querySelector('[data-project-count]');
+      if (count) count.textContent = `${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`;
+      const message = form.querySelector<HTMLElement>('[data-allocation-error]');
+      if (message) { message.textContent = error; message.hidden = !error; }
+      const submit = form.querySelector<HTMLButtonElement>('[type="submit"]');
+      if (submit) submit.disabled = Boolean(error);
+      form.querySelectorAll<HTMLButtonElement>('[data-amount]').forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.amount) === Number(total.value))));
+    };
+    form.querySelectorAll<HTMLElement>('[data-enhanced]').forEach((element) => { element.hidden = false; });
+    form.addEventListener('input', update);
+    form.addEventListener('change', () => {
+      const label = form.querySelector('[data-visibility-label]');
+      const selected = form.querySelector<HTMLInputElement>('[name="visibility"]:checked')?.value || 'anonymous';
+      if (label) label.textContent = selected[0].toUpperCase() + selected.slice(1);
+    });
+    form.querySelector('[data-even]')?.addEventListener('click', () => { sliders.forEach((slider, index) => { slider.value = index < 100 ? '50' : '0'; }); update(); });
+    form.querySelector('[data-clear]')?.addEventListener('click', () => { sliders.forEach((slider) => { slider.value = '0'; }); update(); });
+    form.querySelectorAll<HTMLButtonElement>('[data-amount]').forEach((button) => button.addEventListener('click', () => { if (total) total.value = button.dataset.amount!; update(); }));
+    update();
+  }
+</script>
+<style>
+  [hidden] { display: none !important; }
+  .support-allocator { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); align-items: start; gap: 40px; margin-top: 32px; }
+  .allocation-projects { min-width: 0; }
+  .allocation-heading p { color: var(--color-muted); font-size: 14px; margin-top: 8px; }
+  .allocation-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 14px 6px; font-size: 12px; color: var(--color-muted); }
+  .allocation-tools > div { display: flex; gap: 16px; }
+  .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .project-list { border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; }
+  .allocation-project { padding: 22px 24px 20px; }
+  .allocation-project + .allocation-project { border-top: 1px solid var(--color-border); }
+  .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+  .project-status { color: var(--color-muted); font-size: 12px; }
+  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-weight: 650; line-height: 1.4; letter-spacing: -.02em; }
+  h3 a:hover { color: var(--color-primary); }
+  h3 a svg { color: var(--color-muted); }
+  .project-summary { font-size: 14px; line-height: 1.6; color: var(--color-muted); margin-top: 4px; }
+  .project-funding { font-size: 12px; color: var(--color-muted); margin-top: 12px; }
+  .project-funding strong { font-weight: 600; color: var(--color-ink); }
+  .project-allocation { margin-top: 20px; }
+  .allocation-label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .allocation-label label { color: var(--color-muted); font-size: 12px; }
+  .allocation-label output { color: var(--color-primary); font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-weight: 400; margin-left: 5px; }
+  .project-slider { display: block; appearance: none; width: 100%; height: 44px; margin: 0; cursor: pointer; background: transparent; accent-color: var(--color-primary); }
+  .project-slider::-webkit-slider-runnable-track { height: 5px; border-radius: 5px; background: linear-gradient(to right, var(--color-primary) var(--fill, 0%), #e3e8ee var(--fill, 0%)); }
+  .project-slider::-moz-range-track { height: 5px; border-radius: 5px; background: #e3e8ee; }
+  .project-slider::-moz-range-progress { height: 5px; background: var(--color-primary); }
+  .project-slider::-webkit-slider-thumb { appearance: none; width: 22px; height: 22px; border: 2px solid var(--color-primary); background: white; border-radius: 50%; margin-top: -8.5px; box-shadow: 0 1px 4px #172b3a26; }
+  .project-slider::-moz-range-thumb { width: 19px; height: 19px; border: 2px solid var(--color-primary); background: white; border-radius: 50%; box-shadow: 0 1px 4px #172b3a26; }
+  .slider-scale { display: flex; justify-content: space-between; margin-top: -3px; font-size: 11px; color: var(--color-muted); }
+  .completed-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; font-size: 13px; color: var(--color-primary); margin-top: 10px; }
+  .allocation-help { font-size: 12px; color: var(--color-muted); margin-top: 16px; }
+  .donation-panel { position: sticky; top: 24px; padding: 24px; border: 1px solid var(--color-border); border-radius: 14px; box-shadow: 0 4px 24px #1a1f3608; background: white; }
+  .donation-panel h2 { font-size: 21px; }
+  .donation-subtitle { font-size: 13px; color: var(--color-muted); margin-top: 5px; }
+  .total-field { margin-block: 24px 12px; font-size: 13px; }
+  .total-input { display: flex; align-items: center; gap: 10px; border: 1px solid #c0c8d2; border-radius: 6px; padding-inline: 14px; }
+  .total-input:focus-within { outline: 3px solid #0866ff26; border-color: var(--color-primary); }
+  .total-input > span:first-child { font-size: 25px; color: var(--color-muted); }
+  .total-input > span:last-child { font-size: 12px; color: var(--color-muted); }
+  .total-input input { min-height: 60px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 30px; font-weight: 600; }
+  .amount-presets { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-weight: 600; }
+  .amount-presets button[aria-pressed='true'] { color: var(--color-primary); border-color: var(--color-primary); background: #f2f7ff; }
+  .one-time { font-size: 12px; color: var(--color-muted); margin-top: 12px; }
+  .split-summary { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+  .split-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--color-muted); margin-bottom: 10px; }
+  .split-heading h3 { color: var(--color-ink); font-size: 13px; font-weight: 600; }
+  .split-summary li { display: flex; justify-content: space-between; gap: 16px; padding-block: 7px; font-size: 12px; line-height: 1.5; }
+  .split-summary li span { color: var(--color-muted); }
+  .split-summary li strong { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .allocation-error { font-size: 13px; color: #a12727; padding-block: 8px; }
+  .support-options { margin-block: 16px; border-block: 1px solid var(--color-border); }
+  .support-options summary { padding-block: 12px; font-size: 13px; font-weight: 500; }
+  .support-options summary > span { float: right; color: var(--color-muted); font-size: 12px; font-weight: 400; }
+  .allocation-privacy { border: 0; padding: 0; margin: 4px 0 16px; }
+  .allocation-privacy label, .anonymous-consent { display: flex; align-items: flex-start; gap: 8px; padding-block: 10px; cursor: pointer; }
+  .allocation-privacy input, .anonymous-consent input { margin-top: 2px; }
+  .allocation-privacy strong { display: block; font-size: 13px; font-weight: 500; }
+  .allocation-privacy small, .anonymous-consent { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
+  .allocation-privacy label:has(input:disabled) { opacity: .6; cursor: not-allowed; }
+  form:has(input[name='visibility']:checked:not([value='anonymous'])) .anonymous-consent { display: none; }
+  .sign-in-hint { font-size: 12px; color: var(--color-muted); margin-block: 8px 16px; }
+  .sign-in-hint a { color: var(--color-primary); text-decoration: underline; }
+  .note-field { display: block; margin-block: 16px; font-size: 13px; }
+  .note-field textarea { margin-top: 8px; }
+  .checkout-total { display: flex; justify-content: space-between; gap: 16px; margin-block: 20px 16px; font-size: 14px; }
+  .checkout-total strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .allocation-submit { min-height: 48px; }
+  .checkout-caption { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; color: var(--color-muted); margin-top: 12px; text-align: center; }
+  .allocation-disclosure { color: var(--color-muted); font-size: 12px; margin-top: 16px; }
+  .allocation-mobile-bar { display: none; }
+  @media(max-width:1000px) { .support-allocator { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 24px; } .donation-panel { padding: 20px; } .allocation-project { padding-inline: 20px; } }
+  @media(max-width:800px) {
+    .support-allocator { grid-template-columns: minmax(0,1fr); gap: 24px; }
+    .donation-panel { display: contents; }
+    .donation-total { grid-row: 1; padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; }
+    .allocation-projects { grid-row: 2; }
+    .donation-checkout { grid-row: 3; padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; scroll-margin-top: 20px; }
+    .split-summary { margin-top: 0; padding-top: 0; border: 0; }
+    .allocation-mobile-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px max(20px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)); background: white; border-top: 1px solid var(--color-border); box-shadow: 0 -2px 16px #1a1f3608; }
+    .allocation-mobile-bar > div { display: grid; line-height: 1.4; }
+    .allocation-mobile-bar span { font-size: 12px; color: var(--color-muted); }
+    .allocation-mobile-bar strong { font-size: 18px; }
+    :global(body:has([data-allocator])) { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .allocation-tools { align-items: center; font-size: 11px; gap: 8px; }
+    .allocation-tools > div { gap: 12px; }
+  }
+  @media(max-width:359px) { .allocation-project, .donation-total, .donation-checkout { padding-inline: 16px; } .allocation-tools { flex-wrap: wrap; } }
+</style>

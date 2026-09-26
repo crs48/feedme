@@ -1,6 +1,6 @@
 # Appearance
 
-Feedme combines Bluesky’s social layout with Stripe’s restrained payment interface: bright blue actions, circular portraits, compact feed rows, white surfaces, slate text, thin neutral borders, and system typography. The creator and their projects remain the focus. No external font requests or new browser JavaScript are required.
+Feedme combines Bluesky’s social layout with Stripe’s restrained payment interface: bright blue actions, circular portraits, compact feed rows, white surfaces, slate text, thin neutral borders, and system typography. The creator and their projects remain the focus. No external font requests are required. The homepage allocation calculator uses a small, same-origin JavaScript module; the underlying range inputs and checkout form still work without it.
 
 | Token | Value | Purpose |
 | --- | --- | --- |
@@ -21,7 +21,13 @@ The visual reference is [Bluesky’s public profile interface](https://bsky.app/
 
 ## Mobile layout
 
-Project grids move from three to two to one column. The project page places its summary and section links first, then the support form, then the full Markdown story, updates, and supporter timeline. The full story never pushes the payment form down the page. Decorative fallback artwork is omitted on the mobile project page; creator-provided images remain visible. Optional private notes use native `details`, and visibility selection uses ordinary radios with CSS state styling.
+The homepage lists projects without cover images, alongside a sticky support panel on desktop. On mobile, the total amount appears first, followed by project sliders and the checkout breakdown. A fixed review bar keeps the chosen total in view. Project pages retain their images. The project page places its summary and section links first, then the support form, then the full Markdown story, updates, and supporter timeline. The full story never pushes the payment form down the page. Decorative fallback artwork is omitted on the mobile project page; creator-provided images remain visible. Optional private notes use native `details`, and visibility selection uses ordinary radios with CSS state styling.
+
+## Allocating one tip
+
+Each slider is a relative weight from 0 to 100. Equal weights split the total equally; one nonzero slider receives the whole total. Zero-weight projects are excluded. Dollar amounts and percentages update immediately, and clearing all sliders disables checkout with an explanation. “Split evenly” and amount presets are conveniences; native sliders and the total field remain usable without JavaScript.
+
+The browser and server share the same integer-cent allocation function. Leftover cents go to the largest fractional shares, with ties resolved in the displayed project order. The server recomputes the amounts rather than trusting the displayed values. See [split support](split-support.md) for the payment and refund behavior.
 
 ## Portraits and photography
 

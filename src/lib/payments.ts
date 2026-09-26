@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { enqueue, getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
-import { NS, privateReceipt, publicAcknowledgment, publicTipActivity, type Support } from './model';
+import { NS, privateReceipt, publicAcknowledgment, publicTipActivity, supportParts, type Support } from './model';
 import { privateSpace } from './habitat';
 
 export const stripeClient = () => {
@@ -24,14 +24,18 @@ export const connectStripe = async () => {
     return_url: `${config().origin}/studio?notice=Stripe%20details%20saved.%20Checkout%20will%20verify%20payment%20readiness.`,
   });
 };
-export const checkout = async (intent: Support, title: string) => {
+export const checkout = async (intent: Support, items: { title: string; amount: number }[]) => {
+  if (!items.length || items.length > 100 || items.some((item) => !Number.isSafeInteger(item.amount) || item.amount < 1) || items.reduce((sum, item) => sum + item.amount, 0) !== intent.amount)
+    throw new Error('The project allocations must match the total support.');
   if (!privateSpace()) throw new Error('The creator needs to connect private storage before receiving support.');
   const stripe = stripeClient();
   const account = connectedAccount();
   if (!account) throw new Error('The creator hasn’t connected Stripe yet.');
   const readiness = await stripe.accounts.retrieve(account);
   if (!readiness.charges_enabled || !readiness.payouts_enabled) throw new Error('The creator’s Stripe account is still being set up.');
-  const current = { ...intent, accountId: account };
+  const stored = readRecord<Support>(getDb(), 'support', intent.id);
+  if (stored?.accountId && stored.accountId !== account) throw new Error('This checkout belongs to a different connected account. Start a new one.');
+  const current = { ...intent, ...stored, accountId: account };
   putRecord(getDb(), 'support', intent.id, current);
   const result = await stripe.checkout.sessions.create({
     mode: 'payment', client_reference_id: intent.id,
@@ -39,9 +43,9 @@ export const checkout = async (intent: Support, title: string) => {
     branding_settings: { background_color: '#ffffff', button_color: '#0866ff', border_style: 'rounded', font_family: 'default' },
     metadata: { feedme_support_id: intent.id },
     payment_intent_data: { metadata: { feedme_support_id: intent.id } },
-    line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: intent.amount, product_data: { name: `Support: ${title}` } } }],
+    line_items: items.map(({ title, amount }) => ({ quantity: 1, price_data: { currency: 'usd', unit_amount: amount, product_data: { name: `Support: ${title}` } } })),
     success_url: `${config().origin}/thanks?id=${intent.id}`,
-    cancel_url: `${config().origin}/support/${intent.projectId}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
+    cancel_url: `${config().origin}${intent.allocations ? '/' : `/support/${intent.projectId}`}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
   }, { stripeAccount: account, idempotencyKey: `feedme-checkout-${intent.id}` });
   // A webhook may arrive before this API call returns. Preserve its newer status.
   const latest = readRecord<Support>(getDb(), 'support', intent.id) || current;
@@ -52,9 +56,11 @@ export const checkout = async (intent: Support, title: string) => {
 
 const queueSupport = (db: DatabaseSync, s: Support, ownerDid: string) => {
   putRecord(db, 'support', s.id, s);
-  enqueue(db, 'private', `${NS}.support`, s.id, privateReceipt(s));
-  if (s.visibility === 'public') enqueue(db, 'public', `${NS}.acknowledgment`, s.id, publicAcknowledgment(s, ownerDid));
-  if (s.activityId && (s.visibility === 'public' || s.announceAnonymously)) enqueue(db, 'public', `${NS}.activity`, s.activityId, publicTipActivity(s, ownerDid));
+  for (const part of supportParts(s)) {
+    enqueue(db, 'private', `${NS}.support`, part.id, privateReceipt(part));
+    if (part.visibility === 'public') enqueue(db, 'public', `${NS}.acknowledgment`, part.id, publicAcknowledgment(part, ownerDid));
+    if (part.activityId && (part.visibility === 'public' || part.announceAnonymously)) enqueue(db, 'public', `${NS}.activity`, part.activityId, publicTipActivity(part, ownerDid));
+  }
 };
 // Called only AFTER verifying Stripe's raw-body signature. Exported for deterministic tests.
 export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string, supportIdHint?: string) => {

@@ -3,7 +3,7 @@
 | Check | Result |
 | --- | --- |
 | `pnpm check` | No errors, warnings, or hints |
-| `pnpm test` | 58 tests across nine suites |
+| `pnpm test` | 75 tests across twelve suites |
 | `pnpm build` | Production Node build passes |
 | Production health endpoint | HTTP 200 |
 | Cross-origin studio POST | HTTP 403 |
@@ -11,7 +11,7 @@
 | Anonymous studio page | Redirects to sign-in |
 | Sync without bearer token | HTTP 401 |
 | Sync with correct bearer token, without browser Origin | HTTP 200 |
-| Production homepage | Server-rendered supporter timeline and zero script tags |
+| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,281 bytes gzipped) |
 | Browser assets | Static CSS; a small video initializer on post pages, with a 1,093-byte gzipped initializer and a 113,161-byte gzipped HLS light bundle loaded only on demand |
 | Desktop browser | Creator follow, project follow, Following feed, native demo post, and Markdown editing verified |
 | Mobile browser, JavaScript disabled | Anonymous tip with timeline consent, sign-in return, and explicit public post verified |
@@ -58,6 +58,18 @@ See the [appearance guide](appearance.md) for the tokens, responsive behavior, a
 - [x] The shared primary blue (`#0866ff`) provides 4.82:1 white-text contrast and matches the typed per-session hosted Checkout branding. Social buttons use pills; payment controls keep their 6px radius.
 
 The real Stripe test-account visual comparison remains pending below; the hosted branding parameters were verified locally, not through a live payment session.
+
+## Homepage split support
+
+- [x] `pnpm check`, all 75 tests across twelve suites, and `pnpm build` pass.
+- [x] Replaced homepage project cover cards with a text-first project list and relative sliders; images remain on project detail pages.
+- [x] Production browser verifies $30 split equally with all sliders at maximum, $30 to one selected project, a 2:1 split of $20/$10, and a $1 split of $0.34/$0.33/$0.33. All-zero selection disables checkout and explains why.
+- [x] Desktop support panel remains sticky at 24px while scrolling the list. At 320, 390, 768, and 1440px, no horizontal overflow or primary buttons under 44px. Mobile amount selection, sliders, persistent review bar, and checkout summary visually reviewed.
+- [x] Browser-submitted anonymous demo splits confirm $30.01 as $20.01/$10 with JavaScript and $24.01 as $16.01/$8 without JavaScript. Public totals remain unchanged. Screenshots use `allocation-*` in `output/playwright/`.
+- [x] The calculator is one external 3,105-byte module (1,281 bytes gzipped); production CSP permits it without allowing inline scripts. Earlier zero-script homepage checks above describe the previous interface.
+- [x] Unit/provider tests verify exact connected-account Checkout line items, parent idempotency, mismatched allocation rejection, repeat submissions, receipt privacy, per-project public projections, webhook races, partial/full refunds, and disputes. Original single-project checkout remains supported.
+
+See [split support](split-support.md) for the deterministic cent-rounding and cumulative refund rules. Live Stripe Checkout remains an operator acceptance item.
 
 ## Not verified
 

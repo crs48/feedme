@@ -3,7 +3,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import Stripe from 'stripe';
 import { applyStripeEvent } from '../src/lib/payments';
 import { openDatabase, pendingWrites, putRecord, readRecord } from '../src/lib/db';
-import { type Support } from '../src/lib/model';
+import { supportParts, netSupport, type Support } from '../src/lib/model';
 
 const owner = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa';
 const initial: Support = { id: 'tip-1', projectId: 'sauna', amount: 2500, currency: 'usd', visibility: 'public', supporterDid: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', note: 'Private', status: 'pending', refundedAmount: 0, disputed: false, createdAt: '2026-09-25T12:00:00.000Z', accountId: 'acct_creator' };
@@ -94,5 +94,42 @@ describe('verified Stripe events', () => {
     const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
     expect(stripe.webhooks.constructEvent(payload, header, secret).id).toBe('evt_signed');
     expect(() => stripe.webhooks.constructEvent(payload.replace('2500', '2501'), header, secret)).toThrow();
+  });
+  it('settles a split once and publishes separate project amounts without exposing the parent allocation', () => {
+    putRecord(db, 'support', initial.id, { ...initial, allocations: [
+      { projectId: 'sauna', amount: 1700, activityId: 'part-a' }, { projectId: 'writing', amount: 800, activityId: 'part-b' },
+    ] });
+    applyStripeEvent(db, event('evt_split'), owner, 'acct_creator');
+    expect(applyStripeEvent(db, event('evt_split'), owner, 'acct_creator')).toBe('duplicate');
+    const acks = pendingWrites(db).filter((r) => r.collection === 'social.feedme.acknowledgment');
+    expect(acks.map((r) => (r.value as { amount: number }).amount)).toEqual([1700, 800]);
+    expect(pendingWrites(db).filter((r) => r.destination === 'private')).toHaveLength(2);
+    for (const row of pendingWrites(db).filter((r) => r.destination === 'public')) {
+      expect(row.value).not.toHaveProperty('note');
+      expect(row.value).not.toHaveProperty('allocations');
+      expect(row.value).not.toHaveProperty('paymentIntentId');
+    }
+    applyStripeEvent(db, event('evt_partial_split', 'charge.refunded', { amount_refunded: 1800 }), owner, 'acct_creator');
+    expect(supportParts(current()).map(netSupport)).toEqual([0, 700]);
+    expect(pendingWrites(db).find((r) => r.rkey === 'part-a')?.value).toBeNull();
+    applyStripeEvent(db, event('evt_old_split', 'charge.refunded', { amount_refunded: 100 }), owner, 'acct_creator');
+    expect(supportParts(current()).map(netSupport)).toEqual([0, 700]);
+    applyStripeEvent(db, event('evt_full_split', 'charge.refunded', { amount_refunded: 2500 }), owner, 'acct_creator');
+    expect(pendingWrites(db).filter((r) => r.destination === 'public').every((r) => r.value === null)).toBe(true);
+  });
+  it('disputes and restores all parts together; anonymous activities omit all amounts', () => {
+    putRecord(db, 'support', initial.id, { ...initial, visibility: 'anonymous', supporterDid: undefined, announceAnonymously: true, allocations: [
+      { projectId: 'sauna', amount: 1700, activityId: 'anon-a' }, { projectId: 'writing', amount: 800, activityId: 'anon-b' },
+    ] });
+    applyStripeEvent(db, event('evt_split_paid'), owner, 'acct_creator');
+    const publicRows = () => pendingWrites(db).filter((r) => r.destination === 'public');
+    expect(publicRows()).toHaveLength(2);
+    expect(publicRows().every((r) => Object.keys(r.value as object).sort().join() === '$type,createdAt,project,visibility')).toBe(true);
+    applyStripeEvent(db, event('evt_split_disputed', 'charge.dispute.created', { id: 'dp_split' }), owner, 'acct_creator');
+    expect(supportParts(current()).map(netSupport)).toEqual([0, 0]);
+    expect(publicRows().every((r) => r.value === null)).toBe(true);
+    applyStripeEvent(db, event('evt_split_won', 'charge.dispute.closed', { id: 'dp_split', status: 'won' }, 200), owner, 'acct_creator');
+    expect(supportParts(current()).map(netSupport)).toEqual([1700, 800]);
+    expect(publicRows().every((r) => r.value !== null)).toBe(true);
   });
 });

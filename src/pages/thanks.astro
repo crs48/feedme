@@ -9,6 +9,7 @@ import { config } from '../lib/config';
 import { canAccessTip, canShareTip } from '../lib/tip-sharing';
 import { publishedPost } from '../lib/social-repo';
 import { blueskyPostUrl, projectUri } from '../lib/social-model';
+import { money, netSupport, supportParts } from '../lib/model';
 const s = support(Astro.url.searchParams.get('id') || '');
 const paid = s?.status === 'paid';
 const user = Astro.locals.user;
@@ -16,6 +17,7 @@ const browser = Astro.cookies.get('feedme_checkout')?.value;
 const accessible = canAccessTip(s, user, browser);
 const shareable = canShareTip(s, user, browser);
 const p = accessible && s ? project(s.projectId) : undefined;
+const allocations = accessible && s?.allocations ? supportParts(s) : [];
 const saved = shareable && user && s ? publishedPost(user.did, `tip:${s.id}`) : undefined;
 const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
 ---
@@ -23,14 +25,15 @@ const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
   <section class="shell py-14"><div class="max-w-xl mx-auto text-center">
     <span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={paid ? 'heart' : 'leaf'} size={34}/></span><p class="eyebrow">{config().demo ? 'Demo tip' : 'Payment status'}</p><h1 class="display text-4xl my-5">{paid ? 'Thank you for your support.' : 'Confirming your payment.'}</h1><p class="muted text-sm">{config().demo && paid ? 'Your demo tip is saved. No money changed hands — but you can see how the real experience will feel.' : paid ? 'Your support is confirmed. Thank you for helping someone spend more time on what matters.' : 'Payment is not confirmed yet. This page only shows success after Stripe sends a verified payment event.'}</p>
     {!paid && <a class="button secondary mt-5" href={returnTo}>Check payment status</a>}
-    {paid && p && <div class="panel text-left mt-8"><p class="eyebrow mb-2">Project updates</p><h2 class="section-title mb-4">Keep up with this project</h2><FollowButton kind="project" subject={projectUri(config().ownerDid, p.id)} title={p.title} returnTo={returnTo}/></div>}
-    {paid && accessible && !user && <p class="notice text-sm"><a class="underline" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</a> to follow this project or write a public message about your support.</p>}
+    {paid && allocations.length > 0 && <div class="panel text-left mt-8"><h2 class="section-title mb-4">Your support breakdown</h2><ul>{allocations.map((part) => <li class="flex justify-between gap-4 border-b border-border py-3 text-sm"><a class="text-primary" href={`/support/${part.projectId}`}>{project(part.projectId)?.title || 'Project'}</a><strong class="whitespace-nowrap">{money(netSupport(part))}</strong></li>)}</ul><p class="text-sm font-semibold mt-4">Total: {money(netSupport(s!))}</p></div>}
+    {paid && p && !allocations.length && <div class="panel text-left mt-8"><p class="eyebrow mb-2">Project updates</p><h2 class="section-title mb-4">Keep up with this project</h2><FollowButton kind="project" subject={projectUri(config().ownerDid, p.id)} title={p.title} returnTo={returnTo}/></div>}
+    {paid && accessible && !user && <p class="notice text-sm"><a class="underline" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</a> to follow projects or write a public message about your support.</p>}
     {shareable && user && s && <div class="panel text-left mt-6">
       <p class="eyebrow mb-2">Share your support</p><h2 class="section-title mb-4">{saved?.uri ? 'Your public message' : 'Leave a public message'}</h2>
       {saved?.uri ? <><p class="prose-copy text-sm mb-4">{String(saved.record.text)}</p><a class="button secondary" href={config().demo ? '/following?view=people' : blueskyPostUrl(saved.uri)} rel="noopener noreferrer">{config().demo ? 'View your demo post' : 'View on Bluesky'} ↗</a></> : <form method="post" action="/api/social">
         <input type="hidden" name="action" value="post"/><input type="hidden" name="supportId" value={s.id}/>
         <label class="field">Your public words<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…">{saved ? String(saved.record.text) : ''}</textarea></label>
-        <p class="muted text-xs mb-4">Up to 300 characters. Includes a link to this project. Your private tip note and amount are never copied here.</p>
+        <p class="muted text-xs mb-4">Up to 300 characters. Includes a link to {allocations.length ? 'the creator’s projects' : 'this project'}. Your private tip note and amount are never copied here.</p>
         <p class="text-xs muted mb-4 break-all">Posting as {user.did}</p>
         <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this message publicly under my AT Protocol identity. This identifies me even if my tip was anonymous.</span></label>
         <button class="button">{config().demo ? 'Try a demo public post' : 'Publish on Bluesky'}</button>

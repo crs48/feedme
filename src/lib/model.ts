@@ -47,6 +47,20 @@ export type Support = {
   refundedAmount: number; disputed: boolean; createdAt: string;
   checkoutId?: string; paymentIntentId?: string; accountId?: string;
   announceAnonymously?: boolean; activityId?: string;
+  allocations?: { projectId: string; amount: number; activityId: string }[];
+};
+
+// One payment remains the authoritative record. Views and portable receipts use its parts.
+// Cumulative refunds consume parts in saved order, so an older event cannot restore a cent.
+export const supportParts = (support: Support): Support[] => {
+  if (!support.allocations) return [support];
+  const { allocations, ...payment } = support;
+  let refunded = support.refundedAmount;
+  return allocations.map((part, index) => {
+    const refundedAmount = Math.min(part.amount, refunded);
+    refunded -= refundedAmount;
+    return { ...payment, ...part, id: `${support.id}-${index}`, refundedAmount };
+  });
 };
 
 export const centsFromInput = (input: unknown): number => {

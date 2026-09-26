@@ -8,6 +8,7 @@ export default defineConfig({
   // Middleware enforces exact origins for forms while allowing signed Stripe
   // webhooks and bearer-authenticated background sync from outside the browser.
   security: { checkOrigin: false },
-  vite: { plugins: [tailwindcss()], ssr: { external: ['node:sqlite'] } },
+  // Serve small progressive-enhancement scripts as same-origin assets under CSP.
+  vite: { plugins: [tailwindcss()], build: { assetsInlineLimit: 0 }, ssr: { external: ['node:sqlite'] } },
   devToolbar: { enabled: false },
 });

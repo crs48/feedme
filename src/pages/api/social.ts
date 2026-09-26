@@ -3,8 +3,8 @@ import { currentUser } from '../../lib/auth';
 import { config } from '../../lib/config';
 import { errorMessage, formObject, redirectNotice, safeReturnPath } from '../../lib/http';
 import { changeFollow, publishPost } from '../../lib/social-repo';
-import { projectPost, projectUri, publicPostText } from '../../lib/social-model';
-import { project, support } from '../../lib/repository';
+import { POST as BSKY_POST, projectPost, projectUri, publicPostText } from '../../lib/social-model';
+import { profile, project, support } from '../../lib/repository';
 import { canShareTip } from '../../lib/tip-sharing';
 
 export const POST: APIRoute = async (context) => {
@@ -26,7 +26,11 @@ export const POST: APIRoute = async (context) => {
       if (form.consent !== 'public') throw new Error('Confirm that you want to publish this message publicly.');
       const p = project(s!.projectId);
       if (!p) throw new Error('This project is no longer available.');
-      await publishPost(user.did, `tip:${s!.id}`, projectPost(publicPostText(form.publicText), {
+      const text = publicPostText(form.publicText);
+      await publishPost(user.did, `tip:${s!.id}`, s!.allocations ? {
+        $type: BSKY_POST, text, createdAt: new Date().toISOString(),
+        embed: { $type: 'app.bsky.embed.external', external: { uri: config().origin, title: `${profile().name}’s projects`, description: 'Independent work, supported.' } },
+      } : projectPost(text, {
         title: p.title, summary: p.summary, uri: projectUri(config().ownerDid, p.id), url: `${config().origin}/support/${p.id}`,
       }, new Date().toISOString()));
       return redirectNotice(returnTo, config().demo ? 'Your demo post is saved. Nothing was published to the network.' : 'Your message is published on Bluesky.');

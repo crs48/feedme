@@ -1,13 +1,13 @@
 import { config } from './config';
 import { enqueue, getDb, listRecords, putRecord, readRecord, transaction } from './db';
-import { NS, netSupport, projectSchema, profileSchema, updateSchema, friendSchema, type Friend, type Profile, type Project, type Support, type Update } from './model';
+import { NS, netSupport, supportParts, projectSchema, profileSchema, updateSchema, friendSchema, type Friend, type Profile, type Project, type Support, type Update } from './model';
 
 export const profile = () => readRecord<Profile>(getDb(), 'profile', 'self')!;
 export const projects = (includeArchived = false) => listRecords<Project>(getDb(), 'project').filter((p) => includeArchived || p.status !== 'archived').reverse();
 export const project = (id: string) => readRecord<Project>(getDb(), 'project', id);
 export const updates = () => listRecords<Update>(getDb(), 'update').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 export const friends = () => listRecords<Friend>(getDb(), 'friend');
-export const supports = () => listRecords<Support>(getDb(), 'support');
+export const supports = () => listRecords<Support>(getDb(), 'support').flatMap(supportParts);
 export const support = (id: string) => readRecord<Support>(getDb(), 'support', id);
 export const totals = (projectId?: string, publicOnly = true) => {
   const records = supports().filter((s) => (!projectId || s.projectId === projectId) && (!publicOnly || s.visibility === 'public'));

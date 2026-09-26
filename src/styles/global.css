@@ -22,7 +22,7 @@
   button:disabled { cursor: not-allowed; opacity: .5; }
   :focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
   ::selection { background: #dcecff; }
-  input:not([type='radio']):not([type='checkbox']), textarea, select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid #c0c8d2; border-radius: 6px; background: white; padding: 10px 12px; color: var(--color-ink); font-size: 16px; box-shadow: 0 1px 2px #1a1f3605; }
+  input:not([type='radio']):not([type='checkbox']):not([type='range']), textarea, select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid #c0c8d2; border-radius: 6px; background: white; padding: 10px 12px; color: var(--color-ink); font-size: 16px; box-shadow: 0 1px 2px #1a1f3605; }
   input:focus, textarea:focus, select:focus { border-color: var(--color-primary); }
   input::placeholder, textarea::placeholder { color: #697386; opacity: 1; }
   textarea { min-height: 104px; resize: vertical; }

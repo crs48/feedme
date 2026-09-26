@@ -4,7 +4,7 @@ Feedme separates the HTML experience, domain decisions, provider adapters, and o
 
 ## Rendering and hosting
 
-Astro compiles components to HTML. There are no hydrated components, React dependencies, client-side routers, or checkout scripts. Navigation and mutations use links and forms. Native post videos have an optional player that dynamically loads HLS support after a play action. Tailwind compiles at build time, and the illustrations are small inline SVGs. Canonical metadata and server-rendered content are available before any JavaScript could run.
+Astro compiles components to HTML. There are no hydrated components, React dependencies, client-side routers, or checkout scripts. Navigation and mutations use links and forms. A small homepage calculator previews relative project allocations; the server independently validates and recomputes the submitted split. Native post videos have an optional player that dynamically loads HLS support after a play action. Tailwind compiles at build time, and the illustrations are small inline SVGs. Canonical metadata and server-rendered content are available before any JavaScript could run.
 
 The server performs the operations a static host cannot: OAuth callbacks, session handling, secret-bearing Checkout creation, private reads, and webhook verification. Production consists of one Node process and one durable directory. `scripts/start.mjs` starts the built server and drains the outbox approximately every 30 seconds; completion-based scheduling avoids overlap. The studio can also request an immediate drain.
 
@@ -49,7 +49,7 @@ stateDiagram-v2
   Refunded --> Refunded: delayed completion cannot resurrect funds
 ```
 
-The supporter’s amount is parsed as integer USD cents. Hosted Checkout is created on the configured connected account with an idempotency key and a server-persisted intent. Billing details remain with Stripe. The raw-body signature, connected account, amount, currency, mode, and intent reference are checked before updating support. Event IDs deduplicate deliveries inside the same transaction as records and outbox entries. Refund amounts are cumulative; dispute closure cannot be undone by a late opening event.
+The supporter’s amount is parsed as integer USD cents. Homepage tips can allocate that total across multiple projects in one Checkout; [split support](split-support.md) describes the per-project projections and refund accounting. Hosted Checkout is created on the configured connected account with an idempotency key and a server-persisted intent. Billing details remain with Stripe. The raw-body signature, connected account, amount, currency, mode, and intent reference are checked before updating support. Event IDs deduplicate deliveries inside the same transaction as records and outbox entries. Refund amounts are cumulative; dispute closure cannot be undone by a late opening event.
 
 The success page never writes payment state. The public feed counts only confirmed public support, net of refunds, excluding disputed amounts. Public acknowledgment deletion is best effort across the network; remote copies cannot be recalled.
 

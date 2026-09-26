@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Creator from '../components/Creator.astro';
-import ProjectCard from '../components/ProjectCard.astro';
+import SupportAllocator from '../components/SupportAllocator.astro';
 import SupportTimeline from '../components/SupportTimeline.astro';
 import Icon from '../components/Icon.astro';
 import Avatar from '../components/Avatar.astro';
@@ -14,18 +14,13 @@ const t = totals();
 ---
 <Layout title={`${p.name} — projects & support`} description={p.bio}>
   <Creator/>
-  <section class="shell intro-row"><div><h2 class="section-title">Support a project</h2><p class="muted intro-copy">Help me spend more time on the work you care about.</p></div><span class="project-count">{list.length} {list.length === 1 ? 'project' : 'projects'}</span></section>
-  <section class="shell project-grid" aria-label="Projects">{list.map((project) => <ProjectCard project={project}/>)}{!list.length && <div class="panel"><h2 class="section-title mb-3">The first project is on its way.</h2><p class="muted mb-5">This creator is getting ready to share their work.</p><a class="button secondary" href="/studio">Open studio <Icon name="arrow"/></a></div>}</section>
+  <div class="shell"><SupportAllocator projects={list} creatorName={p.name}/></div>
   <section class="shell support-note"><Icon name="heart" size={18}/><p><strong>Support goes directly to the creator.</strong> Every tip helps, whether or not a project reaches its aspiration.</p><span>{t.count} public tips</span></section>
   <section class="shell circle-teaser"><div><h2 class="section-title">People worth knowing</h2><p class="muted mt-2">A few friends and projects I recommend.</p></div><a class="button secondary social" href="/circle">Explore my circle <Icon name="arrow" size={15}/></a></section>
   <div class="shell teaser-cards">{friends().slice(0, 2).map((f) => <a href={f.url} rel="noopener noreferrer" class="teaser-card"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined} size={44}/><span class="min-w-0"><strong>{f.name}</strong><span class="block muted mt-1">{f.description}</span></span><span class="ml-auto muted" aria-hidden="true">↗</span></a>)}</div>
   <div class="shell"><SupportTimeline/></div>
 </Layout>
 <style>
-  .intro-row { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 32px; margin-bottom: 24px; }
-  .intro-copy { font-size: 14px; margin-top: 8px; }
-  .project-count { color: var(--color-muted); font-size: 13px; white-space: nowrap; }
-  .project-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
   .support-note { display: flex; align-items: center; gap: 14px; padding: 20px 0; margin-top: 12px; font-size: 12px; color: var(--color-muted); border-bottom: 1px solid var(--color-border); }
   .support-note strong { font-weight: 500; color: var(--color-ink); }
   .support-note > span { margin-left: auto; white-space: nowrap; }
@@ -34,6 +29,6 @@ const t = totals();
   .teaser-card { border: 1px solid var(--color-border); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px; background: white; font-size: 13px; transition: border-color .15s; }
   .teaser-card:hover { border-color: #83b8ff; }
   .teaser-card strong { font-size: 14px; font-weight: 600; }
-  @media(max-width:950px) { .project-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .support-note > span { display: none; } }
-  @media(max-width:600px) { .intro-row { align-items: flex-start; margin-top: 28px; margin-bottom: 20px; } .project-count { display: none; } .project-grid { grid-template-columns: 1fr; gap: 20px; } .support-note { align-items: flex-start; } .support-note svg { margin-top: 3px; } .circle-teaser { align-items: flex-start; flex-direction: column; gap: 16px; margin-top: 32px; } .teaser-cards { grid-template-columns: 1fr; gap: 12px; } }
+  @media(max-width:950px) { .support-note > span { display: none; } }
+  @media(max-width:600px) { .support-note { align-items: flex-start; } .support-note svg { margin-top: 3px; } .circle-teaser { align-items: flex-start; flex-direction: column; gap: 16px; margin-top: 32px; } .teaser-cards { grid-template-columns: 1fr; gap: 12px; } }
 </style>

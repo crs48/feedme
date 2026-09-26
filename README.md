@@ -27,8 +27,9 @@ pnpm start
 
 ## What works in this release
 
-- Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the optional video player loads on demand.
+- Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the allocation preview is a small progressive enhancement, and the optional video player loads on demand.
 - A mobile-first interface combining Bluesky-inspired profiles and feeds with Stripe-style forms and matching hosted Checkout colors. See the [appearance guide](docs/appearance.md) for theme customization.
+- Split a single tip across projects from the homepage with relative sliders and a live dollar breakdown. One Stripe Checkout handles the whole amount; project pages remain available for details.
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
 - Creator studio with project/profile editing, field notes, support breakdowns, and friend recommendations.
