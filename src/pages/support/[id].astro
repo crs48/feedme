@@ -65,7 +65,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
     </aside>
     <div class="project-community">
       <section id="story" aria-label="Project story"><Markdown content={p.description}/>{p.link && <a class="button secondary mt-6" href={p.link} rel="noopener noreferrer">Explore the project ↗</a>}</section>
-      <section id="project-log" class="mt-10"><h2 class="section-title mb-3">Project updates</h2><p class="muted text-sm mb-6">Public posts from {creator.name}. Join the conversation on Bluesky.</p>{log.unavailable && <p class="notice" role="status">Some Bluesky posts could not be loaded. Try refreshing in a moment.</p>}{log.posts.map((post) => <PostCard post={post}/>)}{!log.posts.length && !log.unavailable && <p class="panel muted text-sm">No project posts yet. Follow along for the next update.</p>}{(log.cursor || log.moreLinked) && <a class="button secondary" href={`${Astro.url.pathname}?${olderLog}#project-log`}>Older project posts →</a>}{legacyNotes.length > 0 && <details class="mt-6"><summary class="text-sm muted">Earlier notes</summary><div class="mt-5">{legacyNotes.map((n) => <article class="panel mb-4"><time class="eyebrow" datetime={n.createdAt}>{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}</time><p class="prose-copy text-sm mt-3">{n.text}</p></article>)}</div></details>}</section>
+      <section id="project-log" class="mt-10"><h2 class="section-title mb-3">Project updates</h2><p class="muted text-sm mb-6">Public posts from {creator.name}. Join the conversation on Bluesky.</p>{log.unavailable && <p class="notice" role="status">Some Bluesky posts could not be loaded. Try refreshing in a moment.</p>}{log.posts.length > 0 && <div class="post-feed">{log.posts.map((post) => <PostCard post={post}/>)}</div>}{!log.posts.length && !log.unavailable && <p class="panel muted text-sm">No project posts yet. Follow along for the next update.</p>}{(log.cursor || log.moreLinked) && <a class="button secondary" href={`${Astro.url.pathname}?${olderLog}#project-log`}>Older project posts →</a>}{legacyNotes.length > 0 && <details class="mt-6"><summary class="text-sm muted">Earlier notes</summary><div class="mt-5">{legacyNotes.map((n) => <article class="panel mb-4"><time class="eyebrow" datetime={n.createdAt}>{new Date(n.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })}</time><p class="prose-copy text-sm mt-3">{n.text}</p></article>)}</div></details>}</section>
       <SupportTimeline projectId={p.id}/>
     </div>
   </div>
@@ -82,7 +82,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
   .project-header h1 { font-size: 32px; line-height: 1.2; margin-top: 14px; }
   .project-summary { color: var(--color-muted); margin-top: 14px; font-size: 15px; line-height: 1.7; }
   .project-tabs { display: flex; flex-wrap: wrap; gap: 0 24px; margin-top: 20px; border-bottom: 1px solid var(--color-border); }
-  .project-tabs a { display: inline-flex; align-items: center; min-height: 48px; font-size: 13px; color: #5146e8; font-weight: 500; }
+  .project-tabs a { display: inline-flex; align-items: center; min-height: 48px; font-size: 13px; color: #0866ff; font-weight: 500; }
   .project-tabs a:hover { text-decoration: underline; }
   .support-panel { padding: 28px; box-shadow: 0 4px 24px #1a1f3608, 0 1px 3px #1a1f3606; }
   .support-panel h2 { font-size: 20px; }
@@ -92,7 +92,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
   .funding-total strong { font-size: 14px; font-weight: 600; }
   .funding-summary p { margin-top: 8px; }
   .amount-input { display: flex; align-items: center; gap: 10px; padding-inline: 14px; border: 1px solid #c0c8d2; border-radius: 6px; box-shadow: 0 1px 2px #1a1f3608; }
-  .amount-input:focus-within { border-color: var(--color-primary); outline: 3px solid #635bff26; }
+  .amount-input:focus-within { border-color: var(--color-primary); outline: 3px solid #0866ff26; }
   .amount-input input { border: 0; border-radius: 0; padding: 10px 0; box-shadow: none; font-size: 24px; font-weight: 500; min-height: 52px; outline: none; }
   .amount-input > span:first-child { font-size: 22px; color: var(--color-muted); }
   #amount-currency { font-size: 13px; color: var(--color-muted); }
@@ -103,13 +103,13 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
   .privacy-options input { margin-top: 3px; }
   .privacy-options strong { display: block; font-size: 14px; font-weight: 500; }
   .privacy-options small { display: block; color: var(--color-muted); font-size: 12px; line-height: 1.5; margin-top: 2px; }
-  .privacy-options label:has(input:checked) { border-color: var(--color-primary); background: #f8f7ff; box-shadow: 0 0 0 1px var(--color-primary); }
+  .privacy-options label:has(input:checked) { border-color: var(--color-primary); background: #f2f7ff; box-shadow: 0 0 0 1px var(--color-primary); }
   .privacy-options label:has(input:disabled) { background: var(--color-surface); border-color: var(--color-border); cursor: not-allowed; }
   .anonymous-consent { display: flex; align-items: flex-start; gap: 10px; padding-block: 4px; font-size: 12px; color: var(--color-muted); margin-bottom: 12px; cursor: pointer; }
   .anonymous-consent input { margin-top: 3px; }
   form:has(input[name='visibility']:checked:not([value='anonymous'])) .anonymous-consent { display: none; }
   .sign-in-hint { font-size: 12px; color: var(--color-muted); margin-bottom: 12px; }
-  .sign-in-hint a { color: #5146e8; text-decoration: underline; }
+  .sign-in-hint a { color: #0866ff; text-decoration: underline; }
   .note-option { margin-bottom: 16px; }
   .note-option summary { font-size: 13px; padding-block: 12px; }
   .note-help { font-size: 12px; font-weight: 400; }

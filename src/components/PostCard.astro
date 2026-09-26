@@ -2,30 +2,49 @@
 import type { PostView } from '../lib/bsky-content';
 import PostVideo from './PostVideo.astro';
 import Avatar from './Avatar.astro';
+import Icon from './Icon.astro';
+import { config } from '../lib/config';
 import { demoImageSources } from '../lib/demo-media';
 interface Props { post: PostView; projectTitle?: string; }
 const { post, projectTitle } = Astro.props;
+const authorUrl = post.demo ? (post.did === config().ownerDid ? '/' : undefined) : `https://bsky.app/profile/${encodeURIComponent(post.did)}`;
 ---
-<article class="panel mb-5">
-  <header class="post-author"><Avatar name={post.author} src={post.avatar}/><div class="min-w-0"><strong>{post.author}</strong><div class="post-meta"><time datetime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time>{post.demo && <span>· Demo post</span>}</div></div>{projectTitle && <span class="tag project-tag">{projectTitle}</span>}</header>
-  <div class:list={{ 'sensitive-post': post.sensitive }}>
-    {post.sensitive && <p class="text-xs muted mb-3">This post has a content warning. Open it on Bluesky to view it with your moderation settings.</p>}
-    {!post.sensitive && <><p class="prose-copy text-sm">{post.segments.map((segment) => segment.href ? <a href={segment.href} class="underline" rel="noopener noreferrer ugc">{segment.text}</a> : segment.text)}</p>
-      {post.images.length > 0 && <div class:list={['post-images mt-5', { multiple: post.images.length > 1 }]}>{post.images.map((image) => <a href={image.url} rel="noopener noreferrer"><img src={image.url} srcset={demoImageSources(image.url)} sizes="(max-width: 700px) calc(100vw - 82px), 620px" width={demoImageSources(image.url) ? 960 : undefined} height={demoImageSources(image.url) ? 640 : undefined} alt={image.alt} loading="lazy" decoding="async" referrerpolicy="no-referrer"/></a>)}</div>}
-      {post.video && <div class="mt-5"><PostVideo {...post.video}/></div>}
-      {post.external && <a class="link-card mt-5" href={post.external.url} rel="noopener noreferrer ugc">{post.external.image && <img src={post.external.image} alt="" loading="lazy" referrerpolicy="no-referrer"/>}<div><strong class="text-sm">{post.external.title || new URL(post.external.url).hostname}</strong><p class="text-xs muted mt-1">{post.external.description}</p><span class="text-xs muted block mt-2">{new URL(post.external.url).hostname} ↗</span></div></a>}
-    </>}
+<article class="social-post">
+  <a class="post-avatar" href={authorUrl} aria-label={authorUrl ? `View ${post.author}’s profile` : undefined} rel="noopener noreferrer"><Avatar name={post.author} src={post.avatar}/></a>
+  <div class="post-content">
+    <header class="post-author"><a href={authorUrl} class="author-name" rel="noopener noreferrer">{post.author}</a>{post.handle && <span class="post-handle">@{post.handle}</span>}<time datetime={post.createdAt}>{new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time></header>
+    {(post.demo || projectTitle) && <div class="post-context">{projectTitle && <span class="tag">{projectTitle}</span>}{post.demo && <span>Demo post</span>}</div>}
+    <div class:list={{ 'sensitive-post': post.sensitive }}>
+      {post.sensitive && <p class="text-xs muted mt-2">This post has a content warning. Open it on Bluesky to view it with your moderation settings.</p>}
+      {!post.sensitive && <><p class="post-text">{post.segments.map((segment) => segment.href ? <a href={segment.href} rel="noopener noreferrer ugc">{segment.text}</a> : segment.text)}</p>
+        {post.images.length > 0 && <div class:list={['post-images mt-3', { multiple: post.images.length > 1 }]}>{post.images.map((image) => <a href={image.url} rel="noopener noreferrer"><img src={image.url} srcset={demoImageSources(image.url)} sizes="(max-width: 700px) calc(100vw - 126px), 590px" width={demoImageSources(image.url) ? 960 : undefined} height={demoImageSources(image.url) ? 640 : undefined} alt={image.alt} loading="lazy" decoding="async" referrerpolicy="no-referrer"/></a>)}</div>}
+        {post.video && <div class="mt-3"><PostVideo {...post.video}/></div>}
+        {post.external && <a class="link-card mt-3" href={post.external.url} rel="noopener noreferrer ugc">{post.external.image && <img src={post.external.image} alt="" loading="lazy" referrerpolicy="no-referrer"/>}<div><strong class="text-sm">{post.external.title || new URL(post.external.url).hostname}</strong><p class="text-xs muted mt-1">{post.external.description}</p><span class="text-xs muted block mt-2">{new URL(post.external.url).hostname} ↗</span></div></a>}
+      </>}
+    </div>
+    <a class="post-action" href={post.url} rel="noopener noreferrer"><Icon name={post.demo ? 'arrow' : 'comment'} size={17}/>{post.demo ? 'Explore the project' : 'Join the conversation on Bluesky'}<span aria-hidden="true">↗</span></a>
   </div>
-  <a class="text-xs underline muted inline-block mt-5" href={post.url} rel="noopener noreferrer">{post.demo ? 'Explore the project' : 'Reply, like, or repost on Bluesky'} ↗</a>
 </article>
 <style>
-  .post-author { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-  .post-author strong { display:block; font-size:14px; font-weight:600; overflow-wrap:anywhere; }
-  .post-meta { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; font-size:12px; color:var(--color-muted); }
-  .project-tag { margin-left:auto; max-width:40%; }
-  .post-images { display:grid; gap:8px; } .post-images.multiple { grid-template-columns:1fr 1fr; }
-  .post-images img { width:100%; max-height:500px; object-fit:cover; border-radius:9px; }
-  .link-card { display:block; overflow:hidden; border:1px solid #e3e8ee; border-radius:10px; }
-  .link-card img { width:100%; max-height:250px; object-fit:cover; } .link-card > div { padding:16px; }
-  @media(max-width:480px) { .post-author { flex-wrap:wrap; } .project-tag { max-width:100%; margin-left:52px; } }
+  .social-post { display: grid; grid-template-columns: 40px minmax(0,1fr); gap: 12px; padding: 20px; border-bottom: 1px solid var(--color-border); background: white; }
+  .social-post:last-child { border-bottom: 0; }
+  .post-avatar { display: block; align-self: start; min-height: 44px; }
+  .post-content { min-width: 0; }
+  .post-author { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; line-height: 1.5; }
+  .author-name { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+  .author-name:hover { text-decoration: underline; }
+  .post-handle, time { font-size: 13px; color: var(--color-muted); }
+  .post-handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  time::before { content: '·'; margin-right: 7px; }
+  .post-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--color-muted); }
+  .post-text { white-space: pre-line; overflow-wrap: anywhere; font-size: 15px; line-height: 1.6; margin-top: 6px; }
+  .post-text a { color: var(--color-primary); }
+  .post-text a:hover { text-decoration: underline; }
+  .post-images { display: grid; gap: 6px; } .post-images.multiple { grid-template-columns: 1fr 1fr; }
+  .post-images img { display: block; width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px; }
+  .link-card { display: block; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; }
+  .link-card img { width: 100%; max-height: 250px; object-fit: cover; } .link-card > div { padding: 16px; }
+  .post-action { display: flex; align-items: center; gap: 8px; width: fit-content; min-height: 44px; margin-top: 4px; font-size: 12px; color: var(--color-muted); }
+  .post-action:hover { color: var(--color-primary); }
+  @media(max-width:700px) { .social-post { padding: 16px 12px; gap: 10px; } }
 </style>

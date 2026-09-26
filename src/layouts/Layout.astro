@@ -30,7 +30,7 @@ const error = Astro.url.searchParams.get('error');
       <nav aria-label="Main navigation" class="flex items-center gap-7">
         <a href="/about" class="about-link muted nav-link">About</a>
         {user && <a href="/following" class="nav-link">Following</a>}
-        {isOwner(user) ? <a class="button secondary" href="/studio">Studio</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary">Sign out</button></form> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
+        {isOwner(user) ? <a class="button secondary social" href="/studio">Studio</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary social">Sign out</button></form> : <a class="button secondary social" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
       </nav>
     </header>
     <main id="main">

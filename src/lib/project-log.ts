@@ -40,7 +40,7 @@ export const projectLog = async (projectId?: string, cursor?: string, linkedPage
       return post && (!projectId || post.tags.includes(projectTag(projectUri(owner, projectId))) || linked.includes(post.uri)) ? [{ ...post, avatar: demoPerson(owner)?.avatar, demo: true, url: projectId ? `/support/${projectId}` : '/updates' }] : [];
     });
     // Seed notes are illustrative posts, with no external writes in demo mode.
-    for (const note of updates().filter((u) => !u.postUri && (!projectId || u.projectId === projectId))) posts.push({ uri: `demo:${note.id}`, cid: 'demo', url: `/support/${note.projectId}`, author: profile().name, did: owner, avatar: demoPerson(owner)?.avatar, text: note.text, createdAt: note.createdAt, segments: [{ text: note.text }], images: demoNoteImages(note.id), tags: [], sensitive: false, demo: true });
+    for (const note of updates().filter((u) => !u.postUri && (!projectId || u.projectId === projectId))) posts.push({ uri: `demo:${note.id}`, cid: 'demo', url: `/support/${note.projectId}`, author: profile().name, handle: profile().handle, did: owner, avatar: demoPerson(owner)?.avatar, text: note.text, createdAt: note.createdAt, segments: [{ text: note.text }], images: demoNoteImages(note.id), tags: [], sensitive: false, demo: true });
     return { posts: posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), cursor: undefined, moreLinked: false, unavailable: false };
   }
   const cacheKey = JSON.stringify([owner, projectId, cursor, linked, linkedPage]);

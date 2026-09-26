@@ -30,7 +30,7 @@ const demoFeed = async (actor: string, subscriptions: Follow[], projectsOnly: bo
   const posts: FollowingPost[] = updates().flatMap((update) => {
     const p = project(update.projectId);
     if (!p || !subscriptions.some(({ value }) => value.subject === (projectsOnly ? projectUri(own, p.id) : own))) return [];
-    return [{ uri: `demo:${update.id}`, cid: 'demo', url: `/support/${p.id}`, text: update.text, createdAt: update.createdAt, author: profile().name, did: own, avatar: demoPerson(own)?.avatar, projectTitle: p.title, images: demoNoteImages(update.id), tags: [], sensitive: false, demo: true, segments: [{ text: update.text }] }];
+    return [{ uri: `demo:${update.id}`, cid: 'demo', url: `/support/${p.id}`, text: update.text, createdAt: update.createdAt, author: profile().name, handle: profile().handle, did: own, avatar: demoPerson(own)?.avatar, projectTitle: p.title, images: demoNoteImages(update.id), tags: [], sensitive: false, demo: true, segments: [{ text: update.text }] }];
   });
   if (!projectsOnly) {
     const shared = await readSocialRecords(actor, 'app.bsky.feed.post');
