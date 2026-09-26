@@ -80,6 +80,15 @@
           "announceAnonymously": {
             "type": "boolean",
             "description": "Explicit consent to a public timeline entry with project and date only."
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "once",
+              "monthly",
+              "yearly"
+            ],
+            "description": "Frequency chosen for this contribution. Each successful renewal has its own receipt."
           }
         }
       }

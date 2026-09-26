@@ -8,7 +8,7 @@ vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo }) }));
 vi.mock('../src/lib/auth', () => ({ currentUser: () => state.user, digest: (value: string) => createHash('sha256').update(value).digest('hex') }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 vi.mock('../src/lib/payments', () => ({ checkout: state.checkout }));
-import { openDatabase, putRecord, setKv } from '../src/lib/db';
+import { openDatabase, putRecord, setKv, readRecord } from '../src/lib/db';
 import { POST } from '../src/pages/api/checkout';
 import { support, supports, totals } from '../src/lib/repository';
 
@@ -61,6 +61,19 @@ describe('allocated checkout requests', () => {
     expect(support('request')?.status).toBe('pending');
     await run(); expect(state.checkout).toHaveBeenCalledTimes(1);
     expect(totals(undefined, false).amount).toBe(0);
+  });
+  it.each(['monthly', 'yearly'])('freezes %s frequency and repeats the saved split only after future payments', async (frequency) => {
+    await run({ frequency });
+    expect(support('request')).toMatchObject({ frequency, amount: 3000, status: 'paid' });
+    expect(readRecord(db, 'subscription', 'request')).toMatchObject({ status: 'active' });
+    expect(totals(undefined, false).amount).toBe(3000);
+    expect((await run({ frequency: 'once' })).headers.get('location')).toContain('different%20details');
+    expect((await run({ frequency })).headers.get('location')).toBe('/thanks?id=request');
+    expect(totals(undefined, false).amount).toBe(3000);
+  });
+  it('rejects invalid billing intervals before storing a payment', async () => {
+    expect((await run({ frequency: 'weekly' })).headers.get('location')).toContain('Choose%20one-time');
+    expect(support('request')).toBeUndefined();
   });
   it('continues to accept the existing single-project form', async () => {
     setKv(db, 'checkout-form', 'request', { projectId: 'two', binding: createHash('sha256').update('browser').digest('hex') });

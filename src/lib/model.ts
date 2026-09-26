@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { BillingFrequency } from './billing-frequency';
 
 // Draft namespace: replace with a domain you control before a public protocol release.
 export const NS = 'social.feedme';
@@ -46,6 +47,7 @@ export type Support = {
   status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed';
   refundedAmount: number; disputed: boolean; createdAt: string;
   checkoutId?: string; paymentIntentId?: string; accountId?: string;
+  frequency?: BillingFrequency; subscriptionId?: string; invoiceId?: string; recurringRootId?: string;
   announceAnonymously?: boolean; activityId?: string;
   allocations?: { projectId: string; amount: number; activityId: string }[];
 };
@@ -87,6 +89,7 @@ export const publicAcknowledgment = (support: Support, creatorDid: string) => {
 export const privateReceipt = (support: Support) => ({
   $type: `${NS}.support`, projectId: support.projectId,
   amount: support.amount, currency: 'USD', visibility: support.visibility,
+  ...(support.frequency ? { frequency: support.frequency } : {}),
   ...(support.visibility !== 'anonymous' && support.supporterDid ? { supporter: support.supporterDid } : {}),
   note: support.note, status: support.status, refundedAmount: support.refundedAmount,
   disputed: support.disputed, createdAt: support.createdAt,

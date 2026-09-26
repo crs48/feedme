@@ -13,7 +13,7 @@ describe('wire record contracts', () => {
       { $type: 'social.feedme.profile', ...demoProfile },
       ...demoFriends.map((p) => ({ $type: 'social.feedme.recommendation', ...p })),
       ...demoUpdates.map((p) => ({ $type: 'social.feedme.update', ...p })),
-      privateReceipt(demoSupports[0]), publicAcknowledgment(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
+      privateReceipt(demoSupports[0]), privateReceipt({ ...demoSupports[0], frequency: 'monthly', subscriptionId: 'sub_private', invoiceId: 'in_private' }), publicAcknowledgment(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
       publicTipActivity(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
       publicTipActivity({ ...demoSupports[0], visibility: 'anonymous', announceAnonymously: true, activityId: 'public-id' }, 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
       { $type: 'social.feedme.follow', subject: 'at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/social.feedme.project/sauna', title: 'A sauna', createdAt: '2026-09-25T12:00:00Z' },

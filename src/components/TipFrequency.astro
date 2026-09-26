@@ -1,0 +1,32 @@
+---
+import { config } from '../lib/config';
+interface Props { split?: boolean; }
+const { split = false } = Astro.props;
+---
+<fieldset class="tip-frequency">
+  <legend>How often?</legend>
+  <div class="frequency-options">
+    <label><input type="radio" name="frequency" value="once" checked/><span>One-time</span></label>
+    <label><input type="radio" name="frequency" value="monthly"/><span>Monthly</span></label>
+    <label><input type="radio" name="frequency" value="yearly"/><span>Yearly</span></label>
+  </div>
+  <p class="frequency-help once">One tip. A little goes a long way.</p>
+  <p class="frequency-help monthly">{config().demo ? 'Preview monthly support. No automatic charges.' : `The same amount${split ? ' and split' : ''} every month. Cancel anytime.`}</p>
+  <p class="frequency-help yearly">{config().demo ? 'Preview yearly support. No automatic charges.' : `The same amount${split ? ' and split' : ''} every year. Cancel anytime.`}</p>
+  <p class="frequency-consent">Your visibility choice applies to every payment.</p>
+</fieldset>
+<style>
+  .tip-frequency { border: 0; padding: 0; margin: 20px 0 16px; min-width: 0; }
+  legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 500; }
+  .frequency-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; padding: 4px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); }
+  label { position: relative; display: block; cursor: pointer; min-width: 0; }
+  input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+  label span { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 5px; border: 1px solid transparent; font-size: 13px; font-weight: 500; white-space: nowrap; color: var(--color-muted); }
+  input:checked + span { color: var(--color-primary); background: white; border-color: #d5e3fa; box-shadow: 0 1px 3px #1a1f360d; }
+  input:focus-visible + span { outline: 3px solid #0866ff40; outline-offset: 1px; }
+  .frequency-help, .frequency-consent { font-size: 12px; line-height: 1.5; color: var(--color-muted); margin-top: 10px; }
+  .frequency-help, .frequency-consent { display: none; }
+  fieldset:has([value='once']:checked) .once, fieldset:has([value='monthly']:checked) .monthly, fieldset:has([value='yearly']:checked) .yearly,
+  fieldset:has(input:checked:not([value='once'])) .frequency-consent { display: block; }
+  .frequency-consent { margin-top: 4px; }
+</style>

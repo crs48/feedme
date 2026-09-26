@@ -7,7 +7,7 @@ import { netSupport, type Support } from './model';
 export const canAccessTip = (support: Support | undefined, user: User | undefined, browser: string | undefined) => {
   if (!support) return false;
   if (user && support.visibility !== 'anonymous' && support.supporterDid === user.did) return true;
-  const binding = getKv<string>(getDb(), 'checkout-owner', support.id);
+  const binding = getKv<string>(getDb(), 'checkout-owner', support.recurringRootId || support.id);
   return Boolean(binding && browser && binding === digest(browser));
 };
 export const canShareTip = (support: Support | undefined, user: User | undefined, browser: string | undefined) =>

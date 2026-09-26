@@ -1,0 +1,43 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { config } from '../lib/config';
+import { getDb, listRecords, readRecord } from '../lib/db';
+import { savedBillingPortal } from '../lib/billing';
+import { connectedAccount } from '../lib/payments';
+import type { Subscription } from '../lib/recurring';
+import { money, type Support } from '../lib/model';
+import { frequencyLabel, frequencySuffix } from '../lib/billing-frequency';
+import { canAccessTip } from '../lib/tip-sharing';
+import { project } from '../lib/repository';
+const cfg = config();
+const records = listRecords<Support>(getDb(), 'support');
+const roots = records.filter((s) => s.frequency && s.frequency !== 'once' && !s.recurringRootId && canAccessTip(s, Astro.locals.user, Astro.cookies.get('feedme_checkout')?.value));
+const account = connectedAccount();
+const loginUrl = account ? savedBillingPortal(account)?.loginUrl : undefined;
+const statusLabel = (s?: Subscription) => !s ? 'Confirming subscription' : s.status === 'canceled' ? 'Stopped' : s.cancelAtPeriodEnd ? 'Stops at the end of this period' : ({ active: 'Active', past_due: 'Payment needs attention', unpaid: 'Unpaid', incomplete: 'Awaiting first payment', incomplete_expired: 'Checkout expired', paused: 'Paused', trialing: 'Trial' }[s.status] || 'Check billing settings');
+---
+<Layout title="Manage recurring support" noindex>
+  <section class="shell py-10"><div class="max-w-2xl mx-auto">
+    <a class="back-link" href="/">← Back to projects</a>
+    <h1 class="display text-3xl mt-5 mb-4">Your recurring support</h1>
+    <p class="muted text-sm mb-6">{cfg.demo ? 'Explore your demo subscriptions. No automatic payments are made.' : 'Manage renewals, update payment details, and view invoices securely with Stripe. Stopping renewals keeps your previous tips in place.'}</p>
+    {roots.map((root) => { const subscription = readRecord<Subscription>(getDb(), 'subscription', root.id); const payments = records.filter((s) => s.id === root.id || s.recurringRootId === root.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt)); return <article class="panel mb-5">
+      <div class="billing-heading"><div><p class="eyebrow">{frequencyLabel(root.frequency)}</p><h2 class="section-title mt-2">{money(root.amount)}{frequencySuffix(root.frequency)}</h2></div><span class="tag">{statusLabel(subscription)}</span></div>
+      <p class="text-sm muted mt-3">{(root.allocations || [{ projectId: root.projectId }]).map((part) => project(part.projectId)?.title || 'Project').join(' · ')}</p>
+      <p class="text-xs muted mt-2">Visibility: {root.visibility}. {root.announceAnonymously ? 'Anonymous timeline entries are enabled.' : ''}</p>
+      {subscription && (!cfg.demo || subscription.status !== 'canceled') && <form action="/api/billing" method="post" class="mt-5"><input type="hidden" name="supportId" value={root.id}/>{cfg.demo && <input type="hidden" name="action" value="cancel"/>}<button class="button secondary">{cfg.demo ? 'Stop demo renewals' : 'Manage with Stripe'} →</button></form>}
+      {!subscription && !cfg.demo && <a class="button secondary mt-4" href="/billing">Refresh billing status</a>}
+      <details class="billing-payments"><summary>Payment history</summary><ul>{payments.map((s) => <li><span><time datetime={s.createdAt}>{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time><small>{s.status}{s.refundedAmount > 0 ? ` · ${money(s.refundedAmount)} refunded` : ''}</small></span><strong>{money(s.amount)}</strong></li>)}</ul></details>
+    </article>; })}
+    {!roots.length && <div class="panel"><h2 class="section-title mb-3">No recurring support here yet</h2><p class="muted text-sm">Use the browser you tipped from, or <a class="text-primary underline" href="/login?returnTo=/billing">sign in</a> with the account attached to your tip.</p></div>}
+    {loginUrl && <div class="panel mt-6"><h2 class="section-title mb-3">Tipped from another browser?</h2><p class="muted text-sm mb-4">Use the email you entered at checkout. Stripe will send a secure sign-in link so you can manage your support, including anonymous tips.</p><a class="button secondary" href={loginUrl}>Find support with email →</a></div>}
+  </div></section>
+</Layout>
+<style>
+  .back-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--color-muted); }
+  .billing-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .billing-payments { margin-top: 20px; border-top: 1px solid var(--color-border); font-size: 13px; }
+  .billing-payments summary { padding-top: 16px; min-height: 44px; }
+  .billing-payments li { display: flex; justify-content: space-between; gap: 12px; padding-block: 12px; }
+  .billing-payments small { display: block; color: var(--color-muted); text-transform: capitalize; margin-top: 4px; }
+</style>

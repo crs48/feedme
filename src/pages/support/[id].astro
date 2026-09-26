@@ -9,6 +9,7 @@ import { projectLog } from '../../lib/project-log';
 import Icon from '../../components/Icon.astro';
 import FollowButton from '../../components/FollowButton.astro';
 import Avatar from '../../components/Avatar.astro';
+import TipFrequency from '../../components/TipFrequency.astro';
 import { demoCover, demoImageSources, demoPerson } from '../../lib/demo-media';
 import { projectUri } from '../../lib/social-model';
 import { profile, project, totals, updates } from '../../lib/repository';
@@ -25,7 +26,7 @@ const cfg = config();
 const cover = p.image ? { url: p.image, alt: p.title } : cfg.demo ? demoCover(p.id) : undefined;
 const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
-Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 86400 });
+Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 365 * 86400 });
 setKv(getDb(), 'checkout-form', requestId, { projectId: p.id, binding: digest(binding) }, 3600_000);
 const legacyNotes = cfg.demo ? [] : updates().filter((u) => u.projectId === p.id && !u.postUri);
 const linkedPage = Math.max(0, Math.min(1000, Number.parseInt(Astro.url.searchParams.get('logPage') || '0') || 0));
@@ -43,10 +44,11 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
     </header>
     <aside>
       <section id="support" class="panel support-panel" aria-labelledby="support-heading">
-        <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : undefined} size={28}/><p>A one-time tip for {creator.name}.</p></div>
+        <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : undefined} size={28}/><p>A little support for {creator.name}.</p></div>
         <div class="funding-summary"><div class="funding-total"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(t.amount, p.target)}><span style={`width:${Math.min(100, t.amount / p.target * 100)}%`}></span></div><p class="muted">{money(p.target)} aspiration. Every tip is kept, regardless of progress.</p></>}</div>
         {p.status === 'active' ? <form action="/api/checkout" method="post">
           <input type="hidden" name="projectId" value={p.id}/><input type="hidden" name="requestId" value={requestId}/>
+          <TipFrequency/>
           <label class="field amount-field">Amount<span class="amount-input"><span aria-hidden="true">$</span><input name="amount" inputmode="decimal" type="number" min="1" max="1000" step="0.01" value="15" required aria-describedby="amount-currency"/><span id="amount-currency">USD</span></span></label>
           <fieldset class="privacy-options"><legend>Support visibility</legend>
             <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>

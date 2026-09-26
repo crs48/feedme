@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Support } from '../src/lib/model';
 let db: DatabaseSync;
-const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn() }));
-vi.mock('stripe', () => ({ default: class { accounts = { retrieve: mock.retrieve }; checkout = { sessions: { create: mock.create } }; } }));
+const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn(), portal: vi.fn() }));
+vi.mock('stripe', () => ({ default: class { accounts = { retrieve: mock.retrieve }; billingPortal = { configurations: { create: mock.portal } }; checkout = { sessions: { create: mock.create } }; } }));
 vi.mock('../src/lib/config', () => ({ config: () => ({ stripeKey: 'sk_test_fixture', origin: 'https://feedme.example' }) }));
 vi.mock('../src/lib/habitat', () => ({ privateSpace: () => 'space' }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
@@ -16,6 +16,7 @@ const items = [{ title: 'Sauna', amount: 667 }, { title: 'Writing', amount: 333 
 describe('split Stripe Checkout contract', () => {
   beforeEach(() => {
     db = openDatabase(':memory:'); setKv(db, 'app', 'stripe-account', 'acct_creator');
+    mock.portal.mockReset().mockResolvedValue({ id: 'bpc_test', login_page: { url: 'https://billing.stripe.com/test' } });
     mock.retrieve.mockReset().mockResolvedValue({ charges_enabled: true, payouts_enabled: true });
     mock.create.mockReset().mockResolvedValue({ id: 'cs_one', url: 'https://checkout.stripe.com/one' });
   });
@@ -30,6 +31,33 @@ describe('split Stripe Checkout contract', () => {
     expect(params.cancel_url).toMatch(/^https:\/\/feedme.example\/\?/);
     expect(JSON.stringify(params)).not.toContain('A private note');
     expect(readRecord<Support>(db, 'support', intent.id)?.status).toBe('pending');
+  });
+  it.each([['monthly', 'month'], ['yearly', 'year']] as const)('creates %s subscriptions with exact recurring prices and cancellation management', async (frequency, interval) => {
+    await checkout({ ...intent, frequency }, items);
+    const [params, options] = mock.create.mock.calls[0];
+    expect(params.mode).toBe('subscription');
+    expect(params.subscription_data.metadata).toEqual({ feedme_support_id: intent.id });
+    expect(params).not.toHaveProperty('payment_intent_data');
+    expect(params.line_items.map((line: { price_data: unknown }) => line.price_data)).toEqual(items.map((item) => ({ currency: 'usd', unit_amount: item.amount, recurring: { interval }, product_data: { name: `Support: ${item.title}` } })));
+    expect(options.stripeAccount).toBe('acct_creator');
+    expect(mock.portal.mock.calls[0][0]).toMatchObject({ login_page: { enabled: true }, features: { subscription_cancel: { enabled: true, mode: 'at_period_end' }, subscription_update: { enabled: false } } });
+    expect(mock.portal.mock.calls[0][1].stripeAccount).toBe('acct_creator');
+    expect(readRecord<Support>(db, 'support', intent.id)?.status).toBe('pending');
+  });
+  it('reuses a customer only with a matching server-side browser capability', async () => {
+    putRecord(db, 'support', 'older', { ...intent, id: 'older', accountId: 'acct_creator', frequency: 'monthly', subscriptionId: 'sub_old' });
+    putRecord(db, 'subscription', 'older', { customerId: 'cus_old' });
+    setKv(db, 'checkout-owner', intent.id, 'browser-hash');
+    setKv(db, 'checkout-owner', 'older', 'another-browser');
+    await checkout({ ...intent, frequency: 'yearly' }, items);
+    expect(mock.create.mock.calls[0][0]).not.toHaveProperty('customer');
+    setKv(db, 'checkout-owner', 'older', 'browser-hash');
+    await checkout({ ...intent, frequency: 'yearly' }, items);
+    expect(mock.create.mock.calls[1][0]).toHaveProperty('customer', 'cus_old');
+  });
+  it('rejects more than 20 recurring items without contacting Stripe', async () => {
+    await expect(checkout({ ...intent, amount: 2100, frequency: 'monthly' }, Array.from({ length: 21 }, () => ({ title: 'Project', amount: 100 })))).rejects.toThrow('20 projects');
+    expect(mock.create).not.toHaveBeenCalled();
   });
   it('preserves a webhook that settles the payment before the Checkout response returns', async () => {
     mock.create.mockImplementation(async () => {

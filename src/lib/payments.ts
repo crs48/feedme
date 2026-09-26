@@ -1,9 +1,13 @@
 import Stripe from 'stripe';
 import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
-import { enqueue, getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
-import { NS, privateReceipt, publicAcknowledgment, publicTipActivity, supportParts, type Support } from './model';
+import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
+import type { Support } from './model';
+import { queueSupport } from './support-ledger';
 import { privateSpace } from './habitat';
+import { billingInterval } from './billing-frequency';
+import { ensureBillingPortal } from './billing';
+import { applyBillingEvent, bindSubscriptionCheckout, type BillingEventContext, type Subscription } from './recurring';
 
 export const stripeClient = () => {
   const key = config().stripeKey;
@@ -27,23 +31,33 @@ export const connectStripe = async () => {
 export const checkout = async (intent: Support, items: { title: string; amount: number }[]) => {
   if (!items.length || items.length > 100 || items.some((item) => !Number.isSafeInteger(item.amount) || item.amount < 1) || items.reduce((sum, item) => sum + item.amount, 0) !== intent.amount)
     throw new Error('The project allocations must match the total support.');
+  const interval = billingInterval(intent.frequency);
+  if (interval && items.length > 20) throw new Error('Recurring support can include up to 20 projects.');
   if (!privateSpace()) throw new Error('The creator needs to connect private storage before receiving support.');
   const stripe = stripeClient();
   const account = connectedAccount();
   if (!account) throw new Error('The creator hasn’t connected Stripe yet.');
   const readiness = await stripe.accounts.retrieve(account);
   if (!readiness.charges_enabled || !readiness.payouts_enabled) throw new Error('The creator’s Stripe account is still being set up.');
+  if (interval) await ensureBillingPortal(stripe, account);
   const stored = readRecord<Support>(getDb(), 'support', intent.id);
   if (stored?.accountId && stored.accountId !== account) throw new Error('This checkout belongs to a different connected account. Start a new one.');
   const current = { ...intent, ...stored, accountId: account };
   putRecord(getDb(), 'support', intent.id, current);
+  // Reuse the customer only when the server can prove the same supporter or browser.
+  const binding = getKv<string>(getDb(), 'checkout-owner', intent.id);
+  const previousRoot = interval ? listRecords<Support>(getDb(), 'support').find((s) => s.id !== intent.id && !s.recurringRootId && s.accountId === account && s.subscriptionId &&
+    ((intent.supporterDid && intent.visibility !== 'anonymous' && s.visibility !== 'anonymous' && s.supporterDid === intent.supporterDid) ||
+      (binding && getKv<string>(getDb(), 'checkout-owner', s.id) === binding))) : undefined;
+  const customer = previousRoot ? readRecord<Subscription>(getDb(), 'subscription', previousRoot.id)?.customerId : undefined;
   const result = await stripe.checkout.sessions.create({
-    mode: 'payment', client_reference_id: intent.id,
+    ...(customer ? { customer } : {}),
+    mode: interval ? 'subscription' : 'payment', client_reference_id: intent.id,
     // Match the shared UI theme without replacing the connected merchant's name or logo.
     branding_settings: { background_color: '#ffffff', button_color: '#0866ff', border_style: 'rounded', font_family: 'default' },
     metadata: { feedme_support_id: intent.id },
-    payment_intent_data: { metadata: { feedme_support_id: intent.id } },
-    line_items: items.map(({ title, amount }) => ({ quantity: 1, price_data: { currency: 'usd', unit_amount: amount, product_data: { name: `Support: ${title}` } } })),
+    ...(interval ? { subscription_data: { metadata: { feedme_support_id: intent.id } } } : { payment_intent_data: { metadata: { feedme_support_id: intent.id } } }),
+    line_items: items.map(({ title, amount }) => ({ quantity: 1, price_data: { currency: 'usd', unit_amount: amount, ...(interval ? { recurring: { interval } } : {}), product_data: { name: `Support: ${title}` } } })),
     success_url: `${config().origin}/thanks?id=${intent.id}`,
     cancel_url: `${config().origin}${intent.allocations ? '/' : `/support/${intent.projectId}`}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
   }, { stripeAccount: account, idempotencyKey: `feedme-checkout-${intent.id}` });
@@ -54,16 +68,8 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
   return result.url;
 };
 
-const queueSupport = (db: DatabaseSync, s: Support, ownerDid: string) => {
-  putRecord(db, 'support', s.id, s);
-  for (const part of supportParts(s)) {
-    enqueue(db, 'private', `${NS}.support`, part.id, privateReceipt(part));
-    if (part.visibility === 'public') enqueue(db, 'public', `${NS}.acknowledgment`, part.id, publicAcknowledgment(part, ownerDid));
-    if (part.activityId && (part.visibility === 'public' || part.announceAnonymously)) enqueue(db, 'public', `${NS}.activity`, part.activityId, publicTipActivity(part, ownerDid));
-  }
-};
 // Called only AFTER verifying Stripe's raw-body signature. Exported for deterministic tests.
-export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string, supportIdHint?: string) => {
+export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid: string, accountId: string, supportIdHint?: string, billingContext: BillingEventContext = {}) => {
   if (event.account !== accountId) throw new Error('Unexpected connected account.');
   return transaction(db, () => {
     if (db.prepare('SELECT 1 FROM events WHERE id=?').get(event.id)) return 'duplicate';
@@ -73,18 +79,22 @@ export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid
       const id = session.metadata?.feedme_support_id;
       const stored = id ? readRecord<Support>(db, 'support', id) : undefined;
       if (stored) {
-        if (stored.accountId !== event.account || session.mode !== 'payment' || session.client_reference_id !== stored.id ||
+        if (stored.accountId !== event.account || session.mode !== (billingInterval(stored.frequency) ? 'subscription' : 'payment') || session.client_reference_id !== stored.id ||
           session.amount_total !== stored.amount || session.currency !== stored.currency || (stored.checkoutId && stored.checkoutId !== session.id))
           throw new Error('Payment does not match the stored support intent.');
-        const paid = session.payment_status === 'paid';
-        const failed = ['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type);
-        const next: Support = {
-          ...stored, checkoutId: session.id,
-          paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-          // A delayed completion cannot undo refunds, disputes, or an already-paid record.
-          status: stored.status === 'pending' || stored.status === 'failed' ? (paid ? 'paid' : failed ? 'failed' : stored.status) : stored.status,
-        };
-        queueSupport(db, next, ownerDid);
+        if (billingInterval(stored.frequency)) {
+          bindSubscriptionCheckout(db, stored, session, ['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type));
+        } else {
+          const paid = session.payment_status === 'paid';
+          const failed = ['checkout.session.async_payment_failed', 'checkout.session.expired'].includes(event.type);
+          const next: Support = {
+            ...stored, checkoutId: session.id,
+            paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+            // A delayed completion cannot undo refunds, disputes, or an already-paid record.
+            status: stored.status === 'pending' || stored.status === 'failed' ? (paid ? 'paid' : failed ? 'failed' : stored.status) : stored.status,
+          };
+          queueSupport(db, next, ownerDid);
+        }
       }
     } else if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created' || event.type === 'charge.dispute.closed') {
       const charge = object as Stripe.Charge | Stripe.Dispute;
@@ -109,6 +119,7 @@ export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid
         }
       }
     }
+    applyBillingEvent(db, event, ownerDid, billingContext);
     db.prepare('INSERT INTO events VALUES (?,?)').run(event.id, event.created);
     return 'processed';
   });
