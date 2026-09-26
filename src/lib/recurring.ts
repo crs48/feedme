@@ -73,7 +73,7 @@ export const applyBillingEvent = (db: DatabaseSync, event: Stripe.Event, ownerDi
   if (existing && ((existing.invoiceId && existing.invoiceId !== invoice.id) || (paid && existing.paymentIntentId && existing.paymentIntentId !== payment!.paymentIntentId)))
     throw new Error('Invoice payment binding changed.');
   const base: Support = existing || {
-    ...root, id, recurringRootId: root.id, checkoutId: undefined, paymentIntentId: undefined, invoiceId: undefined,
+    ...root, id, recurringRootId: root.id, checkoutId: undefined, paymentIntentId: undefined, invoiceId: undefined, paidAt: undefined,
     status: 'pending', refundedAmount: 0, disputed: false, activityId: randomUUID(),
     allocations: root.allocations?.map((part) => ({ ...part, activityId: randomUUID() })),
     createdAt: new Date(invoice.created * 1000).toISOString(),
@@ -81,6 +81,7 @@ export const applyBillingEvent = (db: DatabaseSync, event: Stripe.Event, ownerDi
   queueSupport(db, { ...base, subscriptionId: subscription.subscriptionId, invoiceId: invoice.id,
     ...(paid ? { paymentIntentId: payment!.paymentIntentId } : {}),
     createdAt: paid && invoice.status_transitions.paid_at ? new Date(invoice.status_transitions.paid_at * 1000).toISOString() : base.createdAt,
+    ...(paid && invoice.status_transitions.paid_at ? { paidAt: new Date(invoice.status_transitions.paid_at * 1000).toISOString() } : {}),
     // Failures and duplicate success events never undo refunds or already-settled payments.
     status: ['pending', 'failed'].includes(base.status) ? paid ? 'paid' : 'failed' : base.status,
   }, ownerDid);

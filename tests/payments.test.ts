@@ -22,6 +22,12 @@ describe('verified Stripe events', () => {
     applyStripeEvent(db, event('evt_paid', 'checkout.session.async_payment_succeeded'), owner, 'acct_creator');
     expect(current().status).toBe('paid');
   });
+  it('records the first verified payment time and preserves it on duplicate or failure events', () => {
+    applyStripeEvent(db, event('timestamp-paid', 'checkout.session.completed', {}, 1790337600), owner, 'acct_creator');
+    expect(current().paidAt).toBe('2026-09-25T12:00:00.000Z');
+    applyStripeEvent(db, event('timestamp-again', 'checkout.session.completed', {}, 1790424000), owner, 'acct_creator');
+    expect(current().paidAt).toBe('2026-09-25T12:00:00.000Z');
+  });
   it('deduplicates deliveries and creates private and consented public writes', () => {
     expect(applyStripeEvent(db, event('evt_1'), owner, 'acct_creator')).toBe('processed');
     expect(applyStripeEvent(db, event('evt_1'), owner, 'acct_creator')).toBe('duplicate');

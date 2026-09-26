@@ -18,7 +18,7 @@ import { config } from '../../lib/config';
 import { cookieOptions, digest, randomToken } from '../../lib/auth';
 import { getDb, setKv } from '../../lib/db';
 const p = project(Astro.params.id || '');
-if (!p || p.status === 'archived') return Astro.redirect('/404');
+if (!p || !['active', 'complete'].includes(p.status)) return Astro.redirect('/404');
 const creator = profile();
 const t = totals(p.id);
 const user = Astro.locals.user;
@@ -44,7 +44,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
     </header>
     <aside>
       <section id="support" class="panel support-panel" aria-labelledby="support-heading">
-        <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : undefined} size={28}/><p>A little support for {creator.name}.</p></div>
+        <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : creator.avatar} size={28}/><p>A little support for {creator.name}.</p></div>
         <div class="funding-summary"><div class="funding-total"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(t.amount, p.target)}><span style={`width:${Math.min(100, t.amount / p.target * 100)}%`}></span></div><p class="muted">{money(p.target)} aspiration. Every tip is kept, regardless of progress.</p></>}</div>
         {p.status === 'active' ? <form action="/api/checkout" method="post">
           <input type="hidden" name="projectId" value={p.id}/><input type="hidden" name="requestId" value={requestId}/>

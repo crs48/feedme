@@ -12,7 +12,7 @@ export const projectSchema = z.object({
   description: z.string().trim().min(10).max(30000),
   category: z.enum(['Making', 'Writing', 'Open source', 'Community', 'Life']),
   kind: z.enum(['project', 'ongoing']),
-  status: z.enum(['active', 'complete', 'archived']),
+  status: z.enum(['draft', 'active', 'complete', 'archived']),
   color: z.enum(['peach', 'blue', 'green', 'yellow']),
   target: z.number().int().min(0).max(100_000_000),
   image: httpsUrl.default(''),
@@ -21,6 +21,7 @@ export const projectSchema = z.object({
 });
 export type Project = z.infer<typeof projectSchema>;
 export const profileSchema = z.object({
+  avatar: httpsUrl.optional(),
   name: z.string().trim().min(1).max(80),
   handle: z.string().max(253),
   bio: z.string().trim().min(3).max(500),
@@ -45,7 +46,7 @@ export type Support = {
   id: string; projectId: string; amount: number; currency: 'usd';
   visibility: Visibility; supporterDid?: string; note: string;
   status: 'pending' | 'paid' | 'failed' | 'refunded' | 'disputed';
-  refundedAmount: number; disputed: boolean; createdAt: string;
+  refundedAmount: number; disputed: boolean; createdAt: string; paidAt?: string;
   checkoutId?: string; paymentIntentId?: string; accountId?: string;
   frequency?: BillingFrequency; subscriptionId?: string; invoiceId?: string; recurringRootId?: string;
   announceAnonymously?: boolean; activityId?: string;

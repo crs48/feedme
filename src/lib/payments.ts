@@ -90,6 +90,8 @@ export const applyStripeEvent = (db: DatabaseSync, event: Stripe.Event, ownerDid
           const next: Support = {
             ...stored, checkoutId: session.id,
             paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+            ...(paid && !stored.paidAt && Number.isFinite(event.created)
+              ? { paidAt: new Date(event.created * 1000).toISOString() } : {}),
             // A delayed completion cannot undo refunds, disputes, or an already-paid record.
             status: stored.status === 'pending' || stored.status === 'failed' ? (paid ? 'paid' : failed ? 'failed' : stored.status) : stored.status,
           };

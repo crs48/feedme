@@ -1,0 +1,15 @@
+---
+import { randomUUID } from 'node:crypto';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { projects, updates } from '../../lib/repository';
+import { config } from '../../lib/config';
+import { displayDate } from '../../lib/analytics';
+const list = projects();
+const recent = updates().slice(0,30);
+---
+<AdminLayout title="Project updates" description="Keep the story moving with native Bluesky posts.">
+  <div class="admin-settings-grid"><section class="admin-card"><h2>Publish an update</h2><p class="admin-help mt-3">Publish as the creator on Bluesky and add the post to a project’s log. This is a public post, visible to followers.</p><form method="post" action="/api/studio"><input type="hidden" name="action" value="post-update"/><input type="hidden" name="returnTo" value="/studio/updates"/><input type="hidden" name="requestId" value={randomUUID()}/><label class="field">Project<select name="projectId" required>{list.map((p) => <option value={p.id}>{p.title}</option>)}</select></label><label class="field">Your update<textarea name="text" required minlength="3" maxlength="3000" rows="5" placeholder="A small win, a new question, a moment worth sharing…"></textarea></label><p class="admin-help mb-5">Up to 300 characters (counted as graphemes). A link to your project is included. To attach media, publish in Bluesky first and link the post here.</p><button class="button" disabled={!list.length}>{config().demo ? 'Save a demo post' : 'Publish to Bluesky'}</button></form></section>
+  <section class="admin-card"><h2>Add a post with photos or video</h2><p class="admin-help mt-3">Paste a post from the creator’s Bluesky account. Its original images, video, links, and conversation remain attached.</p><form method="post" action="/api/studio"><input type="hidden" name="action" value="link-post"/><input type="hidden" name="returnTo" value="/studio/updates"/><label class="field">Project<select name="projectId" required>{list.map((p) => <option value={p.id}>{p.title}</option>)}</select></label><label class="field">Bluesky post URL<input type="url" name="postUrl" required placeholder="https://bsky.app/profile/you/post/…"/></label><button class="button secondary" disabled={config().demo || !list.length}>Add to project log</button></form></section></div>
+  {!list.length && <p class="notice">Publish a project before adding updates.</p>}
+  <section class="admin-card"><h2 class="mb-5">Recent project updates</h2>{recent.map((u) => <article class="py-4 border-t border-slate-200"><p class="admin-help">{displayDate(u.createdAt)} · {list.find((p) => p.id === u.projectId)?.title || u.projectId}</p><p class="text-sm mt-2 whitespace-pre-wrap">{u.text}</p><a class="admin-link" href={`/studio/projects/${u.projectId}`}>Manage project →</a></article>)}{!recent.length && <p class="admin-empty">Your first update can be a simple hello.</p>}</section>
+</AdminLayout>

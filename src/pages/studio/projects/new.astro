@@ -1,0 +1,8 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProjectForm from '../../../components/ProjectForm.astro';
+---
+<AdminLayout title="Create a project" description="Start with the story. You can keep it private until you’re ready.">
+  <a slot="actions" href="/studio/projects" class="button secondary">Back to projects</a>
+  <div class="admin-editor-grid"><section class="admin-card"><ProjectForm/></section><aside class="admin-card"><h2>A little room for your next idea</h2><p class="admin-help mt-4">A project can be a specific goal, everyday living costs, or an ongoing practice. The aspiration helps tell your story; support never depends on reaching it.</p><h3 class="mt-6">Draft first, publish when ready</h3><p class="admin-help mt-2">Private drafts are saved only in this instance. Save one to preview your Markdown, images, and video before publishing.</p><h3 class="mt-6">One public home</h3><p class="admin-help mt-2">Publishing opens your project to tips and queues its public AT Protocol record. Use Updates to publish a separate Bluesky post when you want to announce it.</p></aside></div>
+</AdminLayout>

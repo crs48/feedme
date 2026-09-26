@@ -34,6 +34,11 @@
           "website": {
             "type": "string",
             "maxLength": 2048
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
           }
         }
       }

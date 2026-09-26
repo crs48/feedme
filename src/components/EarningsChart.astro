@@ -1,0 +1,16 @@
+---
+import { money } from '../lib/model';
+import { displayDate, type earningsSeries } from '../lib/analytics';
+interface Props { series: ReturnType<typeof earningsSeries>; interval: string; }
+const { series, interval } = Astro.props;
+const max = Math.max(100, ...series.map((s) => s.net));
+const step = 720 / Math.max(1, series.length);
+---
+<div class="admin-card"><div class="admin-card-heading"><h2>Earnings over time</h2><span class="admin-help">{interval === 'month' ? 'Monthly' : 'Weekly'} · after refunds & disputes</span></div>
+  <svg class="admin-chart" viewBox="0 0 760 180" preserveAspectRatio="none" role="img" aria-label={`${interval === 'month' ? 'Monthly' : 'Weekly'} earnings in USD. Expand the data table for exact figures.`}>
+    {[0,1,2].map((i) => <line x1="20" y1={20 + i * 75} x2="740" y2={20 + i * 75} stroke="#e8edf4" stroke-dasharray="3 4"/>)}
+    {series.map((s,i) => <rect x={20 + i * step + step * .14} y={170 - s.net / max * 145} width={Math.max(1,step * .72)} height={s.net ? s.net / max * 145 : 2} rx={Math.min(4,step * .2)} fill={s.net ? '#0866ff' : '#e4ebf5'}><title>{displayDate(s.date)}: {money(s.net)}</title></rect>)}
+  </svg>
+  {series.length > 0 && <div class="admin-chart-labels"><span>{displayDate(series[0].date)}</span><span>{displayDate(series[series.length-1].date)}</span></div>}
+  <details><summary class="admin-link">View earnings table</summary><div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Period starting</th><th class="numeric">Gross</th><th class="numeric">Refunds</th><th class="numeric">Disputes</th><th class="numeric">Net</th></tr></thead><tbody>{series.map((s) => <tr><td>{displayDate(s.date)}</td><td class="numeric">{money(s.gross)}</td><td class="numeric">{money(s.refunded)}</td><td class="numeric">{money(s.disputed)}</td><td class="numeric">{money(s.net)}</td></tr>)}</tbody></table></div><p class="admin-help">Only payments within your selected dates are included. Weeks begin Monday.</p></details>
+</div>

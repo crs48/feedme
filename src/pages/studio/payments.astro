@@ -1,0 +1,20 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminFilters from '../../components/AdminFilters.astro';
+import AdminPayments from '../../components/AdminPayments.astro';
+import { adminReport, selectedPayments, summarizePayments, reportPage } from '../../lib/analytics';
+import { payments, projects } from '../../lib/repository';
+import { money } from '../../lib/model';
+const list = projects(true);
+const { query, error } = adminReport(Astro.url.searchParams);
+const records = selectedPayments(payments(), query);
+const stats = summarizePayments(records);
+const pagination = reportPage(records, Astro.url.searchParams);
+---
+<AdminLayout title="Payments" description="Every tip and recurring payment, with its original allocation and visibility.">
+  <a slot="actions" class="button secondary" href={`/api/admin/export?${error ? '' : Astro.url.searchParams}`}>Export CSV ↓</a>
+  {error && <p class="notice error">{error}</p>}
+  <AdminFilters query={query} projects={list} detailed/>
+  <section class="admin-card"><div class="admin-card-heading"><h2>{records.length} payments <span class="muted">· {money(stats.net)} net</span></h2><span class="admin-help">{query.project ? 'Amounts show the selected project’s share' : 'Split payments count once'}</span></div><AdminPayments records={pagination.items} projects={list}/><nav class="admin-pagination" aria-label="Payment pages"><span>{pagination.page > 1 && <a class="admin-link" href={pagination.previous}>← Newer</a>}</span><span>Page {pagination.page} of {pagination.pages}</span><span>{pagination.page < pagination.pages && <a class="admin-link" href={pagination.next}>Older →</a>}</span></nav></section>
+  <p class="admin-help">CSV exports include one row per project allocation and respect your filters. Anonymous tips have no supporter DID. Private notes and Stripe identifiers stay out of the export. Refunds and subscription changes are managed in your Stripe account.</p>
+</AdminLayout>

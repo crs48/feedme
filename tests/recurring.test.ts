@@ -30,6 +30,15 @@ describe('recurring payment ledger', () => {
     expect(readRecord(db, 'subscription', root.id)).toMatchObject({ customerId: 'cus_one', subscriptionId: 'sub_one' });
     paid(); expect(amount()).toBe(3000);
   });
+  it('does not inherit an earlier payment date when a renewal fails', () => {
+    paid();
+    const renewal = invoice('in_failed', 'subscription_cycle', { created: 200, status_transitions: { paid_at: null }, status: 'open', amount_paid: 0 });
+    apply('evt_renewal_failed', 'invoice.payment_failed', renewal);
+    const next = readRecord<Support>(db, 'support', invoiceSupportId(root.id, renewal))!;
+    expect(next.status).toBe('failed');
+    expect(next.paidAt).toBeUndefined();
+    expect(next.createdAt).toBe(new Date(200000).toISOString());
+  });
   it('expires unpaid subscription Checkouts without removing later paid contributions', () => {
     apply('evt_expired', 'checkout.session.expired', { ...session, subscription: null, customer: null, payment_status: 'unpaid' });
     expect(readRecord<Support>(db, 'support', root.id)?.status).toBe('failed');

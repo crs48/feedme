@@ -1,0 +1,16 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProjectForm from '../../../components/ProjectForm.astro';
+import Markdown from '../../../components/Markdown.astro';
+import { project, payments } from '../../../lib/repository';
+import { projectPerformance } from '../../../lib/analytics';
+import { money } from '../../../lib/model';
+const p = project(Astro.params.id || '');
+if (!p) return Astro.redirect('/404');
+const stats = projectPerformance(payments(), [p]).find((s) => s.id === p.id)!;
+---
+<AdminLayout title={p.title} description={`${p.status === 'draft' ? 'Private draft' : p.status === 'active' ? 'Published' : p.status} · ${money(stats.net)} net support · ${stats.count} contributions, all time`}>
+  <a slot="actions" href="/studio/projects" class="button secondary">Back to projects</a>
+  {p.status === 'draft' ? <p class="admin-warning">This draft is visible only to administrators. Choose “Published · accepting tips” and save to publish it on your site and queue its public AT Protocol record.</p> : <p class="admin-help mb-6">Published content cannot become a private draft. Archive it to remove it from the site and stop new tips; existing subscriptions continue. Copies of public records may remain elsewhere.</p>}
+  <div class="admin-editor-grid"><section class="admin-card"><h2 class="mb-6">Project details</h2><ProjectForm project={p}/></section><aside><section class="admin-card"><div class="admin-card-heading"><h2>Saved content preview</h2><span class="status-pill">Admin only</span></div>{p.image && <img src={p.image} alt={p.title} class="rounded-lg mb-5" loading="lazy" referrerpolicy="no-referrer"/>}<h3>{p.title}</h3><p class="admin-help mt-2 mb-6">{p.summary}</p><Markdown content={p.description}/>{p.link && <a class="admin-link mt-4" href={p.link} rel="noopener noreferrer">Project link ↗</a>}<p class="admin-help mt-6">Save changes to refresh this preview.</p></section><div class="admin-actions">{['active','complete'].includes(p.status) && <a href={`/support/${p.id}`} class="button secondary">View public page ↗</a>}<a href={`/studio/payments?range=all&project=${p.id}`} class="button secondary">Payment history</a></div></aside></div>
+</AdminLayout>
