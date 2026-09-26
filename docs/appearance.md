@@ -25,7 +25,7 @@ The homepage lists projects without cover images, alongside a sticky support pan
 
 ## Allocating one tip
 
-Each slider is a relative weight from 0 to 100. Equal weights split the total equally; one nonzero slider receives the whole total. Zero-weight projects are excluded. Dollar amounts and percentages update immediately, and clearing all sliders disables checkout with an explanation. “Split evenly” and amount presets are conveniences; native sliders and the total field remain usable without JavaScript.
+Each slider is a relative weight from 0 to 100 and starts at zero, so supporters choose which projects to include. Equal weights split the total equally; one nonzero slider receives the whole total. Zero-weight projects are excluded. Dollar amounts and percentages update immediately, and checkout stays disabled until at least one project is selected. “Split evenly” and amount presets are conveniences; native sliders and the total field remain usable without JavaScript.
 
 The browser and server share the same integer-cent allocation function. Leftover cents go to the largest fractional shares, with ties resolved in the displayed project order. The server recomputes the amounts rather than trusting the displayed values. See [split support](split-support.md) for the payment and refund behavior.
 

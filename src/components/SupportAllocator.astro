@@ -2,7 +2,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Project } from '../lib/model';
 import { money } from '../lib/model';
-import { allocateAmount } from '../lib/allocation';
 import { config } from '../lib/config';
 import { cookieOptions, digest, randomToken } from '../lib/auth';
 import { getDb, setKv } from '../lib/db';
@@ -13,7 +12,6 @@ interface Props { projects: Project[]; creatorName: string; }
 const { projects, creatorName } = Astro.props;
 const active = projects.filter((p) => p.status === 'active');
 const { demo, tipAmounts, defaultTipAmount: defaultAmount } = config();
-const initial = active.length ? allocateAmount(defaultAmount, active.slice(0, 100).map((p) => ({ projectId: p.id, weight: 100 }))) : [];
 const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
 Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 365 * 86400 });
@@ -25,15 +23,15 @@ const user = Astro.locals.user;
   <section class="allocation-projects" aria-labelledby="allocation-heading">
     <div class="allocation-heading"><div><h2 id="allocation-heading" class="section-title">Where should your support go?</h2><p>Move the sliders to put more behind what matters to you.</p></div></div>
     {active.length > 0 && <div class="allocation-tools"><span>Equal sliders = an equal split</span><div data-enhanced hidden><button type="button" data-even>Split evenly</button><button type="button" data-clear>Clear</button></div></div>}
-    <noscript><p class="notice">Sliders set relative shares of your total. Your exact dollar breakdown will appear at checkout. Set a slider to zero to leave that project out.</p></noscript>
-    <div class="project-list">{projects.map((p) => { const t = totals(p.id); const part = initial.find((part) => part.projectId === p.id); return <article class="allocation-project" data-project={p.id}>
+    <noscript><p class="notice">Sliders set relative shares of your total. Move at least one slider above zero to select a project. Your exact dollar breakdown will appear at checkout.</p></noscript>
+    <div class="project-list">{projects.map((p) => { const t = totals(p.id); return <article class="allocation-project" data-project={p.id}>
       <div class="project-topline"><span class="tag">{p.category}</span><span class="project-status">{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
       <h3><a href={`/support/${p.id}`}>{p.title}<Icon name="arrow" size={16}/></a></h3>
       <p class="project-summary">{p.summary}</p>
       <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
       {p.status === 'active' ? <div class="project-allocation">
-        <div class="allocation-label"><label for={`weight-${p.id}`}>Your allocation</label><output for={`weight-${p.id}`} data-project-output={p.id} data-enhanced hidden>{money(part?.amount || 0)} <span>{((part?.amount || 0) / defaultAmount * 100).toFixed(1)}%</span></output></div>
-        <input class="project-slider" type="range" name={`weight:${p.id}`} id={`weight-${p.id}`} min="0" max="100" step="1" value={part ? 50 : 0} data-weight={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
+        <div class="allocation-label"><label for={`weight-${p.id}`}>Your allocation</label><output for={`weight-${p.id}`} data-project-output={p.id} data-enhanced hidden>{money(0)} <span>0%</span></output></div>
+        <input class="project-slider" type="range" name={`weight:${p.id}`} id={`weight-${p.id}`} min="0" max="100" step="1" value="0" data-weight={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
         <div class="slider-scale" aria-hidden="true"><span>None</span><span>More</span></div>
       </div> : <a class="completed-link" href={`/support/${p.id}`}>View project <Icon name="arrow" size={14}/></a>}
     </article>; })}</div>
@@ -48,7 +46,7 @@ const user = Astro.locals.user;
       <div class="amount-presets" data-enhanced hidden aria-label="Suggested amounts">{tipAmounts.map((amount) => <button type="button" data-amount={amount / 100} aria-pressed={amount === defaultAmount}>{money(amount)}</button>)}</div>
     </div>
     <div class="donation-checkout" id="donation-checkout">
-      <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>{initial.length} projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id}><span>{p.title}</span><strong data-summary-amount={p.id}>{money(initial.find((part) => part.projectId === p.id)?.amount || 0)}</strong></li>)}</ul><p data-allocation-error class="allocation-error" role="status" hidden></p></div>
+      <div class="split-summary" data-enhanced hidden><div class="split-heading"><h3>Your split</h3><span data-project-count>0 projects</span></div><ul>{active.map((p) => <li data-summary-row={p.id} hidden><span>{p.title}</span><strong data-summary-amount={p.id}>{money(0)}</strong></li>)}</ul><p data-allocation-error class="allocation-error" role="status" hidden></p></div>
       <details class="support-options"><summary>Visibility & note <span data-visibility-label>Anonymous</span></summary>
         <fieldset class="allocation-privacy"><legend class="sr-only">Support visibility</legend>
           <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
