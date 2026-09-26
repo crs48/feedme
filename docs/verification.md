@@ -120,3 +120,16 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - A deployed Railway/VPS instance, live load testing, remote re-indexing, or organization administration.
 
 Use the [operator acceptance checklist](hosting.md#live-acceptance-checklist) before taking real payments. Mocked provider contracts and local demo flows do not replace that checklist.
+
+## Configurable administration dashboard · 2026-09-26
+
+- [x] `pnpm check`: no errors, warnings, or hints.
+- [x] `pnpm test`: 129 passing tests across 19 suites. Added coverage for handle/DID authorization, permanent identity pins, admin removal, protected pages/exports, draft publication boundaries, additional-admin project operations, CSV privacy/formula protection, split accounting, date ranges, payment timestamps, and recurring run rates.
+- [x] `pnpm build`: production Node bundle generated successfully.
+- [x] All eight admin routes render without page overflow at 320, 390, 768, and 1440px widths (32 browser checks).
+- [x] Demo browser workflow: sign in as admin, create a private draft, inspect rendered Markdown, publish, and archive. The temporary project and its test-only activity records were removed afterward.
+- [x] Public HTTP requests cannot see the draft on the homepage or its detail route. Signed-out admin pages redirect to login; exports return HTTP 403. Published test project returned HTTP 200 with rendered Markdown.
+- [x] Mobile editor text fields render at 16px. Dashboard forms and reporting use server-rendered HTML; charts include exact-value tables.
+- [x] A fresh, isolated live-mode instance resolved `crs.land` through the actual Habitat SDK, stored encrypted DID/owner pins, served health HTTP 200, redirected unsigned dashboard requests, and rejected unsigned exports. The live identity is `did:plc:fvfdugmhgbbvxjppo2kkveq2`.
+
+The live bootstrap check used a temporary data directory and no Stripe credentials. It did not perform an interactive OAuth login, a PDS/Habitat write, or a payment. Real creator OAuth, delegated publication through the creator’s stored grant, Habitat membership, and Stripe payment acceptance still require the live acceptance checklist in [hosting](hosting.md#live-acceptance-checklist).

@@ -26,4 +26,4 @@ sequenceDiagram
   Feedme-->>Browser: HttpOnly session + redirect
 ```
 
-Organizations are modeled by an eventual workspace DID and role records; initial authorization deliberately has one owner rather than an incomplete multi-admin UI.
+The initial release used one owner. The [administration dashboard](../../admin.md) now supports a configured DID allowlist for multiple administrators of a single creator instance. Organization workspace DIDs, invitation flows, and granular Habitat roles remain future work.

@@ -35,6 +35,22 @@ TIP_AMOUNTS=11,22,44,88
 
 The second amount is the starting amount on both the homepage and project pages. Use four distinct values between $1 and $1,000, with up to two decimal places. Supporters can always enter a custom amount. The suggestions apply to one-time, monthly, and yearly tips; existing recurring payments keep their saved amounts.
 
+## Your Bluesky account is your admin login
+
+Copy the template, then change this one identity setting in `.env` or your host’s environment:
+
+```dotenv
+BLUESKY_HANDLE=crs.land
+# Optional: grant full admin access to more people.
+ADMIN_ACCOUNTS=friend.bsky.social,another.example
+```
+
+The default creator/admin is **@crs.land**. For your own instance, replace it with your handle before the first live launch. In live mode, click **Sign in**, authenticate with that Bluesky/AT Protocol account, and open **Dashboard** at `/studio`. No separate admin password. A handle is verified through Habitat and pinned to its permanent DID in the persistent database; display names never grant permissions. Additional admins have the same access to private payment records and project publishing as the creator. Restart after changing configuration.
+
+The demo uses a fictional account and an **Explore the demo studio** button, so no real Bluesky login is needed to preview the dashboard. For real login, complete [live hosting setup](docs/hosting.md#live-configuration); a handle does not replace HTTPS, encryption, or Stripe credentials. Existing installations can keep `OWNER_DID`, which overrides `BLUESKY_HANDLE`.
+
+See the [administration guide](docs/admin.md) for project workflows, report definitions, admin removal, and identity recovery.
+
 ## What works in this release
 
 - Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the allocation preview is a small progressive enhancement, and the optional video player loads on demand.
@@ -43,7 +59,7 @@ The second amount is the starting amount on both the homepage and project pages.
 - Split a single tip across projects from the homepage with linked percentage sliders and a live dollar breakdown. One Stripe Checkout handles the whole amount; project pages remain available for details.
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
-- Creator studio with project/profile editing, field notes, support breakdowns, and friend recommendations.
+- Configurable Bluesky administrators (default `crs.land`) and a private dashboard: draft/publish/archive projects, Markdown previews, weekly/monthly earnings, project performance, recurring support, searchable payments, CSV exports, supporter profiles, connection health, and admin activity.
 - Native creator/friend follows, portable project subscriptions, a Following feed, and explicit public messages after tipping.
 - Markdown project stories with safe images and video embeds. Project logs use native Bluesky posts, including imported photo/video posts.
 - Author avatars on posts, with bundled demo portraits and responsive project photography. Missing portraits use initials; anonymous supporters use a generic icon.
@@ -118,11 +134,11 @@ Compose builds the app itself; Node and pnpm do not need to be installed on the 
 
 After deploying, set these in your host's secret/environment settings:
 
-1. `FEEDME_MODE=live`, `OWNER_DID=your permanent AT Protocol DID`, and a `DATA_ENCRYPTION_KEY` generated with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Back up the key separately from the disk.
+1. `FEEDME_MODE=live`, `BLUESKY_HANDLE=your.handle`, and a `DATA_ENCRYPTION_KEY` generated with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Back up the key separately from the disk.
 2. `PUBLIC_URL=https://your-custom-domain` if using a custom domain or VPS. Render, Railway, Fly.io, and Koyeb generated domains are detected automatically when this variable is absent. Don't copy the local `.env` URL to a hosted instance.
 3. Stripe test credentials: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Sign in as the owner, create Habitat private storage, and finish Stripe Connect onboarding in the studio.
 
-Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the deployment configurations). A handle alone is not yet sufficient for live setup: the current release uses your permanent DID and provider credentials. Follow [identity/payment setup and the live acceptance checklist](docs/hosting.md#live-configuration) before taking real payments.
+Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the deployment configurations). Your handle is the only identity setting required; Feedme verifies and pins its permanent DID. Live hosting and payments still require HTTPS, encryption, and provider credentials. Follow [identity/payment setup and the live acceptance checklist](docs/hosting.md#live-configuration) before taking real payments.
 
 ### Koyeb demo button
 

@@ -41,7 +41,9 @@ Use `http://127.0.0.1:4321` consistently, including in `PUBLIC_URL`. The applica
 | --- | --- |
 | `FEEDME_MODE` | `live` |
 | `PUBLIC_URL` | Your HTTPS origin; optional on supported hosts when using their generated domain |
-| `OWNER_DID` | Your permanent AT Protocol DID, not your handle |
+| `BLUESKY_HANDLE` | Creator handle and primary administrator; defaults to `crs.land`. Change to your handle before first live launch. |
+| `ADMIN_ACCOUNTS` | Optional comma-separated additional admin handles or DIDs; full administrative access |
+| `OWNER_DID` | Optional legacy permanent-DID override; takes precedence over `BLUESKY_HANDLE` |
 | `DATA_ENCRYPTION_KEY` | 64 hex characters, generated once and backed up separately |
 | `DATA_DIR` | Persistent writable directory; `/data` in the supplied deployment configurations |
 | `HABITAT_URL` | Trusted Habitat host; defaults to `https://pear.habitat.network` |
@@ -60,7 +62,7 @@ Generate the encryption key locally:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Store it in the deployment’s environment or secret manager. The live app refuses to run without HTTPS, a syntactically valid owner DID, and this key. Do not rotate the key by simply replacing the environment value: existing encrypted records would become unreadable. Key migration is not implemented yet.
+Store it in the deployment’s environment or secret manager. The live app refuses to run without HTTPS, a verified configured creator identity, and this key. Do not rotate the key by simply replacing the environment value: existing encrypted records would become unreadable. Key migration is not implemented yet.
 
 When `PUBLIC_URL` is absent, Feedme uses `RENDER_EXTERNAL_URL`, `RAILWAY_PUBLIC_DOMAIN`, `KOYEB_PUBLIC_DOMAIN`, or `FLY_APP_NAME` (in that order), then falls back to loopback for local development. An explicit `PUBLIC_URL` always wins. Set it for custom domains, and do not paste the localhost value from `.env.example` into a hosted deployment. The origin comes from trusted environment settings, never inbound request headers. These provider variables are documented by [Render](https://render.com/docs/environment-variables), [Railway](https://docs.railway.com/variables), [Koyeb](https://www.koyeb.com/docs/build-and-deploy/environment-variables), and [Fly.io](https://fly.io/docs/machines/runtime-environment/).
 
@@ -70,16 +72,16 @@ Deployment configurations omit `FEEDME_MODE` so the app initially uses its defau
 
 1. Make the HTTPS origin reachable and verify `/api/health`.
 2. Verify `/oauth-client-metadata.json` and `/jwks.json` return JSON publicly. These contain public client metadata and public keys, not private secrets.
-3. Sign in using your handle. Your authenticated DID must match `OWNER_DID` to use the studio.
-4. In the studio, choose **Create private storage**. Feedme creates a new member-list Habitat space and saves the returned URI. Only the creator is an initial member. Feedme never adopts an arbitrary existing space whose permissions it has not established.
-5. Create your profile and first project. Choose **Sync records** to verify the first public write. Production `pnpm start` also retries automatically every 30 seconds.
+3. Set `BLUESKY_HANDLE` to your account (default `crs.land`), restart, and sign in using that handle. Feedme resolves and pins its verified DID; only that DID and configured `ADMIN_ACCOUNTS` can open `/studio`. Existing `OWNER_DID` deployments keep their override. See [admin setup and identity recovery](admin.md).
+4. In **Dashboard → Settings**, choose **Create private storage**. Feedme creates a new member-list Habitat space and saves the returned URI. Only the creator is an initial member. Feedme never adopts an arbitrary existing space whose permissions it has not established.
+5. In Settings, import your Bluesky profile. Create a project as a private draft, preview it, then publish it. Choose **Sync records** to verify the first public write. Production `pnpm start` also retries automatically every 30 seconds.
 
 Habitat’s own service can be self-hosted separately. Feedme is TypeScript and does not embed Habitat’s Go server. The current SDK delegates identity verification to the configured Habitat instance; use an instance you trust. See the [upstream setup](https://github.com/habitat-network/habitat) and [proxy integration](https://github.com/habitat-network/habitat/blob/85654a07dec6931925763e66c835f65d0cdf1e30/api-docs/docs/space-proxy/getting-started.mdx).
 
 ### Connect payments
 
 1. Configure your Stripe platform for Connect and use **test mode** credentials first.
-2. In the studio, choose **Connect with Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
+2. In **Dashboard → Settings**, choose **Connect Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
 3. Register `https://support.example.com/api/stripe/webhook` as a **connected-account** event destination using API version `2026-08-26.dahlia` (matching the installed Stripe SDK) and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 4. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, **`invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`**. Existing installations must add the invoice and subscription events before offering recurring support.
 5. Enable eligible payment methods on the connected account. Checkout selects methods dynamically; card wallets such as Apple Pay and Google Pay depend on account, currency, device, and Stripe eligibility. Feedme does not promise every method on every checkout.
@@ -204,7 +206,7 @@ Treat it as a disposable preview: the button does not provision a volume and cha
 These require your provider accounts and were not executed as part of the local build.
 
 - [ ] Real owner sign-in through Habitat, then repeat after an app restart.
-- [ ] A different DID can sign in but cannot mutate studio state.
+- [ ] An unconfigured DID can sign in but cannot view admin pages, export payments, or mutate studio state. A configured additional admin can perform those actions.
 - [ ] Create a member-list space and verify another identity cannot read its receipts.
 - [ ] Publish a project, read it from the actual public PDS, and confirm private notes are absent.
 - [ ] Finish Stripe test onboarding and confirm the connected account’s charge/payout readiness.
