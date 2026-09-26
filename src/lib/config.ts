@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
-import { centsFromInput, didSchema } from './model';
+import { centsFromInput } from './model';
+import { identitySettings, resolvedDid } from './identity-settings';
 
 // Trust deployment settings, never request Host or forwarded headers.
 // An explicit public URL always wins, including when using a custom domain.
@@ -25,16 +26,17 @@ export const config = () => {
   const tipAmounts = tipAmountsFromEnv();
   const demo = process.env.FEEDME_MODE !== 'live';
   const origin = publicOrigin();
-  const ownerDid = demo ? 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' : (process.env.OWNER_DID || '');
+  const identities = identitySettings();
+  const dataDir = resolve(process.env.DATA_DIR || '.data');
+  const ownerDid = demo ? 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' : (resolvedDid(dataDir, identities.owner) || '');
+  const adminDids = demo ? [ownerDid] : identities.accounts.flatMap((account) => resolvedDid(dataDir, account) || []);
   if (!demo) {
-    didSchema.parse(ownerDid);
     if (!origin.startsWith('https://')) throw new Error('Live mode requires an HTTPS PUBLIC_URL.');
     if (!/^[a-f0-9]{64}$/i.test(process.env.DATA_ENCRYPTION_KEY || ''))
       throw new Error('Live mode requires a 32-byte DATA_ENCRYPTION_KEY encoded as hex.');
   }
   return {
-    demo, origin, ownerDid, tipAmounts, defaultTipAmount: tipAmounts[1],
-    dataDir: resolve(process.env.DATA_DIR || '.data'),
+    demo, origin, ownerDid, adminDids, identities, tipAmounts, defaultTipAmount: tipAmounts[1], dataDir,
     habitatUrl: process.env.HABITAT_URL || 'https://pear.habitat.network',
     stripeKey: process.env.STRIPE_SECRET_KEY || '',
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',

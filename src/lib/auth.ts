@@ -46,6 +46,12 @@ export const currentUser = (context: Pick<APIContext, 'cookies'>): User | undefi
   return token ? getKv<User>(getDb(), 'session', digest(token)) : undefined;
 };
 export const isOwner = (user?: User) => Boolean(user && user.did === config().ownerDid);
+export const isAdmin = (user?: User) => Boolean(user && config().adminDids.includes(user.did));
+export const requireAdmin = (context: Pick<APIContext, 'cookies'>) => {
+  const user = currentUser(context);
+  if (!isAdmin(user)) throw new Error('Administrator access is required.');
+  return user!;
+};
 export const requireOwner = (context: Pick<APIContext, 'cookies'>) => {
   const user = currentUser(context);
   if (!isOwner(user)) throw new Error('Sign in as the instance owner to make changes.');

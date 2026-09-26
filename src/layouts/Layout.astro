@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import Icon from '../components/Icon.astro';
 import { config } from '../lib/config';
-import { isOwner } from '../lib/auth';
+import { isAdmin } from '../lib/auth';
 interface Props { title?: string; description?: string; noindex?: boolean; }
 const { title = 'Good things grow with a little support', description = 'A home for the things you make and the people who make them possible.', noindex = false } = Astro.props;
 const cfg = config();
@@ -30,7 +30,7 @@ const error = Astro.url.searchParams.get('error');
       <nav aria-label="Main navigation" class="flex items-center gap-7">
         <a href="/about" class="about-link muted nav-link">About</a>
         {user && <a href="/following" class="nav-link">Following</a>}
-        {isOwner(user) ? <a class="button secondary social" href="/studio">Studio</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary social">Sign out</button></form> : <a class="button secondary social" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
+        {isAdmin(user) ? <a class="button secondary social" href="/studio">Dashboard</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary social">Sign out</button></form> : <a class="button secondary social" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
       </nav>
     </header>
     <main id="main">

@@ -1,14 +1,22 @@
 import { defineMiddleware } from 'astro:middleware';
 import { config } from './lib/config';
-import { currentUser } from './lib/auth';
+import { currentUser, isAdmin } from './lib/auth';
+import { prepareIdentity } from './lib/admin-identity';
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  try { await prepareIdentity(); }
+  catch { return new Response('Feedme could not verify its configured creator. Check BLUESKY_HANDLE, Habitat connectivity, and the data directory owner configuration.', { status: 503, headers: { 'Cache-Control': 'no-store' } }); }
   const cfg = config();
   if (context.request.method === 'POST' && !['/api/stripe/webhook', '/api/sync'].includes(context.url.pathname)) {
     const origin = context.request.headers.get('origin');
     if (origin !== cfg.origin) return new Response('This form must be submitted from this site.', { status: 403 });
   }
   context.locals.user = currentUser(context);
+  if ((context.url.pathname === '/api/studio' || context.url.pathname === '/studio' || context.url.pathname.startsWith('/studio/') || context.url.pathname.startsWith('/api/admin/')) && !isAdmin(context.locals.user)) {
+    if (!context.locals.user && !context.url.pathname.startsWith('/api/'))
+      return context.redirect(`/login?returnTo=${encodeURIComponent(context.url.pathname + context.url.search)}`, 303);
+    return new Response('Administrator access is required.', { status: 403, headers: { 'Cache-Control': 'private, no-store' } });
+  }
   const response = await next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
