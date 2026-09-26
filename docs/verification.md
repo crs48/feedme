@@ -25,6 +25,20 @@ The anonymous browser test created a permitted timeline entry, and the public HT
 
 Browser screenshots are generated locally under ignored `output/playwright/`. These are preview artifacts, not application assets or test fixtures.
 
+## Mobile and Checkout appearance
+
+- [x] `pnpm check`, all 56 tests, and `pnpm build` pass after the redesign.
+- [x] Production profile, project, circle, updates, Following, login, and studio pages return HTTP 200 at 320, 390, 768, and 1440px widths (28 checks).
+- [x] Those pages have no horizontal document overflow, primary buttons below 44px, or visible text inputs below 16px.
+- [x] Desktop and mobile screenshots visually reviewed. At 390px, the project support form starts at 429px; the full Markdown story follows the form. Decorative placeholders are hidden on mobile project headers.
+- [x] Visibility selection shows anonymous timeline consent only when anonymous support is selected; named support remains disabled for signed-out visitors.
+- [x] With JavaScript disabled and touch emulation enabled, a signed-out visitor can expand the native note field, submit an anonymous demo tip, and reach its confirmation. Neither the private note nor anonymous amount appears in the public profile HTML.
+- [x] Keyboard focus reaches the skip link with a visible outline. The production homepage still contains zero script tags; no extra browser JavaScript or web fonts were added.
+- [x] Hosted Checkout uses typed per-session branding settings matching the app's white background, purple action color, default font, and rounded controls.
+- [ ] Visually compare a real connected-account Stripe test Checkout session with the local support page, including the merchant's existing logo and business name.
+
+See the [appearance guide](appearance.md) for the tokens, responsive behavior, and Stripe source documentation. Screenshots for this pass use the `stripe-` filename prefix in `output/playwright/`.
+
 ## Not verified
 
 - Real Habitat OAuth and live PDS/private-space interoperability using creator and supporter accounts, including the Bluesky AppView proxy.

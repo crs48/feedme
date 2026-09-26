@@ -35,6 +35,8 @@ export const checkout = async (intent: Support, title: string) => {
   putRecord(getDb(), 'support', intent.id, current);
   const result = await stripe.checkout.sessions.create({
     mode: 'payment', client_reference_id: intent.id,
+    // Match the shared UI theme without replacing the connected merchant's name or logo.
+    branding_settings: { background_color: '#ffffff', button_color: '#635bff', border_style: 'rounded', font_family: 'default' },
     metadata: { feedme_support_id: intent.id },
     payment_intent_data: { metadata: { feedme_support_id: intent.id } },
     line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: intent.amount, product_data: { name: `Support: ${title}` } } }],
