@@ -8,6 +8,8 @@ import SupportTimeline from '../../components/SupportTimeline.astro';
 import { projectLog } from '../../lib/project-log';
 import Icon from '../../components/Icon.astro';
 import FollowButton from '../../components/FollowButton.astro';
+import Avatar from '../../components/Avatar.astro';
+import { demoCover, demoImageSources, demoPerson } from '../../lib/demo-media';
 import { projectUri } from '../../lib/social-model';
 import { profile, project, totals, updates } from '../../lib/repository';
 import { money } from '../../lib/model';
@@ -20,6 +22,7 @@ const creator = profile();
 const t = totals(p.id);
 const user = Astro.locals.user;
 const cfg = config();
+const cover = p.image ? { url: p.image, alt: p.title } : cfg.demo ? demoCover(p.id) : undefined;
 const requestId = randomUUID();
 const binding = Astro.cookies.get('feedme_checkout')?.value || randomToken();
 Astro.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 86400 });
@@ -33,14 +36,14 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
   <div class="shell"><a href="/" class="back-link">← {creator.name}’s projects</a></div>
   <div class="shell support-layout">
     <header class="project-header">
-      <div class:list={['detail-art', { placeholder: !p.image }]}>{p.image ? <img src={p.image} alt={p.title} width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</div>
+      <div class:list={['detail-art', { placeholder: !cover }]}>{cover ? <img src={cover.url} srcset={demoImageSources(cover.url)} sizes="(max-width: 700px) calc(100vw - 40px), 584px" alt={cover.alt} width="960" height="640" decoding="async" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</div>
       <div class="project-meta"><span class="tag">{p.category}</span><span>{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
       <h1 class="display">{p.title}</h1><p class="project-summary">{p.summary}</p>
       <nav class="project-tabs" aria-label="Project sections"><a href="#support">Support</a><a href="#story">Story</a><a href="#project-log">Updates</a><a href="#supporters">Supporters</a></nav>
     </header>
     <aside>
       <section id="support" class="panel support-panel" aria-labelledby="support-heading">
-        <h2 id="support-heading" class="section-title">Support this project</h2><p class="muted support-recipient">A one-time tip for {creator.name}.</p>
+        <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : undefined} size={28}/><p>A one-time tip for {creator.name}.</p></div>
         <div class="funding-summary"><div class="funding-total"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(t.amount, p.target)}><span style={`width:${Math.min(100, t.amount / p.target * 100)}%`}></span></div><p class="muted">{money(p.target)} aspiration. Every tip is kept, regardless of progress.</p></>}</div>
         {p.status === 'active' ? <form action="/api/checkout" method="post">
           <input type="hidden" name="projectId" value={p.id}/><input type="hidden" name="requestId" value={requestId}/>
@@ -83,7 +86,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
   .project-tabs a:hover { text-decoration: underline; }
   .support-panel { padding: 28px; box-shadow: 0 4px 24px #1a1f3608, 0 1px 3px #1a1f3606; }
   .support-panel h2 { font-size: 20px; }
-  .support-recipient { margin-top: 6px; font-size: 14px; }
+  .support-recipient { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; color:var(--color-muted); }
   .funding-summary { font-size: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); margin-block: 24px; }
   .funding-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
   .funding-total strong { font-size: 14px; font-weight: 600; }

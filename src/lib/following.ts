@@ -4,10 +4,11 @@ import { profile, updates, project } from './repository';
 import { blueskyPostUrl, parseProjectUri, projectTag, projectUri, type Follow } from './social-model';
 import { readSocialRecords, socialClient } from './social-repo';
 import { parsePostView, type PostView } from './bsky-content';
+import { demoNoteImages, demoPerson } from './demo-media';
 
 export type FollowingPost = PostView & { projectTitle?: string };
 const feedSchema = z.object({ cursor: z.string().optional(), feed: z.array(z.object({ post: z.looseObject({
-  uri: z.string(), author: z.object({ did: z.string(), handle: z.string(), displayName: z.string().optional(), viewer: z.object({ muted: z.boolean().optional(), blocking: z.string().optional(), blockedBy: z.boolean().optional() }).optional() }),
+  uri: z.string(), author: z.object({ did: z.string(), handle: z.string(), displayName: z.string().optional(), avatar: z.unknown().optional(), labels: z.array(z.unknown()).optional(), viewer: z.object({ muted: z.boolean().optional(), blocking: z.string().optional(), blockedBy: z.boolean().optional() }).optional() }),
   record: z.looseObject({ text: z.string().max(10000), createdAt: z.string().refine((value) => Number.isFinite(Date.parse(value))), tags: z.array(z.string()).optional() }),
 }) })) });
 export const parseFeed = (input: unknown, subscriptions?: Follow[], references: { subject: string; uri: string }[] = []): { posts: FollowingPost[]; cursor?: string } => {
@@ -29,11 +30,11 @@ const demoFeed = async (actor: string, subscriptions: Follow[], projectsOnly: bo
   const posts: FollowingPost[] = updates().flatMap((update) => {
     const p = project(update.projectId);
     if (!p || !subscriptions.some(({ value }) => value.subject === (projectsOnly ? projectUri(own, p.id) : own))) return [];
-    return [{ uri: `demo:${update.id}`, cid: 'demo', url: `/support/${p.id}`, text: update.text, createdAt: update.createdAt, author: profile().name, did: own, projectTitle: p.title, images: [], tags: [], sensitive: false, demo: true, segments: [{ text: update.text }] }];
+    return [{ uri: `demo:${update.id}`, cid: 'demo', url: `/support/${p.id}`, text: update.text, createdAt: update.createdAt, author: profile().name, did: own, avatar: demoPerson(own)?.avatar, projectTitle: p.title, images: demoNoteImages(update.id), tags: [], sensitive: false, demo: true, segments: [{ text: update.text }] }];
   });
   if (!projectsOnly) {
     const shared = await readSocialRecords(actor, 'app.bsky.feed.post');
-    for (const record of shared) posts.push({ uri: record.uri, cid: 'demo', url: '/following?view=people', text: String(record.value.text), createdAt: String(record.value.createdAt), author: 'You · demo post', did: actor, images: [], tags: [], sensitive: false, demo: true, segments: [{ text: String(record.value.text) }] });
+    for (const record of shared) posts.push({ uri: record.uri, cid: 'demo', url: '/following?view=people', text: String(record.value.text), createdAt: String(record.value.createdAt), author: 'You · demo post', did: actor, avatar: demoPerson(actor)?.avatar, images: [], tags: [], sensitive: false, demo: true, segments: [{ text: String(record.value.text) }] });
   }
   return { posts: posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), warnings: [] as string[] };
 };

@@ -44,6 +44,17 @@ export const getDb = () => {
       setKv(database, 'app', 'social-demo-seed', true);
     });
   }
+  if (cfg.demo && !getKv(database, 'app', 'portrait-demo-seed')) {
+    transaction(database, () => {
+      // Update only the old stock identities, preserving user-created tips and every payment field.
+      for (const seed of demoSupports) {
+        const existing = readRecord<{ visibility: string; supporterDid?: string; createdAt: string }>(database, 'support', seed.id);
+        if (existing?.visibility === 'public' && existing.supporterDid === 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' && existing.createdAt === seed.createdAt)
+          putRecord(database, 'support', seed.id, { ...existing, supporterDid: seed.supporterDid });
+      }
+      setKv(database, 'app', 'portrait-demo-seed', true);
+    });
+  }
   return database;
 };
 

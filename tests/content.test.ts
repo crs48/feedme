@@ -41,4 +41,13 @@ describe('rich project content', () => {
     expect(postUriFromInput('https://bsky.app/profile/alex.test/post/3mposttest222')).toBe('at://alex.test/app.bsky.feed.post/3mposttest222');
     expect(() => postUriFromInput('https://evil.test/profile/alex.test/post/3mposttest222')).toThrow();
   });
+  it('preserves safe author avatars but omits invalid or labeled profile images', () => {
+    const author = { did: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', handle: 'alex.test', avatar: 'https://cdn.bsky.app/avatar.jpg' };
+    const post = { uri: `at://${author.did}/app.bsky.feed.post/3mposttest222`, author, record: { text: 'Hello', createdAt: '2026-09-25T12:00:00Z' } };
+    expect(parsePostView(post)?.avatar).toBe(author.avatar);
+    for (const avatar of [undefined, 7, 'javascript:alert(1)', 'data:image/svg+xml,evil', 'http://example.com/a.jpg', 'https://user:password@example.com/a.jpg']) {
+      expect(parsePostView({ ...post, author: { ...author, avatar } })?.avatar).toBeUndefined();
+    }
+    expect(parsePostView({ ...post, author: { ...author, labels: [{ val: '!warn' }] } })?.avatar).toBeUndefined();
+  });
 });

@@ -34,6 +34,7 @@ pnpm start
 - Creator studio with project/profile editing, field notes, support breakdowns, and friend recommendations.
 - Native creator/friend follows, portable project subscriptions, a Following feed, and explicit public messages after tipping.
 - Markdown project stories with safe images and video embeds. Project logs use native Bluesky posts, including imported photo/video posts.
+- Author avatars on posts, with bundled demo portraits and responsive project photography. Missing portraits use initials; anonymous supporters use a generic icon.
 - Profile and project supporter timelines with public amounts and separately permitted anonymous entries. Private tips stay hidden.
 - One-time USD support with anonymous, creator-private, or public identity choices.
 - Stripe Connect hosted onboarding, direct-charge hosted Checkout, signed webhooks, and refund/dispute reconciliation.

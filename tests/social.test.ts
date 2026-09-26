@@ -81,6 +81,13 @@ describe('actor-scoped social records', () => {
 });
 
 describe('public content contracts', () => {
+  it('keeps avatar metadata through feed validation without losing profile moderation labels', () => {
+    const author = { did: owner, handle: 'alex.test', avatar: 'https://cdn.bsky.app/avatar.jpg' };
+    const post = { uri: `at://${owner}/app.bsky.feed.post/3mposttest2222`, author, record: { text: 'Update', createdAt: '2026-09-25T12:00:00Z' } };
+    expect(parseFeed({ feed: [{ post }] }).posts[0].avatar).toBe(author.avatar);
+    expect(parseFeed({ feed: [{ post: { ...post, author: { ...author, labels: [{ val: 'nudity' }] } } }] }).posts[0].avatar).toBeUndefined();
+    expect(parseFeed({ feed: [{ post: { ...post, author: { ...author, avatar: 'javascript:alert(1)' } } }] }).posts[0].avatar).toBeUndefined();
+  });
   it('counts graphemes and bytes and truncates without breaking emoji', () => {
     expect(publicPostText('👩‍🌾'.repeat(200))).toBe('👩‍🌾'.repeat(200));
     expect(() => publicPostText('x'.repeat(301))).toThrow();

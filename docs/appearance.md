@@ -17,6 +17,14 @@ Shared tokens and components live in [`global.css`](../src/styles/global.css). C
 
 Project grids move from three to two to one column. The project page places its summary and section links first, then the support form, then the full Markdown story, updates, and supporter timeline. The full story never pushes the payment form down the page. Decorative fallback artwork is omitted on the mobile project page; creator-provided images remain visible. Optional private notes use native `details`, and visibility selection uses ordinary radios with CSS state styling.
 
+## Portraits and photography
+
+[`Avatar.astro`](../src/components/Avatar.astro) provides fixed-size circular portraits with initials underneath. The photo is a decorative CSS background beside the person's visible name, so missing or failed images expose the initials without JavaScript, broken-image icons, or layout movement. Anonymous supporters always use the same generic person icon.
+
+Post avatars come from the Bluesky AppView's `author.avatar`, including project logs and the Following feed. Only credential-free HTTPS avatar URLs pass normalization; labeled profile images use the fallback. This uses the author data already fetched with each post, with no additional profile lookups. Creator/recommendation cards and supporter activity use sample portraits in demo mode and initials in live mode until profile metadata is available to those views.
+
+Demo mode includes six locally served 160px portraits, three project photos in 480px and 960px WebP variants, and photographs in the original sample updates. Authored posts and uploaded project covers are preserved. Below-the-fold project/post photos load lazily, and `srcset` lets the browser choose an appropriate size. Demo assets are illustrative, are never published to a real PDS, and have [source credits and licenses](../public/demo/CREDITS.md).
+
 ## Hosted Checkout
 
 [`payments.ts`](../src/lib/payments.ts) sends per-session `branding_settings` with a white background, `#635bff` buttons, rounded controls, and Stripe’s `default` font. Keep these settings aligned with the shared CSS if you customize the theme.

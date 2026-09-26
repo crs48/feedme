@@ -4,12 +4,15 @@ import { money } from '../lib/model';
 import { totals } from '../lib/repository';
 import Artwork from './Artwork.astro';
 import Icon from './Icon.astro';
+import { config } from '../lib/config';
+import { demoCover, demoImageSources } from '../lib/demo-media';
 interface Props { project: Project; }
 const { project: p } = Astro.props;
 const total = totals(p.id);
+const cover = p.image || (config().demo ? demoCover(p.id)?.url : undefined);
 ---
 <article class="project-card">
-  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{p.image ? <img src={p.image} alt="" loading="lazy" width="640" height="380" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</a>
+  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{cover ? <img src={cover} srcset={demoImageSources(cover)} sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 950px) 44vw, 347px" alt="" loading="lazy" decoding="async" width="960" height="640" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</a>
   <div class="card-body">
     <div class="card-meta"><span class="tag">{p.category}</span><span>{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
     <h3><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
@@ -23,6 +26,7 @@ const total = totals(p.id);
 <style>
   .project-card { border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; background: white; display: flex; flex-direction: column; box-shadow: 0 2px 4px #1a1f3603; }
   .project-art { display: block; aspect-ratio: 2.65; overflow: hidden; border-bottom: 1px solid var(--color-border); }
+  .project-art:has(img) { aspect-ratio: 2; }
   .project-art img { width: 100%; height: 100%; object-fit: cover; }
   .card-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
   .card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; font-size: 12px; color: var(--color-muted); }

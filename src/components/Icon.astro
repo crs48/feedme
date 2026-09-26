@@ -2,6 +2,7 @@
 interface Props { name: string; size?: number; }
 const { name, size = 18 } = Astro.props;
 const paths: Record<string, string> = {
+  user: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-2a8 8 0 0 1 16 0v2',
   arrow: 'M5 12h14m-5-5 5 5-5 5', heart: 'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',
   leaf: 'M20 3c-9-1-16 3-16 9a6 6 0 0 0 6 6c6 0 10-6 10-15ZM4 22c0-6 5-11 11-14',
   location: 'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0ZM15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',

@@ -1,4 +1,5 @@
 import type { Friend, Profile, Project, Support, Update } from './model';
+import { demoSupporters } from './demo-media';
 
 const createdAt = '2026-09-20T12:00:00.000Z';
 export const demoProfile: Profile = {
@@ -23,4 +24,4 @@ export const demoSupports: Support[] = [
   ...Array.from({ length: 12 }, (_, i) => ({ projectId: 'backyard-sauna', amount: i === 0 ? 25000 : 7500 })),
   ...Array.from({ length: 8 }, () => ({ projectId: 'open-source', amount: 5000 })),
   ...Array.from({ length: 6 }, () => ({ projectId: 'field-notes', amount: 2500 })),
-].map((s, i) => ({ ...s, id: `demo-${i}`, currency: 'usd', visibility: 'public', supporterDid: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', note: '', status: 'paid', refundedAmount: 0, disputed: false, createdAt }));
+].map((s, i) => ({ ...s, id: `demo-${i}`, currency: 'usd', visibility: 'public', supporterDid: demoSupporters[i % demoSupporters.length], note: '', status: 'paid', refundedAmount: 0, disputed: false, createdAt }));

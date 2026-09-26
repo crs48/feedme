@@ -5,6 +5,7 @@ import { profile, updates } from './repository';
 import { projectTag, projectUri } from './social-model';
 import { readSocialRecords } from './social-repo';
 import { z } from 'zod';
+import { demoNoteImages, demoPerson } from './demo-media';
 
 const publicQuery = async (method: 'app.bsky.feed.getAuthorFeed' | 'app.bsky.feed.getPosts', params: URLSearchParams) => {
   const response = await fetch(`https://public.api.bsky.app/xrpc/${method}?${params}`, { signal: AbortSignal.timeout(3000) });
@@ -36,10 +37,10 @@ export const projectLog = async (projectId?: string, cursor?: string, linkedPage
     const shared = await readSocialRecords(owner, 'app.bsky.feed.post');
     const posts = shared.flatMap((record) => {
       const post = parsePostView({ ...record, record: record.value, author: { did: owner, displayName: profile().name, handle: profile().handle }, embed: record.value.embed });
-      return post && (!projectId || post.tags.includes(projectTag(projectUri(owner, projectId))) || linked.includes(post.uri)) ? [{ ...post, demo: true, url: projectId ? `/support/${projectId}` : '/updates' }] : [];
+      return post && (!projectId || post.tags.includes(projectTag(projectUri(owner, projectId))) || linked.includes(post.uri)) ? [{ ...post, avatar: demoPerson(owner)?.avatar, demo: true, url: projectId ? `/support/${projectId}` : '/updates' }] : [];
     });
     // Seed notes are illustrative posts, with no external writes in demo mode.
-    for (const note of updates().filter((u) => !u.postUri && (!projectId || u.projectId === projectId))) posts.push({ uri: `demo:${note.id}`, cid: 'demo', url: `/support/${note.projectId}`, author: profile().name, did: owner, text: note.text, createdAt: note.createdAt, segments: [{ text: note.text }], images: [], tags: [], sensitive: false, demo: true });
+    for (const note of updates().filter((u) => !u.postUri && (!projectId || u.projectId === projectId))) posts.push({ uri: `demo:${note.id}`, cid: 'demo', url: `/support/${note.projectId}`, author: profile().name, did: owner, avatar: demoPerson(owner)?.avatar, text: note.text, createdAt: note.createdAt, segments: [{ text: note.text }], images: demoNoteImages(note.id), tags: [], sensitive: false, demo: true });
     return { posts: posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)), cursor: undefined, moreLinked: false, unavailable: false };
   }
   const cacheKey = JSON.stringify([owner, projectId, cursor, linked, linkedPage]);

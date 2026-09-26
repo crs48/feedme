@@ -1,5 +1,7 @@
 ---
 import Icon from './Icon.astro';
+import Avatar from './Avatar.astro';
+import { demoPerson } from '../lib/demo-media';
 import { config } from '../lib/config';
 import { supports, project } from '../lib/repository';
 import { money } from '../lib/model';
@@ -12,7 +14,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
 ---
 <section id="supporters" class="supporter-timeline mt-12" aria-label="Recent supporters">
   <div class="mb-6"><h2 class="section-title">Recent support</h2><p class="text-sm muted mt-2">{projectId ? 'The latest tips for this project.' : 'The latest tips across all my projects.'}</p></div>
-  <div class="panel">{feed.entries.length ? <ol>{feed.entries.map((entry) => { const target = parseProjectUri(entry.project); const p = target ? project(target.id) : undefined; const anonymous = entry.visibility === 'anonymous'; return <li class="tip-row"><span class="tip-mark"><Icon name={anonymous ? 'leaf' : 'heart'} size={16}/></span><div class="min-w-0 flex-1"><div class="flex flex-wrap justify-between gap-2"><strong class="text-xs">{anonymous ? 'Anonymous' : config().demo ? 'A kind human · demo supporter' : <a href={`https://bsky.app/profile/${encodeURIComponent(entry.supporter!)}`} rel="noopener noreferrer" class="underline break-all">{entry.supporter}</a>}</strong>{!anonymous && <span class="text-sm font-semibold">{money(entry.amount!)}</span>}</div><p class="text-xs muted mt-1">Supported {p ? <a class="underline" href={`/support/${p.id}`}>{p.title}</a> : 'a project'}</p><time class="block text-xs muted mt-2" datetime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</time></div></li>; })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
+  <div class="panel">{feed.entries.length ? <ol>{feed.entries.map((entry) => { const target = parseProjectUri(entry.project); const p = target ? project(target.id) : undefined; const anonymous = entry.visibility === 'anonymous'; const person = !anonymous && config().demo ? demoPerson(entry.supporter!) : undefined; return <li class="tip-row"><>{anonymous ? <span class="tip-mark" aria-hidden="true"><Icon name="user" size={18}/></span> : <Avatar name={person?.name || 'Supporter'} src={person?.avatar}/>}</><div class="min-w-0 flex-1"><div class="flex flex-wrap justify-between gap-2"><strong class="text-xs">{anonymous ? 'Anonymous' : config().demo ? person?.name || 'Demo supporter' : <a href={`https://bsky.app/profile/${encodeURIComponent(entry.supporter!)}`} rel="noopener noreferrer" class="underline break-all">{entry.supporter}</a>}</strong>{!anonymous && <span class="text-sm font-semibold">{money(entry.amount!)}</span>}</div><p class="text-xs muted mt-1">Supported {p ? <a class="underline" href={`/support/${p.id}`}>{p.title}</a> : 'a project'}</p><time class="block text-xs muted mt-2" datetime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</time></div></li>; })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
     {(feed.hasOlder || feed.hasNewer) && <nav aria-label="Supporter timeline pages" class="flex justify-between gap-5 mt-6 pt-5 border-t border-[#e3e8ee]">{feed.hasNewer ? <a class="button secondary" href={href(feed.page - 1)}>← Newer tips</a> : <span/>}{feed.hasOlder && <a class="button secondary" href={href(feed.page + 1)}>Older tips →</a>}</nav>}
   </div>
   <p class="text-xs muted mt-3">Public tips show the amount remaining after refunds. Anonymous entries appear only with permission; their identity and amount stay hidden. Private tips stay off this timeline.</p>
@@ -21,5 +23,5 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   .tip-row { display:flex; align-items:flex-start; gap:16px; padding:19px 0; }
   .tip-row:first-child { padding-top:0; } .tip-row:last-child { padding-bottom:0; }
   .tip-row + .tip-row { border-top:1px solid #e3e8ee; }
-  .tip-mark { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; color:#596579; background:#f6f8fa; flex-shrink:0; }
+  .tip-mark { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; color:#596579; background:#f6f8fa; flex-shrink:0; }
 </style>

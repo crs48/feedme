@@ -5,7 +5,7 @@ import { didSchema } from './model';
 
 export type TextSegment = { text: string; href?: string };
 export type PostMedia = { images: { url: string; alt: string }[]; video?: { url: string; poster?: string; alt: string }; external?: { url: string; title: string; description: string; image?: string } };
-export type PostView = PostMedia & { uri: string; cid: string; url: string; text: string; createdAt: string; author: string; did: string; segments: TextSegment[]; tags: string[]; demo?: boolean; sensitive: boolean };
+export type PostView = PostMedia & { uri: string; cid: string; url: string; text: string; createdAt: string; author: string; did: string; avatar?: string; segments: TextSegment[]; tags: string[]; demo?: boolean; sensitive: boolean };
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' ? value as Record<string, unknown> : {};
 const string = (value: unknown) => typeof value === 'string' ? value : '';
 const facetSchema = z.object({ index: z.object({ byteStart: z.number().int().nonnegative(), byteEnd: z.number().int().nonnegative() }), features: z.array(z.record(z.string(), z.unknown())) });
@@ -53,5 +53,7 @@ export const parsePostView = (input: unknown): PostView | undefined => {
   if (!url || !uri.startsWith(`at://${did}/`) || !didSchema.safeParse(did).success || !Number.isFinite(Date.parse(createdAt)) || text.length > 10000 || viewer.muted || viewer.blocking || viewer.blockedBy) return undefined;
   const labels = Array.isArray(post.labels) ? post.labels.map((l) => string(object(l).val)) : [];
   if (labels.includes('!hide')) return undefined;
-  return { uri, cid: string(post.cid), url, text, createdAt, did, author: string(author.displayName) || `@${string(author.handle)}`, segments: richText(text, record.facets), tags: Array.isArray(record.tags) ? record.tags.filter((tag): tag is string => typeof tag === 'string') : [], sensitive: labels.some((label) => ['porn', 'sexual', 'nudity', 'graphic-media', '!warn'].includes(label)), ...postMedia(post.embed) };
+  const authorLabels = Array.isArray(author.labels) ? author.labels.map((l) => string(object(l).val)) : [];
+  const avatar = authorLabels.some((label) => ['!hide', '!warn', 'porn', 'sexual', 'nudity', 'graphic-media'].includes(label)) ? undefined : safeWebUrl(author.avatar);
+  return { uri, cid: string(post.cid), url, text, createdAt, did, avatar, author: string(author.displayName) || (string(author.handle) ? `@${string(author.handle)}` : did), segments: richText(text, record.facets), tags: Array.isArray(record.tags) ? record.tags.filter((tag): tag is string => typeof tag === 'string') : [], sensitive: labels.some((label) => ['porn', 'sexual', 'nudity', 'graphic-media', '!warn'].includes(label)), ...postMedia(post.embed) };
 };
