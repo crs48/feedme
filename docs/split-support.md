@@ -16,16 +16,16 @@ flowchart LR
 
 - Sliders are integer weights from 0 to 100; the amount is distributed in proportion to their sum.
 - Equal nonzero weights receive equal shares, apart from unavoidable rounding cents. A lone nonzero weight receives everything.
-- All-zero selections are rejected. A maximum of 100 selected projects matches Stripe’s [Checkout line-item limit](https://docs.stripe.com/api/checkout/sessions/create).
+- All-zero selections are rejected. One-time support allows up to 100 selected projects; recurring support allows up to 20. These match Stripe’s [Checkout line-item limit](https://docs.stripe.com/api/checkout/sessions/create).
 - Calculations use integer cents. Largest fractional remainders receive the leftover cents; ties use the order saved with the form. Shares rounded to zero cents are omitted.
 - Archived and completed projects cannot receive new support. The server validates selected projects again when the form is submitted.
 - With JavaScript disabled, native range inputs still submit their weights. The exact split appears in hosted Checkout (or on the simulated demo receipt). The page hides stale calculated outputs.
 
 ## Payment and privacy
 
-The browser capability binds a short-lived form to its project set. The server freezes the total, allocations, visibility, identity, and private note before contacting Stripe. Repeated identical submissions reuse the same intent and Checkout idempotency key; changed details require a fresh form.
+The browser capability binds a short-lived form to its project set. The server freezes the total, frequency, allocations, visibility, identity, and private note before contacting Stripe. Repeated identical submissions reuse the same intent and Checkout idempotency key; changed details require a fresh form.
 
-The operational `Support` record stores one overall amount and an optional allocation array. Stripe’s metadata references that parent intent. Checkout has a separate line item for each nonzero allocation, and the webhook validates the overall paid amount, currency, session, and connected account. Redirects never settle payments.
+The operational `Support` record stores one overall amount and an optional allocation array. Stripe’s metadata references that parent intent. Checkout has a separate line item for each nonzero allocation, and the webhook validates the overall paid amount, currency, session, and connected account. Redirects never settle payments. For monthly/yearly support, all recurring line items share the chosen interval; each paid invoice gets a separate parent contribution and independent project receipts. See [recurring support](recurring-support.md).
 
 `supportParts` derives stable per-project records for totals, studio reporting, Habitat private receipts, and public projections. Existing single-project records remain unchanged. Each project receives only its allocated amount; the whole payment is not counted repeatedly. The public tip count counts project contributions, so one payment supporting three projects contributes three entries.
 

@@ -44,3 +44,7 @@ Demo mode includes six locally served 160px portraits, three project photos in 4
 Stripe supports these appearance settings for hosted Checkout and allows them to override connected-account defaults for a particular session. See [Stripe’s hosted Checkout appearance documentation](https://docs.stripe.com/payments/checkout/customization/appearance?payment-ui=stripe-hosted). Feedme leaves the connected merchant’s business name and logo untouched and does not change their account-wide branding.
 
 The app continues to use Stripe’s hosted payment flow. Local screenshots verify Feedme’s UI; the final hosted page still needs to be checked using a real Stripe test account and the intended merchant branding.
+
+## Tip frequency
+
+The homepage and project forms share a three-way native radio control for one-time, monthly, and yearly support. The selected option uses the same blue accent and white surface as the amount controls, with 44px touch targets and keyboard focus. CSS changes the explanatory text without JavaScript. The homepage calculator adds the selected interval to each allocation, summary total, and persistent mobile review bar.

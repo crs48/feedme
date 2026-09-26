@@ -49,7 +49,7 @@ stateDiagram-v2
   Refunded --> Refunded: delayed completion cannot resurrect funds
 ```
 
-The supporter’s amount is parsed as integer USD cents. Homepage tips can allocate that total across multiple projects in one Checkout; [split support](split-support.md) describes the per-project projections and refund accounting. Hosted Checkout is created on the configured connected account with an idempotency key and a server-persisted intent. Billing details remain with Stripe. The raw-body signature, connected account, amount, currency, mode, and intent reference are checked before updating support. Event IDs deduplicate deliveries inside the same transaction as records and outbox entries. Refund amounts are cumulative; dispute closure cannot be undone by a late opening event.
+The supporter’s amount is parsed as integer USD cents. Homepage tips can allocate that total across multiple projects in one Checkout; [split support](split-support.md) describes the per-project projections and refund accounting. Hosted Checkout is created on the configured connected account with an idempotency key and a server-persisted intent. Billing details remain with Stripe. The raw-body signature, connected account, amount, currency, mode, and intent reference are checked before updating support. Recurring Checkout binds a subscription without settling support; verified paid invoices produce independent contribution records using the original split and privacy choices. Stripe Customer Portal handles payment-method changes and cancellation. See [recurring support](recurring-support.md). Event IDs deduplicate deliveries inside the same transaction as records and outbox entries. Refund amounts are cumulative; dispute closure cannot be undone by a late opening event.
 
 The success page never writes payment state. The public feed counts only confirmed public support, net of refunds, excluding disputed amounts. Public acknowledgment deletion is best effort across the network; remote copies cannot be recalled.
 
@@ -61,8 +61,8 @@ The outbox coalesces writes by destination, collection, and record key. A revisi
 
 ## Deliberate first-release limits
 
-- One owner, one connected account, USD one-time tips, a single application replica.
-- No automatic group payouts, recurring billing, peer indexing, remote import, or Bitcoin checkout.
+- One owner, one connected account, USD one-time, monthly, and yearly tips, a single application replica.
+- No automatic group payouts, peer indexing, remote import, or Bitcoin checkout.
 - Images are HTTPS URLs; uploads and video processing need separate storage and moderation work.
 - A shared demo is intentionally editable by anyone using its demo login.
 - Operator acceptance of real OAuth and test payments is required before live use. Provider contract fixtures cannot prove service interoperability.

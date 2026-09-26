@@ -50,12 +50,12 @@ Habitat’s own service can be self-hosted separately. Feedme is TypeScript and 
 
 1. Configure your Stripe platform for Connect and use **test mode** credentials first.
 2. In the studio, choose **Connect with Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
-3. Register `https://support.example.com/api/stripe/webhook` as a **connected-account** event destination and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
-4. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, and `charge.dispute.closed`.
+3. Register `https://support.example.com/api/stripe/webhook` as a **connected-account** event destination using API version `2026-08-26.dahlia` (matching the installed Stripe SDK) and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, **`invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`**. Existing installations must add the invoice and subscription events before offering recurring support.
 5. Enable eligible payment methods on the connected account. Checkout selects methods dynamically; card wallets such as Apple Pay and Google Pay depend on account, currency, device, and Stripe eligibility. Feedme does not promise every method on every checkout.
 6. Follow the acceptance checklist below, then replace test credentials and webhook configuration when ready for real payments.
 
-Checkout verifies both `charges_enabled` and `payouts_enabled`. Feedme makes direct charges to the connected account and sets no application fee. Stripe processing fees still apply. Refunds and disputes are managed from Stripe’s dashboard; webhooks update Feedme. The current release offers only USD one-time support.
+Checkout verifies both `charges_enabled` and `payouts_enabled`. Feedme makes direct charges to the connected account and sets no application fee. Stripe processing and applicable Billing fees still apply. Refunds and disputes are managed from Stripe’s dashboard; webhooks update Feedme. The current release offers USD one-time, monthly, and yearly support. Before opening the first recurring Checkout, Feedme creates a connected-account Customer Portal configuration with invoice history, payment-method updates, cancellation at the end of the period, and email login enabled. See [recurring support](recurring-support.md) for accounting and recovery details.
 
 Stripe supports [stablecoin payments](https://docs.stripe.com/payments/stablecoin-payments) subject to eligibility. Bitcoin requires a separate future integration. Do not advertise Bitcoin as a Stripe checkout option.
 
@@ -117,6 +117,9 @@ These require your provider accounts and were not executed as part of the local 
 - [ ] Finish Stripe test onboarding and confirm the connected account’s charge/payout readiness.
 - [ ] Complete a test Checkout and receive a verified connected-account webhook.
 - [ ] Replay the webhook; totals must not increase twice.
+- [ ] Complete monthly and yearly test Checkouts with an uneven project split. Use a Stripe test clock to advance a renewal, replay the invoice event, and verify that only successful payments increase totals once.
+- [ ] Trigger a failed renewal, then recover payment; confirm no contribution is counted until settlement. Refund one renewal and verify that other periods remain intact.
+- [ ] Open Manage support, update a payment method, cancel future renewals, and confirm the verified subscription event updates the local state without removing earlier tips. Test Stripe email recovery from another browser.
 - [ ] Test asynchronous success/failure, partial/full refunds, and disputes.
 - [ ] Disable Habitat temporarily; payments persist and queued writes succeed after reconnection.
 - [ ] Restart/redeploy with the volume retained; data and signing keys survive.

@@ -29,6 +29,7 @@ pnpm start
 
 - Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the allocation preview is a small progressive enhancement, and the optional video player loads on demand.
 - A mobile-first interface combining Bluesky-inspired profiles and feeds with Stripe-style forms and matching hosted Checkout colors. See the [appearance guide](docs/appearance.md) for theme customization.
+- Choose one-time, monthly, or yearly support, with Stripe-hosted renewal management and a separate receipt for every successful payment. See [recurring support](docs/recurring-support.md).
 - Split a single tip across projects from the homepage with relative sliders and a live dollar breakdown. One Stripe Checkout handles the whole amount; project pages remain available for details.
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
@@ -98,6 +99,6 @@ The [verification report](docs/verification.md) records the passing local checks
 
 ## What comes next
 
-Recurring memberships and subscription management; organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
+Organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
 
 This repository is a working first release, not an assertion that these later features already exist.

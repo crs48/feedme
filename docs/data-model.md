@@ -13,7 +13,7 @@ Reviewed against Habitat revision [`85654a07dec6931925763e66c835f65d0cdf1e30`](h
 | `social.feedme.acknowledgment` | Public PDS, explicit consent only | Creator DID, project AT URI, supporter DID, net amount, currency, timestamp |
 | `social.feedme.support` | Habitat permissioned space only | Project key, gross amount, visibility, optional supporter DID, note, payment state, refund/dispute state, payment intent reference |
 | `app.bsky.feed.post` | Public PDS, separate explicit creator opt-in | Short update with an external project link card |
-| Credentials, sessions, Connect account, checkout state, webhook IDs | Local encrypted operational store | Provider-specific operational details; never public records |
+| Credentials, sessions, Connect account, checkout state, subscription/customer/invoice references, webhook IDs | Local encrypted operational store | Provider-specific operational details; never public records |
 
 `social.feedme.receipts` identifies the private space modality. All `social.feedme.*` identifiers are draft names, not a claim of domain ownership or registered lexicon discovery. The JSON schemas under `lexicons/` are validated using the AT Protocol Lexicons library in tests.
 

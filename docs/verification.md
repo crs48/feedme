@@ -1,9 +1,9 @@
-# Verification — 2026-09-25
+# Verification — 2026-09-26
 
 | Check | Result |
 | --- | --- |
 | `pnpm check` | No errors, warnings, or hints |
-| `pnpm test` | 75 tests across twelve suites |
+| `pnpm test` | 101 tests across fifteen suites |
 | `pnpm build` | Production Node build passes |
 | Production health endpoint | HTTP 200 |
 | Cross-origin studio POST | HTTP 403 |
@@ -11,7 +11,7 @@
 | Anonymous studio page | Redirects to sign-in |
 | Sync without bearer token | HTTP 401 |
 | Sync with correct bearer token, without browser Origin | HTTP 200 |
-| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,281 bytes gzipped) |
+| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,460 bytes gzipped) |
 | Browser assets | Static CSS; a small video initializer on post pages, with a 1,093-byte gzipped initializer and a 113,161-byte gzipped HLS light bundle loaded only on demand |
 | Desktop browser | Creator follow, project follow, Following feed, native demo post, and Markdown editing verified |
 | Mobile browser, JavaScript disabled | Anonymous tip with timeline consent, sign-in return, and explicit public post verified |
@@ -71,12 +71,23 @@ The real Stripe test-account visual comparison remains pending below; the hosted
 
 See [split support](split-support.md) for the deterministic cent-rounding and cumulative refund rules. Live Stripe Checkout remains an operator acceptance item.
 
+## Recurring support
+
+- [x] One-time, monthly, and yearly choices on the homepage and individual project forms use native radio controls; one-time remains the default.
+- [x] Automated tests cover Stripe subscription line items and metadata, interval immutability, 20-project limits, customer reuse, billing authorization, duplicate invoice IDs, out-of-order events, failure recovery, cancellation, and refund isolation. Public projections exclude billing identifiers and private notes.
+- [x] Homepage browser checks at 320, 390, 768, and 1440px cover all three frequencies with a $999.99 total. No horizontal overflow or frequency controls below 44px; live totals and project shares carry the correct interval.
+- [x] Project and billing pages also pass layout checks at 320, 390, 768, and 1440px, with no horizontal overflow or primary controls below 44px.
+- [x] A monthly anonymous demo submission records $30.01 split $20.01/$10. Stopping renewals changes its management status to Stopped and keeps the paid contribution.
+- [x] With JavaScript disabled at 390px, an anonymous yearly $21.50 tip submits, displays the correct yearly receipt, and can be stopped through the native billing form. Its amount does not appear on the public homepage.
+- [x] Desktop allocation, mobile frequency controls, yearly project form, and billing screenshots visually reviewed under `output/playwright/recurring-*`.
+- [ ] Live connected-account monthly/yearly Checkout, test-clock renewals, failure/recovery, portal cancellation, and email login; use the [hosting checklist](hosting.md#live-acceptance-checklist).
+
 ## Not verified
 
 - Real Habitat OAuth and live PDS/private-space interoperability using creator and supporter accounts, including the Bluesky AppView proxy.
 - Live photo/video import and playback from an authenticated creator account. Native media contracts and sanitization are fixture-tested.
-- Real Stripe test-account onboarding and hosted payment/webhook delivery.
+- Real Stripe test-account onboarding, hosted payment/webhook delivery, recurring renewals, and Customer Portal/email recovery.
 - Docker image build/runtime locally: the Docker daemon was unavailable. The build is configured in CI.
-- A deployed Railway/VPS instance, live load testing, remote re-indexing, recurring support, or organization administration.
+- A deployed Railway/VPS instance, live load testing, remote re-indexing, or organization administration.
 
 Use the [operator acceptance checklist](hosting.md#live-acceptance-checklist) before taking real payments. Mocked provider contracts and local demo flows do not replace that checklist.
