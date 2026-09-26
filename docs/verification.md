@@ -107,7 +107,8 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - [x] Generated provider domains and explicit custom-domain overrides are covered by five tests; request Host headers are not trusted for origin discovery.
 - [x] `pnpm check`, all 109 tests, and `pnpm build` pass.
 - [x] GitHub repository is private and enabled as a template repository.
-- [ ] New container startup/persistence smoke check passes in GitHub Actions. Local Docker daemon is unavailable.
+- [x] [GitHub Actions](https://github.com/crs48/feedme/actions/runs/36270196045) builds the Docker image and passes the container smoke check: a fresh root-owned volume becomes writable, the server runs as UID 1000, OAuth metadata uses the generated origin, and SQLite data survives container replacement. Local Docker daemon remains unavailable.
+- [x] All 34 linked documentation/badge URLs resolve; relative file links and heading anchors in the hosting docs and README exist. Local production health endpoint returns HTTP 200 after rebuilding.
 - [ ] Provider-side deployment and redeployment on Render, Railway, Fly.io, Coolify, Dokploy, or Koyeb. The configurations and setup guides are prepared; no paid services were provisioned for this verification.
 
 ## Not verified

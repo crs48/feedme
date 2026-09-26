@@ -220,4 +220,4 @@ These require your provider accounts and were not executed as part of the local 
 
 ## Validation performed locally
 
-Type checks, production build, deterministic payment/privacy/storage tests, lexicon contract validation, and browser flow checks run locally. Docker build is included in CI; the local Docker daemon was unavailable during initial implementation. Real service interoperability remains the checklist above.
+Type checks, production build, deterministic payment/privacy/storage tests, lexicon contract validation, and browser flow checks run locally. The Render Blueprint validates against its official JSON Schema, and the Fly configuration parses with matching port/mount settings. GitHub Actions builds the Docker image and verifies health, non-root execution, generated-origin OAuth metadata, and SQLite persistence across container replacement. The local Docker daemon is unavailable. Deployments on the named hosting providers and real service interoperability remain unverified; see the checklist above and the [verification report](verification.md#deployment-setup).
