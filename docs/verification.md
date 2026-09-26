@@ -11,7 +11,7 @@
 | Anonymous studio page | Redirects to sign-in |
 | Sync without bearer token | HTTP 401 |
 | Sync with correct bearer token, without browser Origin | HTTP 200 |
-| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,460 bytes gzipped) |
+| Production homepage | Server-rendered project list and supporter timeline; one same-origin allocation script (1,582 bytes gzipped) |
 | Browser assets | Static CSS; a small video initializer on post pages, with a 1,093-byte gzipped initializer and a 113,161-byte gzipped HLS light bundle loaded only on demand |
 | Desktop browser | Creator follow, project follow, Following feed, native demo post, and Markdown editing verified |
 | Mobile browser, JavaScript disabled | Anonymous tip with timeline consent, sign-in return, and explicit public post verified |
@@ -81,6 +81,13 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - [x] With JavaScript disabled at 390px, an anonymous yearly $21.50 tip submits, displays the correct yearly receipt, and can be stopped through the native billing form. Its amount does not appear on the public homepage.
 - [x] Desktop allocation, mobile frequency controls, yearly project form, and billing screenshots visually reviewed under `output/playwright/recurring-*`.
 - [ ] Live connected-account monthly/yearly Checkout, test-clock renewals, failure/recovery, portal cancellation, and email login; use the [hosting checklist](hosting.md#live-acceptance-checklist).
+
+## Empty slider reminder
+
+- [x] The hint appears only while every slider is zero; selecting any project hides it and returning to zero shows it again.
+- [x] Escape dismisses the tooltip. It bobs twice and disables animation under reduced-motion preferences.
+- [x] Slider positions stay unchanged when the hint disappears. No horizontal overflow at 320, 390, and 1440px; screenshots reviewed under `output/playwright/slider-hint-*`.
+- [x] `pnpm check`, all 101 tests, and `pnpm build` pass.
 
 ## Not verified
 

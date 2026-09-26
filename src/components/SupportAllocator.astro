@@ -31,6 +31,7 @@ const user = Astro.locals.user;
       <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
       {p.status === 'active' ? <div class="project-allocation">
         <div class="allocation-label"><label for={`weight-${p.id}`}>Your allocation</label><output for={`weight-${p.id}`} data-project-output={p.id} data-enhanced hidden>{money(0)} <span>0%</span></output></div>
+        {p.id === active[0]?.id && <div class="slider-hint-slot" data-enhanced hidden><span id="allocation-nudge" class="slider-hint" data-slider-hint role="tooltip" hidden>Move a slider to start</span></div>}
         <input class="project-slider" type="range" name={`weight:${p.id}`} id={`weight-${p.id}`} min="0" max="100" step="1" value="0" data-weight={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
         <div class="slider-scale" aria-hidden="true"><span>None</span><span>More</span></div>
       </div> : <a class="completed-link" href={`/support/${p.id}`}>View project <Icon name="arrow" size={14}/></a>}
@@ -72,9 +73,17 @@ const user = Astro.locals.user;
   if (form) {
     const total = form.querySelector<HTMLInputElement>('[name="amount"]');
     const sliders = [...form.querySelectorAll<HTMLInputElement>('[data-weight]')];
+    const hint = form.querySelector<HTMLElement>('[data-slider-hint]');
+    let hintDismissed = false;
     const currency = (cents: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 }).format(cents / 100);
     const update = () => {
       if (!total) return;
+      const allZero = sliders.length > 0 && sliders.every((slider) => Number(slider.value) === 0);
+      if (!allZero) hintDismissed = false;
+      if (hint) {
+        hint.hidden = !allZero || hintDismissed;
+        sliders[0]?.setAttribute('aria-describedby', hint.hidden ? 'allocation-help' : `allocation-help ${hint.id}`);
+      }
       const amount = Math.round(Number(total.value) * 100);
       const frequency = billingFrequency(form.querySelector<HTMLInputElement>('[name="frequency"]:checked')?.value);
       const suffix = frequencySuffix(frequency);
@@ -109,13 +118,16 @@ const user = Astro.locals.user;
     };
     form.querySelectorAll<HTMLElement>('[data-enhanced]').forEach((element) => { element.hidden = false; });
     form.addEventListener('input', update);
+    form.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && hint && !hint.hidden) { hintDismissed = true; update(); }
+    });
     form.addEventListener('change', () => {
       const label = form.querySelector('[data-visibility-label]');
       const selected = form.querySelector<HTMLInputElement>('[name="visibility"]:checked')?.value || 'anonymous';
       if (label) label.textContent = selected[0].toUpperCase() + selected.slice(1);
     });
     form.querySelector('[data-even]')?.addEventListener('click', () => { sliders.forEach((slider, index) => { slider.value = index < 100 ? '50' : '0'; }); update(); });
-    form.querySelector('[data-clear]')?.addEventListener('click', () => { sliders.forEach((slider) => { slider.value = '0'; }); update(); });
+    form.querySelector('[data-clear]')?.addEventListener('click', () => { hintDismissed = false; sliders.forEach((slider) => { slider.value = '0'; }); update(); });
     form.querySelectorAll<HTMLButtonElement>('[data-amount]').forEach((button) => button.addEventListener('click', () => { if (total) total.value = button.dataset.amount!; update(); }));
     update();
   }
@@ -144,6 +156,12 @@ const user = Astro.locals.user;
   .allocation-label label { color: var(--color-muted); font-size: 12px; }
   .allocation-label output { color: var(--color-primary); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-weight: 400; margin-left: 5px; }
+  /* Keep the track in place when the hint disappears during a drag. */
+  .slider-hint-slot { position: relative; height: 38px; }
+  .slider-hint { position: absolute; left: 0; bottom: -6px; max-width: 100%; padding: 7px 11px; border-radius: 8px; background: var(--color-primary); color: white; font-size: 12px; font-weight: 500; line-height: 1.4; box-shadow: 0 3px 10px #0866ff20; pointer-events: none; animation: slider-nudge 1.8s ease-in-out 2; }
+  .slider-hint::after { content: ''; position: absolute; bottom: -4px; left: 7px; width: 8px; height: 8px; background: inherit; transform: rotate(45deg); }
+  @keyframes slider-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { .slider-hint { animation: none; } }
   .project-slider { display: block; appearance: none; width: 100%; height: 44px; margin: 0; cursor: pointer; background: transparent; accent-color: var(--color-primary); }
   .project-slider::-webkit-slider-runnable-track { height: 5px; border-radius: 5px; background: linear-gradient(to right, var(--color-primary) var(--fill, 0%), #e3e8ee var(--fill, 0%)); }
   .project-slider::-moz-range-track { height: 5px; border-radius: 5px; background: #e3e8ee; }

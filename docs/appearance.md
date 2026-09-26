@@ -27,6 +27,8 @@ The homepage lists projects without cover images, alongside a sticky support pan
 
 Each slider is a relative weight from 0 to 100 and starts at zero, so supporters choose which projects to include. Equal weights split the total equally; one nonzero slider receives the whole total. Zero-weight projects are excluded. Dollar amounts and percentages update immediately, and checkout stays disabled until at least one project is selected. “Split evenly” and amount presets are conveniences; native sliders and the total field remain usable without JavaScript.
 
+When all sliders are zero, a small “Move a slider to start” tooltip points to the first slider. It bobs twice, disappears when any project is selected, and returns when the sliders are cleared. Escape dismisses it, reduced-motion preferences disable its animation, and reserved space keeps the slider from shifting during a drag. Without JavaScript, the native selection instructions remain visible instead.
+
 The browser and server share the same integer-cent allocation function. Leftover cents go to the largest fractional shares, with ties resolved in the displayed project order. The server recomputes the amounts rather than trusting the displayed values. See [split support](split-support.md) for the payment and refund behavior.
 
 ## Portraits and photography
