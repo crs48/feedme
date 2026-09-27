@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { renderAsync } from '@resvg/resvg-js';
 import { aspirationLabel, percentageLabel } from './aspiration';
 import type { SupportCard } from './support-card';
+import { money } from './model';
 
 const xml = (value: string) => value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);
 // Bound text by conservative glyph widths, including unbroken words and CJK.
@@ -38,6 +39,7 @@ export const supportCardSvg = (card: SupportCard, demo = false) => {
       ${text(x + width - 108, titleY, pct, 26, '#0866ff', true)}
       ${bar(x + 22, barY, width - 44, 8, '#edf2fa')}${bar(x + 22, barY, Math.max(2, (width - 44) * project.percentage / 100), 8, '#0866ff')}
       ${rows === 1 ? text(x + 22, barY + 40, 'of this support', 18, '#627088') : ''}
+      ${progress ? text(x + 22, goalY - 20, `${money(project.target)} aspiration`, 16, '#26334b', true) : ''}
       ${text(x + 22, goalY, fit(label, 28), 16, progress?.exceeded ? '#7246b5' : '#627088')}
       ${progress ? `${bar(x + width - 170, goalY - 9, 148, 5, '#edf2fa')}${bar(x + width - 170, goalY - 9, 148 * progress.fill / 100, 5, '#a9caff')}${progress.exceeded ? bar(x + width - 170, goalY - 9, Math.max(2, 148 * progress.surplusFill / 100), 5, 'url(#rainbow)') : ''}` : ''}`;
   }).join('');

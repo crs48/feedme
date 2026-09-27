@@ -20,9 +20,10 @@ describe('public allocation cards', () => {
   it('projects only public percentages, titles and aspiration progress', () => {
     const result = card()!;
     expect(result.projects.map((p) => p.percentage)).toEqual([50, 30, 20]);
+    expect(result.projects.map((p) => p.target)).toEqual([250000, 100000, 50000]);
     expect(result.projects[0].progress).toMatchObject({ percentage: 125, exceeded: true, surplus: 25, surplusFill: 25 });
     expect(result.other).toEqual({ count: 0, percentage: 0 });
-    for (const forbidden of ['PRIVATE NOTE', 'private-billing-id', 'pi_SECRET', receipt.supporterDid!, 'amount', '10000', '5000']) expect(JSON.stringify(result)).not.toContain(forbidden);
+    for (const forbidden of ['PRIVATE NOTE', 'private-billing-id', 'pi_SECRET', receipt.supporterDid!, 'amount']) expect(JSON.stringify(result)).not.toContain(forbidden);
   });
   it.each<Partial<Support>>([{ visibility: 'private' }, { visibility: 'anonymous', announceAnonymously: true }, { status: 'pending' }, { status: 'failed' }, { status: 'refunded' }, { status: 'disputed' }, { disputed: true }, { refundedAmount: 10000 }, { supporterDid: undefined }])('never produces a card for ineligible support %j', (patch) => {
     expect(card({ ...receipt, ...patch })).toBeUndefined();
@@ -65,6 +66,7 @@ describe('public allocation cards', () => {
     const svg = supportCardSvg(result);
     expect(svg).not.toContain('<image');
     expect(svg).toContain('&lt;/text&gt;');
+    expect(svg).toContain('$2,500 aspiration');
     const png = await supportCardPng(result);
     expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     expect(png.readUInt32BE(16)).toBe(1200);

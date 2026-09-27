@@ -4,6 +4,7 @@ import AspirationProgress from '../../components/AspirationProgress.astro';
 import FollowButton from '../../components/FollowButton.astro';
 import { config } from '../../lib/config';
 import { percentageLabel } from '../../lib/aspiration';
+import { money } from '../../lib/model';
 import { supportShare } from '../../lib/support-shares';
 const card = supportShare(Astro.params.id);
 if (!card) return new Response('Support card unavailable.', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
@@ -20,7 +21,7 @@ const description = `Supporting ${card.creator.name}: ${card.projects.map((p) =>
       <div class="share-project-heading"><div><p class="eyebrow">{p.category}{p.archived && ' · Archived'}</p><h3>{p.archived ? p.title : <a href={`/support/${p.id}`}>{p.title} ↗</a>}</h3></div><strong>{percentageLabel(p.percentage)}</strong></div>
       <div class="share-allocation" aria-hidden="true"><span style={`width:${Math.max(1, p.percentage)}%`}></span></div>
       <p class="share-caption">of this support</p>
-      {p.progress ? <AspirationProgress progress={p.progress}/> : <p class="share-caption">Ongoing work · every bit helps</p>}
+      {p.progress ? <div class="share-aspiration"><p>{money(p.target)} aspiration</p><AspirationProgress progress={p.progress}/></div> : <p class="share-caption">Ongoing work · every bit helps</p>}
     </article>)}</div>
     {card.other.count > 0 && <p class="share-footnote">Another {percentageLabel(card.other.percentage)} went to {card.other.count} other {card.other.count === 1 ? 'project' : 'projects'}. The six largest available projects appear above.</p>}
     <p class="share-footnote">Allocation percentages reflect this confirmed public tip. Project progress reflects all current public support. Private support is never included.</p>
@@ -46,7 +47,8 @@ const description = `Supporting ${card.creator.name}: ${card.projects.map((p) =>
   .share-allocation { height: 7px; border-radius: 6px; background: #edf2fa; margin-top: 20px; overflow: hidden; }
   .share-allocation span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
   .share-caption { margin-top: 6px; }
-  article :global(.aspiration) { margin-top: 20px; }
+  .share-aspiration { margin-top: 20px; }
+  .share-aspiration > p { font-size: 13px; font-weight: 550; }
   .share-footnote { margin-top: 18px; line-height: 1.7; }
   .share-invitation { margin-top: 36px; padding: 24px; border: 1px solid var(--color-border); border-radius: 12px; background: #f7faff; display: flex; gap: 24px; justify-content: space-between; align-items: center; }
   .share-invitation p { font-size: 13px; color: var(--color-muted); margin-top: 6px; }

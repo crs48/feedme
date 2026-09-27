@@ -23,7 +23,7 @@ flowchart LR
 
 - Allocations use the settled, unrefunded parts of the payment. Percentages round to tenths using a deterministic largest-remainder method. Very small positive shares display as `<0.1%`.
 - The top six retain their fraction of the **whole** tip; they are never renormalized. Any remaining allocation appears as an “other projects” percentage. Draft or missing project details are omitted and counted in that remainder.
-- Aspiration progress includes only net public support, excluding private and anonymous money, refunds, and disputed payments. Ongoing projects without a target have no goal meter.
+- The image and project breakdown show each aspiration's dollar target alongside its progress. Aspiration progress includes only net public support, excluding private and anonymous money, refunds, and disputed payments. Ongoing projects without a target have no goal meter.
 - The ordinary bar fills at the aspiration. A rainbow surplus bar starts filling after 100%, fills completely at 200%, and keeps an uncapped surplus label after that. For example, 350% total support reads “250% beyond aspiration.” The same component appears on the homepage, project pages, and public share pages. The compact PNG uses a rainbow overlay for the surplus.
 - Goal progress is current when the image is requested, not frozen at checkout. Each recurring payment has its own share link when its receipt is opened.
 

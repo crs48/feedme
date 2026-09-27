@@ -1,7 +1,7 @@
 import { aspirationProgress, type AspirationProgress } from './aspiration';
 import { didSchema, netSupport, supportParts, type Profile, type Project, type Support } from './model';
 
-export type SupportCardProject = { id: string; title: string; category: string; archived: boolean; percentage: number; progress?: AspirationProgress };
+export type SupportCardProject = { id: string; title: string; category: string; archived: boolean; target: number; percentage: number; progress?: AspirationProgress };
 export type SupportCard = {
   creator: { name: string; handle: string };
   projects: SupportCardProject[];
@@ -27,7 +27,7 @@ export const publicSupportCard = (
   const publicProjects = new Map(projects.filter((project) => ['active', 'complete', 'archived'].includes(project.status)).map((project) => [project.id, project]));
   const visible = ranked.flatMap((part): SupportCardProject[] => {
     const project = publicProjects.get(part.projectId);
-    return project ? [{ id: project.id, title: project.title, category: project.category, archived: project.status === 'archived',
+    return project ? [{ id: project.id, title: project.title, category: project.category, archived: project.status === 'archived', target: project.target,
       percentage: (part.units + Number(extras.has(part.index))) / 10,
       progress: aspirationProgress(publicAmounts.get(project.id) || 0, project.target) }] : [];
   }).slice(0, 6);
