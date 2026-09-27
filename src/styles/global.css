@@ -24,6 +24,59 @@
   ::selection { background: #dcecff; }
   input:not([type='radio']):not([type='checkbox']):not([type='range']), textarea, select { width: 100%; min-width: 0; min-height: 46px; border: 1px solid #c0c8d2; border-radius: 6px; background: white; padding: 10px 12px; color: var(--color-ink); font-size: 16px; box-shadow: 0 1px 2px #1a1f3605; }
   input:focus, textarea:focus, select:focus { border-color: var(--color-primary); }
+  select:not([multiple]):not([size]) {
+    appearance: none;
+    padding-inline: 14px 42px;
+    border-color: #cdd5df;
+    border-radius: 8px;
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5' stroke='%23596579' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    box-shadow: 0 1px 2px #1a1f3608, 0 2px 4px #1a1f3603;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    transition: border-color .15s, box-shadow .15s, background-color .15s;
+  }
+  select:not([multiple]):not([size]):focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px #0866ff1f;
+  }
+  select:not([multiple]):not([size]):disabled { background-color: var(--color-surface); color: var(--color-muted); cursor: not-allowed; box-shadow: none; }
+  @media (hover: hover) {
+    select:not([multiple]):not([size]):hover:not(:disabled):not(:focus) { border-color: #9eafc4; background-color: #fafcff; }
+  }
+  /* Enhance desktop pickers without replacing native form or keyboard behavior. */
+  @supports (appearance: base-select) {
+    @media (hover: hover) and (pointer: fine) {
+      select:not([multiple]):not([size]), select:not([multiple]):not([size])::picker(select) { appearance: base-select; }
+      select:not([multiple]):not([size])::picker-icon { display: none; }
+      select:not([multiple]):not([size]):open { border-color: var(--color-primary); box-shadow: 0 0 0 3px #0866ff1f; }
+      select:not([multiple]):not([size])::picker(select) {
+        padding: 6px;
+        margin-block: 6px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        background: white;
+        color: var(--color-ink);
+        box-shadow: 0 12px 32px #1a1f361f, 0 2px 6px #1a1f360d;
+        max-block-size: min(320px, 70dvh);
+        max-inline-size: calc(100vw - 32px);
+        overflow: auto;
+        overscroll-behavior: contain;
+      }
+      select:not([multiple]):not([size]) option { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 10px 12px; border-radius: 6px; background: white; color: var(--color-ink); font-size: 14px; font-weight: 400; white-space: normal; cursor: pointer; }
+      select:not([multiple]):not([size]) option:checked { background: #edf5ff; color: #0759d1; font-weight: 600; }
+      select:not([multiple]):not([size]) option:hover { background: #e3efff; }
+      select:not([multiple]):not([size]) option:focus-visible { background: #e3efff; outline: 2px solid var(--color-primary); outline-offset: -2px; }
+      select:not([multiple]):not([size]) option::checkmark { order: 1; margin-inline-start: auto; color: var(--color-primary); }
+    }
+  }
+  @media (forced-colors: active) {
+    select:not([multiple]):not([size]) { appearance: auto; background-image: none; box-shadow: none; }
+    select:not([multiple]):not([size])::picker(select) { appearance: auto; }
+  }
   input::placeholder, textarea::placeholder { color: #697386; opacity: 1; }
   textarea { min-height: 104px; resize: vertical; }
   input[type='radio'], input[type='checkbox'] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--color-primary); }
@@ -69,4 +122,4 @@
   h1.display { font-size: 30px; line-height: 1.2; }
 }
 @media (max-width: 359px) { .shell { width: calc(100% - 32px); } .panel { padding: 16px; } }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button, select { transition: none; } }

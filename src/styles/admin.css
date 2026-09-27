@@ -20,7 +20,8 @@
 .admin-filters { border:1px solid var(--color-border); border-radius:10px; padding:16px; margin-bottom:24px; background:#fafbfc; }
 .admin-filter-row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
 .admin-filters .field { font-size:12px; margin:0; flex:1; min-width:130px; }
-.admin-filters .field input,.admin-filters .field select { min-height:42px; font-size:14px; padding:9px 10px; background:white; }
+.admin-filters .field input { min-height:44px; font-size:14px; padding:9px 10px; background:white; }
+.admin-filters .field select { min-height:44px; font-size:14px; padding-block:9px; padding-inline-start:12px; }
 .admin-filters details { margin-top:12px; }
 .admin-filters summary { color:var(--color-muted); font-size:12px; padding:4px 0; }
 .admin-filters details .admin-filter-row { margin-top:12px; }

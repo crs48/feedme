@@ -13,6 +13,10 @@ Feedme combines Bluesky’s social layout with Stripe’s restrained payment int
 
 Shared tokens and components live in [`global.css`](../src/styles/global.css). Payment controls use a 6px radius; social buttons use a pill shape, and cards use 12–16px radii. The primary blue has a 4.82:1 contrast ratio against white. Body copy uses the platform system sans-serif stack. Captions are at least 12px; text inputs are at least 16px to avoid focus zoom on iOS. Primary controls and navigation have at least 44px touch targets, with a visible keyboard focus ring and reduced-motion support.
 
+## Dropdowns
+
+Native select controls share an 8px radius, inset chevron, subtle shadow, and blue focus ring. Desktop browsers supporting [customizable selects](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select) also display a rounded, padded menu with a checkmark and blue selected option. Touch devices and other browsers retain their native picker. No JavaScript is required; keyboard navigation, form values, reduced motion, and system high-contrast controls are preserved.
+
 ## Social layout
 
 Creator headers use a soft blue cover, an overlapping portrait, and section tabs with a blue underline. Updates, project logs, and Following share a continuous bordered feed: an avatar column, author name and available handle, timestamp, rich media, and a link to the original conversation. Public supporter activity follows the same portrait-and-divider rhythm. Feedme keeps its own branding and shows no invented engagement counts.
