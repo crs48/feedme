@@ -1,4 +1,5 @@
 ---
+import AspirationProgress from './AspirationProgress.astro';
 import type { Project } from '../lib/model';
 import { money } from '../lib/model';
 import { totals } from '../lib/repository';
@@ -18,7 +19,7 @@ const cover = p.image || (config().demo ? demoCover(p.id)?.url : undefined);
     <h3><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
     <div class="card-bottom">
       <div class="support-total"><span><strong>{money(total.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{total.count} {total.count === 1 ? 'tip' : 'tips'}</span></div>
-      {p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(total.amount, p.target)}><span style={`width:${Math.min(100, total.amount / p.target * 100)}%`}></span></div><p class="target-label">{money(p.target)} aspiration</p></>}
+      {p.target > 0 && <><AspirationProgress amount={total.amount} target={p.target}/><p class="target-label">{money(p.target)} aspiration</p></>}
       <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Support project' : 'View project'}<Icon name="arrow" size={16}/></a>
     </div>
   </div>

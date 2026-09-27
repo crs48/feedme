@@ -32,6 +32,7 @@ for pass in 1 2; do
     assert.equal((await response.json()).client_id, "https://feedme.example.com/oauth-client-metadata.json");
   '
   if [ "$pass" = 1 ]; then
+    docker exec -i --user node "$container" node --input-type=module < scripts/check-support-card.mjs
     docker exec --user node "$container" node --input-type=module -e '
       import { DatabaseSync } from "node:sqlite";
       const db = new DatabaseSync("/data/demo.sqlite");

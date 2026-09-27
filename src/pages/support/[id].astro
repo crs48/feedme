@@ -1,4 +1,5 @@
 ---
+import AspirationProgress from '../../components/AspirationProgress.astro';
 import { randomUUID } from 'node:crypto';
 import Layout from '../../layouts/Layout.astro';
 import Artwork from '../../components/Artwork.astro';
@@ -45,7 +46,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
     <aside>
       <section id="support" class="panel support-panel" aria-labelledby="support-heading">
         <h2 id="support-heading" class="section-title">Support this project</h2><div class="support-recipient"><Avatar name={creator.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : creator.avatar} size={28}/><p>A little support for {creator.name}.</p></div>
-        <div class="funding-summary"><div class="funding-total"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><div class="progress" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={p.target} aria-valuenow={Math.min(t.amount, p.target)}><span style={`width:${Math.min(100, t.amount / p.target * 100)}%`}></span></div><p class="muted">{money(p.target)} aspiration. Every tip is kept, regardless of progress.</p></>}</div>
+        <div class="funding-summary"><div class="funding-total"><span><strong>{money(t.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{t.count} tips</span></div>{p.target > 0 && <><AspirationProgress amount={t.amount} target={p.target}/><p class="muted">{money(p.target)} aspiration. Every tip is kept, regardless of progress.</p></>}</div>
         {p.status === 'active' ? <form action="/api/checkout" method="post">
           <input type="hidden" name="projectId" value={p.id}/><input type="hidden" name="requestId" value={requestId}/>
           <TipFrequency/>
@@ -53,7 +54,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
           <fieldset class="privacy-options"><legend>Support visibility</legend>
             <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
             <label><input type="radio" name="visibility" value="private" disabled={!user}/><span><strong>Private</strong><small>Your DID is shared only with the creator.</small></span></label>
-            <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Public</strong><small>Your DID, project, amount, and date become public.</small></span></label>
+            <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Public</strong><small>Your DID, project, amount, and date become public. Includes a share card with allocation percentages.</small></span></label>
           </fieldset>
           <label class="anonymous-consent"><input type="checkbox" name="announceAnonymously" value="yes"/><span>Show “Anonymous” with this project and date on the public timeline. Keep my amount hidden.</span></label>
           {!user && <p class="sign-in-hint"><a href={`/login?returnTo=/support/${p.id}`}>Sign in with AT Protocol</a> to choose a named tip.</p>}

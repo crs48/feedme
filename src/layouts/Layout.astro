@@ -3,13 +3,14 @@ import '../styles/global.css';
 import Icon from '../components/Icon.astro';
 import { config } from '../lib/config';
 import { isAdmin } from '../lib/auth';
-interface Props { title?: string; description?: string; noindex?: boolean; }
+interface Props { title?: string; description?: string; noindex?: boolean; image?: { url: string; alt: string; width: number; height: number }; }
 const { title = 'Good things grow with a little support', description = 'A home for the things you make and the people who make them possible.', noindex = false } = Astro.props;
 const cfg = config();
 const user = Astro.locals.user;
 const canonical = new URL(Astro.url.pathname, cfg.origin).href;
 const notice = Astro.url.searchParams.get('notice');
 const error = Astro.url.searchParams.get('error');
+const socialImage = Astro.props.image;
 ---
 <!doctype html>
 <html lang="en">
@@ -19,7 +20,8 @@ const error = Astro.url.searchParams.get('error');
     <link rel="canonical" href={canonical}/><link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
     <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · Feedme`}/>
     <meta property="og:description" content={description}/><meta property="og:url" content={canonical}/>
-    <meta property="og:image" content={`${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#ffffff"/>
+    <meta property="og:image" content={socialImage?.url || `${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#ffffff"/>
+    {socialImage && <><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content={String(socialImage.width)}/><meta property="og:image:height" content={String(socialImage.height)}/><meta property="og:image:alt" content={socialImage.alt}/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content={socialImage.url}/><meta name="twitter:image:alt" content={socialImage.alt}/></>}
     {(cfg.demo || noindex) && <meta name="robots" content="noindex,nofollow"/>}
   </head>
   <body>

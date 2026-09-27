@@ -1,0 +1,36 @@
+---
+import { config } from '../lib/config';
+interface Props { id: string; }
+const url = `${config().origin}/share/${Astro.props.id}`;
+---
+<section class="support-share panel text-left mt-8">
+  <p class="eyebrow">Your public support card</p><h2 class="section-title">Share what you believe in.</h2>
+  <p>Your project split, in one little card. The image shows percentages and leaves out your tip amount.</p>
+  <a href={url}><img src={`${url}.png`} alt="Preview of your public support allocation card" width="1200" height="630" loading="lazy"/></a>
+  <label class="field">Your share link<input type="url" value={url} readonly data-share-url/></label>
+  <div class="share-actions"><button type="button" class="button" data-copy-share hidden>Copy link</button><a class="button secondary" href={url}>Open card ↗</a><a class="button secondary" href={`${url}.png`} download="feedme-support.png">Save image ↓</a></div>
+  <p class="share-status" data-share-status role="status"></p>
+  <p class="share-fine">Only public tips get a card. Your public tip amounts still appear on the support timeline. Social platforms may keep a copy of the image after it changes.</p>
+</section>
+<script>
+  document.querySelectorAll<HTMLElement>('.support-share').forEach((panel) => {
+    const input = panel.querySelector<HTMLInputElement>('[data-share-url]')!;
+    const button = panel.querySelector<HTMLButtonElement>('[data-copy-share]')!;
+    const status = panel.querySelector<HTMLElement>('[data-share-status]')!;
+    button.hidden = false;
+    button.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(input.value); status.textContent = 'Link copied. Paste it into your next post.'; }
+      catch { input.focus(); input.select(); status.textContent = 'Your link is selected. Copy it from the field above.'; }
+    });
+  });
+</script>
+<style>
+  h2 { margin-top: 10px; }
+  p { font-size: 13px; line-height: 1.6; color: var(--color-muted); margin-top: 10px; }
+  .eyebrow { margin-top: 0; }
+  img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--color-border); margin-block: 20px; }
+  .share-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .share-actions [hidden] { display: none; }
+  .share-fine { font-size: 11px; }
+  .share-status:empty { display: none; }
+</style>

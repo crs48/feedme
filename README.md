@@ -57,6 +57,7 @@ See the [administration guide](docs/admin.md) for project workflows, report defi
 - A mobile-first interface combining Bluesky-inspired profiles and feeds with Stripe-style forms and matching hosted Checkout colors. See the [appearance guide](docs/appearance.md) for theme customization.
 - Choose one-time, monthly, or yearly support, with Stripe-hosted renewal management and a separate receipt for every successful payment. See [recurring support](docs/recurring-support.md).
 - Split a single tip across projects from the homepage with linked percentage sliders and a live dollar breakdown. One Stripe Checkout handles the whole amount; project pages remain available for details.
+- Confirmed public tips get a share link and a PNG preview of their top six project allocations, with percentages and rainbow progress beyond each aspiration. See [public support cards](docs/support-cards.md).
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
 - Configurable Bluesky administrators (default `crs.land`) and a private dashboard: draft/publish/archive projects, Markdown previews, weekly/monthly earnings, project performance, recurring support, searchable payments, CSV exports, supporter profiles, connection health, and admin activity.

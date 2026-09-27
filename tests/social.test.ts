@@ -9,7 +9,7 @@ vi.mock('../src/lib/config', () => ({ config: () => ({ demo: mocks.demo, ownerDi
 vi.mock('../src/lib/auth', () => ({ oauthClient: async () => ({ restore: mocks.restore }), digest: (input: string) => createHash('sha256').update(input).digest('hex') }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 import { openDatabase, setKv } from '../src/lib/db';
-import { changeFollow, publishPost, readFollows } from '../src/lib/social-repo';
+import { changeFollow, publishPost, readFollows, uploadSocialImage } from '../src/lib/social-repo';
 import { FOLLOW, projectTag, projectUri, publicPostText, shortPostText } from '../src/lib/social-model';
 import { parseFeed } from '../src/lib/following';
 import { canShareTip } from '../src/lib/tip-sharing';
@@ -66,6 +66,18 @@ describe('actor-scoped social records', () => {
     await changeFollow(actor, 'project', subject, false);
     expect(await readFollows(actor, 'project')).toEqual([]);
     expect(mocks.restore).not.toHaveBeenCalled();
+  });
+  it('uploads the preview to the acting account with a PNG content type', async () => {
+    const blob = { $type: 'blob', ref: { $link: 'bafkreipreview' }, mimeType: 'image/png', size: 4 };
+    mocks.transport.mockResolvedValue(Response.json({ blob }));
+    expect(await uploadSocialImage(actor, new Uint8Array([1, 2, 3, 4]))).toEqual(blob);
+    expect(mocks.restore).toHaveBeenCalledWith(actor);
+    expect(mocks.transport.mock.calls[0][0]).toBe('/xrpc/com.atproto.repo.uploadBlob');
+    expect(mocks.transport.mock.calls[0][1].headers).toEqual({ 'Content-Type': 'image/png' });
+    expect(mocks.transport.mock.calls[0][1].body).toBeInstanceOf(Uint8Array);
+    mocks.demo = true;
+    expect(await uploadSocialImage(actor, new Uint8Array([1]))).toBeUndefined();
+    expect(mocks.transport).toHaveBeenCalledTimes(1);
   });
   it('reads legacy project follows without duplicating them, and deletes them in the original collection', async () => {
     const canonical = projectUri(owner, 'sauna');

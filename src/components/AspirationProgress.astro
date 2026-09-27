@@ -1,0 +1,20 @@
+---
+import { aspirationLabel, aspirationProgress, type AspirationProgress } from '../lib/aspiration';
+interface Props { amount?: number; target?: number; progress?: AspirationProgress; }
+const progress = Astro.props.progress || aspirationProgress(Astro.props.amount || 0, Astro.props.target || 0);
+---
+{progress && <div class:list={['aspiration', { exceeded: progress.exceeded }]}>
+  <div class="aspiration-track" role="meter" aria-label="Public support toward aspiration" aria-valuemin={0} aria-valuemax={Math.max(100, progress.percentage)} aria-valuenow={progress.percentage} aria-valuetext={aspirationLabel(progress)}><span style={`width:${progress.fill}%`}></span></div>
+  {progress.exceeded && <div class="surplus-track" aria-hidden="true"><span style={`width:${Math.max(1, progress.surplusFill)}%`}></span></div>}
+  <p>{progress.exceeded && <span aria-hidden="true">✦ </span>}{aspirationLabel(progress)}</p>
+</div>}
+<style>
+  .aspiration { margin-top: 10px; }
+  .aspiration-track, .surplus-track { height: 5px; background: #edf0f6; border-radius: 6px; overflow: hidden; }
+  .aspiration-track span, .surplus-track span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; }
+  .surplus-track { margin-top: 4px; background: #f0eefa; }
+  .surplus-track span { background: linear-gradient(90deg, #7764f4, #eb67ab, #f6b753, #4cc8a2, #479bff); }
+  .exceeded .aspiration-track span { background: #a9caff; }
+  p { margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+  .exceeded p { color: #7046ac; }
+</style>

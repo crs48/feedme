@@ -32,6 +32,20 @@ export const socialClient = async (actor: string) => {
   };
 };
 
+export const uploadSocialImage = async (actor: string, png: Uint8Array) => {
+  didSchema.parse(actor);
+  if (png.byteLength > 1_000_000) throw new Error('The support image is too large for Bluesky.');
+  if (config().demo) return undefined;
+  const session = await (await oauthClient()).restore(actor);
+  if (session.did !== actor) throw new Error('Reconnect your AT Protocol account.');
+  const response = await session.fetchHandler('/xrpc/com.atproto.repo.uploadBlob', {
+    method: 'POST', headers: { 'Content-Type': 'image/png' }, body: new Uint8Array(png), signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error('Your social provider could not upload the support image. Please retry.');
+  const { blob } = z.object({ blob: z.object({ $type: z.literal('blob'), ref: z.object({ $link: z.string().min(1) }), mimeType: z.literal('image/png'), size: z.number().int().min(1).max(1_000_000) }) }).parse(await response.json());
+  return blob;
+};
+
 export const readSocialRecords = async (actor: string, collection: string, fresh = false): Promise<SocialRecord[]> => {
   if (config().demo) return listRecords<SocialRecord>(getDb(), demoNamespace(actor, collection));
   const cacheKey = `${actor}:${collection}`;

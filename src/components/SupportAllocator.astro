@@ -1,4 +1,5 @@
 ---
+import AspirationProgress from './AspirationProgress.astro';
 import { randomUUID } from 'node:crypto';
 import type { Project } from '../lib/model';
 import { money } from '../lib/model';
@@ -29,6 +30,7 @@ const user = Astro.locals.user;
       <h3><a href={`/support/${p.id}`}>{p.title}<Icon name="arrow" size={16}/></a></h3>
       <p class="project-summary">{p.summary}</p>
       <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
+      <AspirationProgress amount={t.amount} target={p.target}/>
       {p.status === 'active' ? <div class="project-allocation">
         <div class="allocation-label"><label for={`percentage-${p.id}`}>Your allocation</label><output for={`percentage-${p.id}`} data-project-output={p.id} data-enhanced hidden>0% <span>{money(0)}</span></output></div>
         {p.id === active[0]?.id && <div class="slider-hint-slot" data-enhanced hidden><span id="allocation-nudge" class="slider-hint" data-slider-hint role="tooltip" hidden>Move a slider to start</span></div>}
@@ -52,7 +54,7 @@ const user = Astro.locals.user;
         <fieldset class="allocation-privacy"><legend class="sr-only">Support visibility</legend>
           <label><input type="radio" name="visibility" value="anonymous" checked/><span><strong>Anonymous</strong><small>No AT Protocol identity attached.</small></span></label>
           <label><input type="radio" name="visibility" value="private" disabled={!user}/><span><strong>Private</strong><small>Your identity is shared only with the creator.</small></span></label>
-          <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Public</strong><small>Publish your identity, amount, and date for each selected project.</small></span></label>
+          <label><input type="radio" name="visibility" value="public" disabled={!user}/><span><strong>Public</strong><small>Publish your identity, amount, and date for each selected project. Get a share card with your allocation percentages.</small></span></label>
         </fieldset>
         <label class="anonymous-consent"><input type="checkbox" name="announceAnonymously" value="yes"/><span>Show “Anonymous” on each project’s public timeline. Keep my identity and amounts hidden.</span></label>
         {!user && <p class="sign-in-hint"><a href="/login?returnTo=/">Sign in with AT Protocol</a> for private or public support.</p>}

@@ -9,6 +9,7 @@ import { publishProtocol } from '../../lib/protocol';
 import { recommend } from '../../lib/recommendations';
 import { getDb } from '../../lib/db';
 import { canShareTip } from '../../lib/tip-sharing';
+import { supportSharePost } from '../../lib/support-share-post';
 
 export const POST: APIRoute = async (context) => {
   const form = await formObject(context.request);
@@ -41,12 +42,13 @@ export const POST: APIRoute = async (context) => {
       const p = project(s!.projectId);
       if (!p) throw new Error('This project is no longer available.');
       const text = publicPostText(form.publicText);
-      await publishPost(user.did, `tip:${s!.id}`, s!.allocations ? {
+      const cardPost = await supportSharePost(user.did, s!.id, text);
+      await publishPost(user.did, `tip:${s!.id}`, cardPost || (s!.allocations ? {
         $type: BSKY_POST, text, createdAt: new Date().toISOString(),
         embed: { $type: 'app.bsky.embed.external', external: { uri: config().origin, title: `${profile().name}’s projects`, description: 'Independent work, supported.' } },
       } : projectPost(text, {
         title: p.title, summary: p.summary, uri: projectUri(config().ownerDid, p.id), url: `${config().origin}/support/${p.id}`,
-      }, new Date().toISOString()));
+      }, new Date().toISOString())));
       return redirectNotice(returnTo, config().demo ? 'Your demo post is saved. Nothing was published to the network.' : 'Your message is published on Bluesky.');
     }
     throw new Error('Unknown social action.');
