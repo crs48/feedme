@@ -9,3 +9,6 @@ output
 .playwright-cli
 coverage
 test-results
+
+site-dist
+.astro-site

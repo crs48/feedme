@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs dev --host 127.0.0.1",
     "build": "astro build",
+    "build:site": "pnpm build && astro build --config astro.site.config.mjs && node scripts/export-demo.mjs && node scripts/check-static-site.mjs",
+    "preview:site": "node scripts/serve-static-site.mjs",
     "start": "node --env-file-if-exists=.env scripts/start.mjs",
     "check": "astro check",
     "test": "vitest run",
@@ -39,6 +41,7 @@
     "@atproto/lexicon": "^0.7.14",
     "@types/node": "^24.13.6",
     "@types/sanitize-html": "^2.16.1",
+    "cheerio": "^1.2.0",
     "typescript": "^6.0.3",
     "vitest": "^5.0.2"
   }

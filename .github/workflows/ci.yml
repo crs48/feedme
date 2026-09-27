@@ -17,6 +17,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm test
-      - run: pnpm build
+      - run: pnpm build:site
       - run: docker build -t feedme:test .
       - run: sh scripts/check-container.sh

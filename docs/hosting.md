@@ -4,26 +4,28 @@ The quickest preview is a single Node process. A real instance also needs HTTPS,
 
 The [README deployment buttons](../README.md#host-it) cover Render, Railway, Fly.io, Coolify, Dokploy, Docker Compose, and a disposable Koyeb demo. Render has a checked-in Blueprint; Railway currently has guided setup and a template recipe. No hosted instance is provisioned just by adding these files to the repository.
 
-While the repository is private, deployers need access and must grant their host's GitHub integration access. A button does not bypass that requirement. Copies made with [Use this template](https://github.com/crs48/feedme/generate) should update the explicit repository URLs in the README's Render and Koyeb buttons. Provider accounts, paid resources, and Stripe onboarding are still the operator's responsibility.
+The repository is public and MIT licensed. Copies made with [Use this template](https://github.com/crs48/feedme/generate) should update the explicit repository URLs in the README's Render and Koyeb buttons. Provider accounts, paid resources, and Stripe onboarding are still the operator's responsibility.
 
 ## Static hosting and GitHub Pages
 
-The app uses Astro's Node server adapter, native POST forms, server-held OAuth credentials, verified payment webhooks, and a SQLite database. Public records on AT Protocol and private records in Habitat do not replace this operational server. GitHub Pages cannot execute it; [Pages is static hosting](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+**[feedme.fund](https://feedme.fund) hosts the static product site and fictional demo on GitHub Pages.** The demo includes public and admin screens, browser-local interactions, and no real provider integrations. Build it with `pnpm build:site`, preview with `pnpm preview:site`, and publish only `site-dist/`. See the [Pages guide](github-pages.md) for the domain, workflow, nightly rebuild, and safety boundaries.
 
 ```mermaid
 flowchart LR
-  Visitor[Visitor] --> Server[Feedme Node server]
-  Server --> Disk[(Persistent SQLite volume)]
-  Server --> Public[Public AT Protocol records]
-  Server --> Private[Habitat private space]
-  Server --> Checkout[Stripe hosted Checkout]
-  Checkout --> Webhook[Verified webhook on Feedme]
-  Webhook --> Disk
-  Export[Future public-only exporter] -. nightly build .-> Pages[Static profile on Pages]
-  Pages -. link to hosted app .-> Server
+  Build[Isolated build] --> Seed[Fresh fictional data]
+  Seed --> Screens[Render demo screens]
+  Marketing[Static product pages] --> Artifact[site-dist]
+  Screens --> Artifact
+  Artifact --> Pages[GitHub Pages · feedme.fund]
+  Visitor[Visitor] --> Pages
+  Visitor --> Live[Self-hosted Feedme server]
+  Live --> Stripe[Stripe Checkout + signed webhooks]
+  Live --> Public[Public AT Protocol PDS]
+  Live --> Private[Habitat private space]
+  Live --> DB[Persistent encrypted SQLite]
 ```
 
-The dotted path is a possible future extension, not a feature of this release. A static exporter would need an explicit public-data allowlist and links back to the backend for sign-in/support. The current GitHub Action runs checks on pushes and pull requests; it does not rebuild a public feed nightly or deploy to Pages. Do not upload `dist/` as a Pages site: it contains a server build, not a working static application. Keep private records and credentials out of all static artifacts.
+The live app uses Astro's Node adapter, server-held OAuth credentials, verified payment webhooks, and a SQLite database. Public AT Protocol records and private Habitat records do not replace that operational server. A nightly static build cannot process payments. Never publish `dist/` (the server build), `.data/`, or private Habitat/payment records. The Pages exporter is a fictional product demo, not a mirror of a live creator account.
 
 ## Local preview
 
@@ -153,7 +155,7 @@ A saved Feedme Railway template has not been created or published. To create one
 | `HOST` / `PORT` / `DATA_DIR` | `0.0.0.0` / `4321` / `/data` |
 | `DATA_ENCRYPTION_KEY` | `${{secret(64, "abcdef0123456789")}}` |
 
-Leave real DIDs, Stripe keys, and webhook secrets out of the reusable template. Omit `FEEDME_MODE` for an initial demo and `PUBLIC_URL` to use the generated domain. Save the template, copy Railway's generated share URL, and use that URL for the official Deploy on Railway button. Templates can remain unlisted; marketplace publication is separate. A template referencing this private repository still requires deployers to grant Railway access to the source. See [Railway's template guide](https://docs.railway.com/templates/create).
+Leave real DIDs, Stripe keys, and webhook secrets out of the reusable template. Omit `FEEDME_MODE` for an initial demo and `PUBLIC_URL` to use the generated domain. Save the template, copy Railway's generated share URL, and use that URL for the official Deploy on Railway button. Templates can remain unlisted; marketplace publication is separate. A template referencing a private copy still requires deployers to grant Railway access to that copy. See [Railway's template guide](https://docs.railway.com/templates/create).
 
 ## Fly.io
 

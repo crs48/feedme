@@ -6,7 +6,11 @@ An open-source home for the projects, practices, and people you want to make mor
 
 TypeScript · pnpm · Astro · Tailwind CSS · Node · MIT licensed
 
-Repository: [crs48/feedme](https://github.com/crs48/feedme). Private during development, with a public release planned.
+> **Work in progress · early public preview.** Feedme is not production-validated yet. Automated tests and the fictional demo cover the implemented flows; real Stripe onboarding/payments and Habitat/AT Protocol account interoperability still need the [live acceptance checklist](docs/hosting.md#live-acceptance-checklist). Please use test accounts before accepting real money.
+
+**[Explore Feedme at feedme.fund](https://feedme.fund) · [Try the demo](https://feedme.fund/demo/) · [Use this template](https://github.com/crs48/feedme/generate)**
+
+Your community gives you resources **and a signal about what they want more of**. Supporters allocate a tip across your projects, from open source to everyday life. You receive their support regardless of progress and decide how to spend your time and resources. Public posts, follows, recommendations, and opt-in support cards help people discover the work around you.
 
 ## Try it
 
@@ -106,7 +110,7 @@ Private and anonymous tips **do not affect public counters**. Anonymous means Fe
 
 The **Render button provisions a service and persistent disk** from [render.yaml](render.yaml); review the paid resources before deploying. The other buttons open guided setup. All routes start with a demo unless you configure live mode. A hosted demo has a shared, editable studio: use sample data only.
 
-This repository is currently **private**. You need repository access and must authorize your host's GitHub integration. [Use this GitHub template](https://github.com/crs48/feedme/generate) to make your own copy; update `crs48/feedme` in the Render and Koyeb button URLs to deploy your copy. The Render Blueprint itself uses whichever repository contains it.
+This is a public, MIT-licensed template repository. [Use this GitHub template](https://github.com/crs48/feedme/generate) to make your own copy; update `crs48/feedme` in the Render and Koyeb button URLs to deploy your copy. The Render Blueprint itself uses whichever repository contains it.
 
 | Option | Included setup | What you provide |
 | --- | --- | --- |
@@ -148,16 +152,27 @@ Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the 
 
 This launches a **disposable demo**. Its filesystem is ephemeral, and Koyeb currently describes its volumes as testing-only public preview, so this is not a live-payment hosting recommendation. [Details and storage limitations](docs/hosting.md#koyeb-demo).
 
-### Can this run on GitHub Pages?
+### GitHub Pages: the product site and interactive demo
 
-**The complete app cannot run on GitHub Pages today.** Pages serves static files; Feedme needs server endpoints for OAuth sessions, checkout creation, payment webhooks, and private storage synchronization, plus durable SQLite data. A nightly build cannot replace those endpoints. See [GitHub's Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages).
+[feedme.fund](https://feedme.fund) is a static introduction to Feedme with a guided setup page and a tour of the public pages and administration dashboard. **It does not accept payments or connect to real accounts.** Try allocations, simulated tips, follows, project editing, and report filters without an account.
 
-A future static public profile/project mirror could run separately from a hosted Feedme backend. That exporter and cross-origin integration are not implemented. Never publish the `.data` directory or private Habitat/payment records in a Pages artifact. [Architecture and hosting boundaries](docs/hosting.md#static-hosting-and-github-pages).
+```sh
+pnpm build:site
+pnpm preview:site
+# Open http://127.0.0.1:4322
+```
+
+`build:site` builds the Node app, builds the marketing pages, and renders an explicit list of demo screens from a **new, temporary, fictional database**. It ignores `.env`, existing databases, provider credentials, and live mode. Only static files go into `site-dist/`. Demo edits stay in the current browser tab and can be reset; no payments or social posts are created. The example share link has a fixed sample image. With JavaScript disabled, screens remain browsable and simulation forms stay disabled.
+
+[The Pages workflow](.github/workflows/pages.yml) checks and rebuilds on pushes to `main`, manual runs, and nightly at **08:17 UTC**, then publishes `site-dist/` to **feedme.fund**. The nightly build refreshes fictional examples; it **does not ingest real Bluesky posts**. Live instances read social feeds through their server and run synchronization independently. Forks do not automatically deploy the official domain. See the [Pages deployment guide](docs/github-pages.md).
+
+Your own live Feedme still needs the [Node server and persistent storage](docs/hosting.md). Pages cannot run OAuth sessions, Stripe webhooks, or private Habitat synchronization. Never upload `.data/` or the server's `dist/` directory as a public artifact.
 
 ## Build on it
 
 | Location | Purpose |
 | --- | --- |
+| `site/`, `scripts/export-demo.mjs` | Static landing pages and isolated demo export |
 | `src/pages/`, `src/components/` | Astro HTML, forms, and page composition |
 | `src/lib/model.ts` | Validation, money, privacy projections |
 | `src/lib/auth.ts`, `habitat.ts` | Identity and protocol adapters |
@@ -174,7 +189,7 @@ The [verification report](docs/verification.md) records the passing local checks
 
 Organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
 
-This repository is a working first release, not an assertion that these later features already exist.
+This repository is a work in progress. The roadmap does not imply these later features already exist.
 
 ## License
 
