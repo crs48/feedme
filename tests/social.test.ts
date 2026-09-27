@@ -67,6 +67,20 @@ describe('actor-scoped social records', () => {
     expect(await readFollows(actor, 'project')).toEqual([]);
     expect(mocks.restore).not.toHaveBeenCalled();
   });
+  it('reads legacy project follows without duplicating them, and deletes them in the original collection', async () => {
+    const canonical = projectUri(owner, 'sauna');
+    const legacy = canonical.replace('fund.feedme', 'social.feedme');
+    mocks.transport.mockImplementation(async (path: string, init) => {
+      if (init.method === 'POST') return Response.json({});
+      const collection = new URL(path, 'https://pds.example').searchParams.get('collection');
+      return Response.json({ records: collection === 'social.feedme.follow' ? [{ uri: `at://${actor}/social.feedme.follow/legacy`, cid: 'old-cid', value: { $type: 'social.feedme.follow', subject: legacy, createdAt: '2026-09-25T12:00:00Z' } }] : [] });
+    });
+    await changeFollow(actor, 'project', canonical, true);
+    expect(mocks.transport.mock.calls.every(([, init]) => init.method === 'GET')).toBe(true);
+    await changeFollow(actor, 'project', canonical, false);
+    const write = mocks.transport.mock.calls.find(([, init]) => init.method === 'POST');
+    expect(JSON.parse(write![1].body)).toMatchObject({ repo: actor, collection: 'social.feedme.follow', rkey: 'legacy', swapRecord: 'old-cid' });
+  });
   it('requires confirmed support and receipt access before sharing', () => {
     const s: Support = { id: 's1', projectId: 'sauna', amount: 1500, currency: 'usd', visibility: 'anonymous', note: 'SECRET', status: 'paid', refundedAmount: 0, disputed: false, createdAt: '2026-09-25T12:00:00Z' };
     const user = { did: actor };
@@ -97,7 +111,7 @@ describe('public content contracts', () => {
   it('matches a project tag only on posts by the project creator', () => {
     const subject = projectUri(owner, 'sauna');
     const post = (did: string) => ({ post: { uri: `at://${did}/app.bsky.feed.post/3mposttest2222`, author: { did, handle: 'someone.example' }, record: { text: 'Project news', createdAt: '2026-09-25T12:00:00Z', tags: [projectTag(subject)] } } });
-    const subscriptions = [{ uri: 'at://follow', cid: 'cid', value: { $type: 'social.feedme.follow', subject, createdAt: '2026-09-25T12:00:00Z' } }];
+    const subscriptions = [{ uri: 'at://follow', cid: 'cid', value: { $type: 'fund.feedme.follow', subject, createdAt: '2026-09-25T12:00:00Z' } }];
     expect(parseFeed({ feed: [post(owner), post(actor)] }, subscriptions).posts.map((p) => p.did)).toEqual([owner]);
   });
 });

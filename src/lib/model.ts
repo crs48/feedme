@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import type { BillingFrequency } from './billing-frequency';
 
-// Draft namespace: replace with a domain you control before a public protocol release.
-export const NS = 'social.feedme';
+// Schema authority: feedme.fund. Keep legacy reads during the prototype migration.
+export const NS = 'fund.feedme';
+export const LEGACY_NS = 'social.feedme';
 export const didSchema = z.string().regex(/^did:(plc:[a-z2-7]{24}|web:[a-zA-Z0-9.:%_-]+)$/);
 export const httpsUrl = z.union([z.literal(''), z.url().refine((v) => new URL(v).protocol === 'https:', 'Use an HTTPS URL')]);
 export const projectSchema = z.object({
@@ -21,6 +22,8 @@ export const projectSchema = z.object({
 });
 export type Project = z.infer<typeof projectSchema>;
 export const profileSchema = z.object({
+  feedmeUrl: httpsUrl.optional(),
+  discoverable: z.boolean().optional(),
   avatar: httpsUrl.refine((value) => value.length <= 2048, 'Avatar URL is too long').transform((value) => value || undefined).optional(),
   name: z.string().trim().min(1).max(80),
   handle: z.string().max(253),
@@ -39,6 +42,7 @@ export const friendSchema = z.object({
   id: z.uuid(), name: z.string().trim().min(1).max(80),
   did: z.union([z.literal(''), didSchema]), url: httpsUrl.refine(Boolean, 'Enter a URL'),
   description: z.string().trim().min(3).max(180),
+  createdAt: z.iso.datetime().optional(),
 });
 export type Friend = z.infer<typeof friendSchema>;
 export type Visibility = 'anonymous' | 'private' | 'public';

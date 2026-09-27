@@ -1,6 +1,6 @@
 # Project pages as living logs 🌿
 
-A project has a long Markdown story and a stream of native Bluesky posts. The story lives in `social.feedme.project.description`; it can include headings, lists, code, tables, links, and HTTPS images. A standalone Markdown link to YouTube, Vimeo, MP4, or WebM becomes an embedded player. Raw HTML is removed and the generated markup is sanitized.
+A project has a long Markdown story and a stream of native Bluesky posts. The story lives in `fund.feedme.project.description`; it can include headings, lists, code, tables, links, and HTTPS images. A standalone Markdown link to YouTube, Vimeo, MP4, or WebM becomes an embedded player. Raw HTML is removed and the generated markup is sanitized.
 
 ```mermaid
 flowchart TD
@@ -11,7 +11,7 @@ flowchart TD
   Compose --> PDS[Creator's app.bsky.feed.post]
   Bluesky[Post photos or video in Bluesky] --> Reference[Paste its URL in the studio]
   Reference --> Check[Verify creator DID]
-  Check --> Link[social.feedme.update postUri]
+  Check --> Link[fund.feedme.update postUri]
   PDS --> AppView[Bluesky public AppView]
   Link --> AppView
   AppView --> Media[Text facets, images, link cards, video]
@@ -41,7 +41,7 @@ flowchart LR
   Anonymous --> Timeline
 ```
 
-`social.feedme.activity` records are emitted from the same transaction that updates a verified payment receipt. Their independent random record keys are not receipt or payment IDs. Public tip amounts reflect refunds; full refunds and disputes remove the entry. Anonymous entries require a separate checkbox, omit identity and amount, and never affect public funding totals. Private tips never appear. Existing anonymous tips have no recorded consent and stay hidden.
+`fund.feedme.activity` records are emitted from the same transaction that updates a verified payment receipt. Their independent random record keys are not receipt or payment IDs. Public tip amounts reflect refunds; full refunds and disputes remove the entry. Anonymous entries require a separate checkbox, omit identity and amount, and never affect public funding totals. Private tips never appear. Existing anonymous tips have no recorded consent and stay hidden.
 
 The server renders twelve entries per page, newest first with a stable tie-breaker. The profile combines all projects; project pages filter before pagination. The UI never receives the original private support record as a timeline item.
 

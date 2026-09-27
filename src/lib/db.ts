@@ -3,6 +3,7 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { config } from './config';
+import { migrateProtocol } from './protocol-migration';
 import { demoFriends, demoProfile, demoProjects, demoSupports, demoUpdates } from './seed';
 
 export const openDatabase = (path: string) => {
@@ -17,7 +18,7 @@ export const openDatabase = (path: string) => {
 };
 let database: DatabaseSync;
 export const getDb = () => {
-  if (database) return database;
+  if (database) { migrateProtocol(database, config()); return database; }
   const cfg = config();
   mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
   const path = join(cfg.dataDir, cfg.demo ? 'demo.sqlite' : 'feedme.sqlite');
@@ -55,6 +56,7 @@ export const getDb = () => {
       setKv(database, 'app', 'portrait-demo-seed', true);
     });
   }
+  migrateProtocol(database, cfg);
   return database;
 };
 

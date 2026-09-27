@@ -1,6 +1,6 @@
 {
   "lexicon": 1,
-  "id": "social.feedme.activity",
+  "id": "fund.feedme.activity",
   "defs": {
     "main": {
       "type": "record",

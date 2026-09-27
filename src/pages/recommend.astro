@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Avatar from '../components/Avatar.astro';
+import { discoverCreator } from '../lib/public-repo';
+import { recommendations } from '../lib/recommendations';
+import { safeReturnPath } from '../lib/http';
+import { config } from '../lib/config';
+const did = Astro.url.searchParams.get('did') || '';
+const user = Astro.locals.user;
+let creator, home, prior;
+let unavailable = false;
+try { creator = await discoverCreator(did); } catch { unavailable = true; }
+if (user) {
+  try { prior = (await recommendations(user.did)).find((r) => r.value.did === did); } catch { unavailable = true; }
+  try { home = await discoverCreator(user.did); } catch { /* Home handoff is optional. */ }
+}
+const returnTo = safeReturnPath(`/recommend?did=${encodeURIComponent(did)}`);
+---
+<Layout title="Recommend a creator" noindex><section class="shell py-12"><div class="panel mx-auto max-w-xl">
+  {creator ? <><Avatar name={creator.name} src={creator.avatar} size={64}/><h1 class="display text-3xl mt-5 mb-3">Recommend {creator.name}</h1><p class="muted text-sm mb-6">Introduce your people to work you believe in. Your recommendation belongs to your AT Protocol account and can appear across Feedme.</p>
+    {!user ? <a class="button" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in with Bluesky</a> : user.did === did ? <p class="notice">Visit <a class="underline" href="/discover">Discover</a> to recommend another creator.</p> : <>
+      {home && home.url !== config().origin && <div class="notice mb-6"><p class="mb-3">You can publish this from your own Feedme.</p><a class="button secondary" href={`${home.url}/recommend?did=${encodeURIComponent(did)}`} rel="noopener noreferrer">Recommend on my Feedme ↗</a></div>}
+      <form method="post" action="/api/social"><input type="hidden" name="action" value="recommend"/><input type="hidden" name="subject" value={did}/><input type="hidden" name="returnTo" value={returnTo}/><label class="field">Why you recommend them<textarea name="note" rows="3" minlength="3" maxlength="180" required placeholder="What do you love about their work?">{prior?.value.description || ''}</textarea></label><label class="flex items-start gap-3 text-sm my-5"><input type="checkbox" name="consent" value="public" required/><span>Publish this recommendation publicly under my Bluesky identity.</span></label><button class="button" disabled={unavailable}>{prior ? 'Update recommendation' : 'Publish recommendation'}</button></form>
+      {prior && <form action="/api/social" method="post" class="mt-5"><input type="hidden" name="action" value="recommend"/><input type="hidden" name="subject" value={did}/><input type="hidden" name="consent" value="public"/><input type="hidden" name="remove" value="yes"/><input type="hidden" name="returnTo" value={returnTo}/><button class="button secondary" disabled={unavailable}>Remove recommendation</button></form>}
+      {unavailable && <p class="notice mt-5">Your existing recommendations could not be checked. Reconnect your account or retry.</p>}
+    </>}
+  </> : <><h1 class="display text-3xl mb-4">Profile unavailable</h1><p class="muted text-sm mb-6">{unavailable ? 'This public profile could not be checked right now. Please retry later.' : 'This account has not published a discoverable Feedme profile.'}</p><a class="button secondary" href="/discover">Find creators</a></>}
+  <p class="text-xs muted mt-6">Recommending someone does not follow them or reveal a tip. Removing a recommendation asks clients to stop showing it; public records may have been copied.</p>
+</div></section></Layout>

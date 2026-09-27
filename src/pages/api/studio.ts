@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { randomUUID } from 'node:crypto';
 import { requireAdmin } from '../../lib/auth';
+import { refreshCreatorCircle } from '../../lib/creator-circle';
 import { config } from '../../lib/config';
 import { formObject, errorMessage, redirectNotice } from '../../lib/http';
 import { adminReturnPath, auditAdmin } from '../../lib/admin';
@@ -58,7 +59,7 @@ export const POST: APIRoute = async (context) => {
         auditAdmin(user.did, 'profile.import', 'self');
         break;
       }
-      case 'profile': saveProfile({ ...profile(), ...form }); auditAdmin(user.did, 'profile.edit', 'self'); break;
+      case 'profile': saveProfile({ ...profile(), ...form, discoverable: form.discoverable === 'yes' }); auditAdmin(user.did, 'profile.edit', 'self'); break;
       case 'friend': saveFriend({ ...form, id: randomUUID() }); auditAdmin(user.did, 'circle.add', String(form.name)); break;
       case 'post-update': {
         const p = project(String(form.projectId));
@@ -105,6 +106,7 @@ export const POST: APIRoute = async (context) => {
         return context.redirect(onboarding.url, 303);
       case 'sync': {
         const result = await drainOutbox();
+        await refreshCreatorCircle();
         auditAdmin(user.did, 'records.sync', String(result.sent));
         return redirectNotice(returnTo, `${result.sent} records synced. ${result.failed ? 'The remaining records are queued for retry.' : 'Your data is up to date.'}`);
       }

@@ -28,6 +28,7 @@ const error = Astro.url.searchParams.get('error');
     <header class="site-header shell">
       <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol" aria-hidden="true">f</span>feedme</a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">
+        <a href="/discover" class="nav-link">Discover</a>
         <a href="/about" class="about-link muted nav-link">About</a>
         {user && <a href="/following" class="nav-link">Following</a>}
         {isAdmin(user) ? <a class="button secondary social" href="/studio">Dashboard</a> : user ? <form action="/auth/logout" method="post"><button class="button secondary social">Sign out</button></form> : <a class="button secondary social" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
@@ -54,6 +55,6 @@ const error = Astro.url.searchParams.get('error');
   .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
-  @media(max-width:700px) { .site-header { min-height: 68px; gap: 12px; } .site-header nav { gap: 14px; } .site-header .button { padding: 8px 12px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; gap: 0; margin-top: 40px; } }
-  @media(max-width:359px) { .brand { font-size: 21px; } .brand-symbol { display: none; } .site-header nav { gap: 10px; } }
+  @media(max-width:700px) { .site-header { min-height: 68px; gap: 8px; flex-wrap:wrap; padding-block:10px; } .site-header nav { gap: 12px; flex-wrap:wrap; } .site-header .button { padding: 8px 12px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; gap: 0; margin-top: 40px; } }
+  @media(max-width:359px) { .brand { font-size: 21px; } .brand-symbol { display: none; } .site-header nav { gap: 10px; width:100%; justify-content:space-between; } }
 </style>

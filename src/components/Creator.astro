@@ -18,6 +18,7 @@ const current = Astro.url.pathname;
   <div class="creator-bio"><p>{p.bio}</p><div class="creator-meta">{p.location && <span><Icon name="location" size={14}/>{p.location}</span>}{p.website && <a href={p.website} rel="noopener noreferrer">Website ↗</a>}</div></div>
   <div class="creator-follow">{isAdmin(Astro.locals.user) ? <a href="/studio/settings" class="button secondary social">Edit profile</a> : <FollowButton kind="creator" subject={config().ownerDid} title={p.name}/>}</div>
 </section>
+<div class="shell mb-5">{Astro.locals.user?.did !== config().ownerDid && <a class="text-sm font-medium text-blue-600" href={`/recommend?did=${encodeURIComponent(config().ownerDid)}`}>Recommend this creator ↗</a>}</div>
 <nav class="shell tabs" aria-label="Creator sections">
   <a class="tab" aria-current={current === '/' ? 'page' : undefined} href="/">Projects</a>
   <a class="tab" aria-current={current === '/updates' ? 'page' : undefined} href="/updates">Updates</a>

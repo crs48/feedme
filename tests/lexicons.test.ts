@@ -9,16 +9,16 @@ describe('wire record contracts', () => {
   it('registers every lexicon and validates the records produced by the application', () => {
     const lexicons = new Lexicons(schemas);
     const records = [
-      ...demoProjects.map((p) => ({ $type: 'social.feedme.project', ...p })),
-      { $type: 'social.feedme.profile', ...demoProfile },
-      { $type: 'social.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: '' }) },
-      { $type: 'social.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: 'https://cdn.bsky.app/avatar.jpg' }) },
-      ...demoFriends.map((p) => ({ $type: 'social.feedme.recommendation', ...p })),
-      ...demoUpdates.map((p) => ({ $type: 'social.feedme.update', ...p })),
+      ...demoProjects.map((p) => ({ $type: 'fund.feedme.project', ...p })),
+      { $type: 'fund.feedme.profile', ...demoProfile },
+      { $type: 'fund.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: '' }) },
+      { $type: 'fund.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: 'https://cdn.bsky.app/avatar.jpg' }) },
+      ...demoFriends.map((p) => ({ $type: 'fund.feedme.recommendation', ...p })),
+      ...demoUpdates.map((p) => ({ $type: 'fund.feedme.update', ...p })),
       privateReceipt(demoSupports[0]), privateReceipt({ ...demoSupports[0], frequency: 'monthly', subscriptionId: 'sub_private', invoiceId: 'in_private' }), publicAcknowledgment(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
       publicTipActivity(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
       publicTipActivity({ ...demoSupports[0], visibility: 'anonymous', announceAnonymously: true, activityId: 'public-id' }, 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,
-      { $type: 'social.feedme.follow', subject: 'at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/social.feedme.project/sauna', title: 'A sauna', createdAt: '2026-09-25T12:00:00Z' },
+      { $type: 'fund.feedme.follow', subject: 'at://did:plc:aaaaaaaaaaaaaaaaaaaaaaaa/fund.feedme.project/sauna', title: 'A sauna', createdAt: '2026-09-25T12:00:00Z' },
     ];
     for (const record of records) expect(lexicons.validate(record.$type, record).success).toBe(true);
   });

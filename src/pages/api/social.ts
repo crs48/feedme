@@ -5,6 +5,9 @@ import { errorMessage, formObject, redirectNotice, safeReturnPath } from '../../
 import { changeFollow, publishPost } from '../../lib/social-repo';
 import { POST as BSKY_POST, projectPost, projectUri, publicPostText } from '../../lib/social-model';
 import { profile, project, support } from '../../lib/repository';
+import { publishProtocol } from '../../lib/protocol';
+import { recommend } from '../../lib/recommendations';
+import { getDb } from '../../lib/db';
 import { canShareTip } from '../../lib/tip-sharing';
 
 export const POST: APIRoute = async (context) => {
@@ -13,11 +16,22 @@ export const POST: APIRoute = async (context) => {
   try {
     const user = currentUser(context);
     if (!user) throw new Error('Sign in with your AT Protocol account first.');
+    if (form.action === 'publish-protocol') {
+      if (config().demo || form.consent !== 'public') throw new Error('Schema publication requires live mode and explicit confirmation.');
+      const count = await publishProtocol(user.did);
+      return redirectNotice('/protocol', `${count} schemas published. DNS must point _lexicon.feedme.fund to this account’s DID.`);
+    }
     if (form.action === 'follow') {
       if (form.kind !== 'creator' && form.kind !== 'project') throw new Error('Choose a person or project.');
       if (form.enabled !== 'yes' && form.enabled !== 'no') throw new Error('Choose whether to follow.');
       await changeFollow(user.did, form.kind, String(form.subject || ''), form.enabled === 'yes', String(form.title || ''));
+      getDb().prepare('DELETE FROM kv WHERE namespace=? AND instr(key,?)=1').run('discovery-graph', `${user.did}:`);
       return redirectNotice(returnTo, `${config().demo ? 'Demo: ' : ''}${form.enabled === 'yes' ? 'Following. Find new posts in Following.' : 'Unfollowed.'}`);
+    }
+    if (form.action === 'recommend') {
+      if (form.consent !== 'public') throw new Error('Confirm that you want to publish this recommendation.');
+      await recommend(user.did, String(form.subject || ''), String(form.note || ''), form.remove !== 'yes');
+      return redirectNotice(form.remove === 'yes' ? '/recommendations' : '/discover', config().demo ? 'Demo recommendation saved.' : form.remove === 'yes' ? 'Recommendation removed.' : 'Your recommendation is published to your AT Protocol account.');
     }
     if (form.action === 'post') {
       const s = support(String(form.supportId || ''));

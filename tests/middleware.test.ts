@@ -1,3 +1,4 @@
+vi.mock('../src/lib/creator-circle', () => ({ refreshCreatorCircle: vi.fn(async () => {}) }));
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('astro:middleware', () => ({ defineMiddleware: <T>(handler: T) => handler }));
 vi.mock('../src/lib/config', () => ({ config: () => ({ origin: 'https://feedme.example' }) }));

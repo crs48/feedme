@@ -1,4 +1,5 @@
 ---
+import { creatorCircle } from '../lib/creator-circle';
 import Layout from '../layouts/Layout.astro';
 import Creator from '../components/Creator.astro';
 import SupportAllocator from '../components/SupportAllocator.astro';
@@ -7,7 +8,7 @@ import Icon from '../components/Icon.astro';
 import Avatar from '../components/Avatar.astro';
 import { config } from '../lib/config';
 import { demoPerson } from '../lib/demo-media';
-import { profile, projects, totals, friends } from '../lib/repository';
+import { profile, projects, totals } from '../lib/repository';
 const p = profile();
 const list = projects();
 const t = totals();
@@ -17,7 +18,7 @@ const t = totals();
   <div class="shell"><SupportAllocator projects={list} creatorName={p.name}/></div>
   <section class="shell support-note"><Icon name="heart" size={18}/><p><strong>Support goes directly to the creator.</strong> Every tip helps, whether or not a project reaches its aspiration.</p><span>{t.count} public tips</span></section>
   <section class="shell circle-teaser"><div><h2 class="section-title">People worth knowing</h2><p class="muted mt-2">A few friends and projects I recommend.</p></div><a class="button secondary social" href="/circle">Explore my circle <Icon name="arrow" size={15}/></a></section>
-  <div class="shell teaser-cards">{friends().slice(0, 2).map((f) => <a href={f.url} rel="noopener noreferrer" class="teaser-card"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined} size={44}/><span class="min-w-0"><strong>{f.name}</strong><span class="block muted mt-1">{f.description}</span></span><span class="ml-auto muted" aria-hidden="true">↗</span></a>)}</div>
+  <div class="shell teaser-cards">{creatorCircle().slice(0, 2).map((f) => <a href={f.url} rel="noopener noreferrer" class="teaser-card"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined} size={44}/><span class="min-w-0"><strong>{f.name}</strong><span class="block muted mt-1">{f.description}</span></span><span class="ml-auto muted" aria-hidden="true">↗</span></a>)}</div>
   <div class="shell"><SupportTimeline/></div>
 </Layout>
 <style>

@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { oauthClient } from './auth';
 import { config } from './config';
 import { deleteKv, getDb, getKv, listRecords, putRecord, setKv } from './db';
-import { didSchema } from './model';
-import { collectionFor, followSchema, POST, projectSubject, type Follow, type FollowKind, type SocialRecord } from './social-model';
+import { didSchema, LEGACY_NS } from './model';
+import { collectionFor, followSchema, POST, projectSubject, sameProject, type Follow, type FollowKind, type SocialRecord } from './social-model';
 
 const recordsSchema = z.object({ records: z.array(z.object({ uri: z.string(), cid: z.string(), value: z.record(z.string(), z.unknown()) })), cursor: z.string().optional() });
 const demoNamespace = (actor: string, collection: string) => `demo-social:${actor}:${collection}`;
@@ -54,10 +54,10 @@ export const readSocialRecords = async (actor: string, collection: string, fresh
   throw new Error('The follow list could not be read completely. Please try again.');
 };
 export const readFollows = async (actor: string, kind: FollowKind, fresh = false): Promise<Follow[]> =>
-  (await readSocialRecords(actor, collectionFor(kind), fresh)).flatMap((record) => {
+  (await Promise.all((kind === 'project' ? [collectionFor(kind), `${LEGACY_NS}.follow`] : [collectionFor(kind)]).map((collection) => readSocialRecords(actor, collection, fresh)))).flat().flatMap((record) => {
     const parsed = followSchema.safeParse(record.value);
     const subject = kind === 'creator' ? didSchema : projectSubject;
-    return parsed.success && parsed.data.$type === collectionFor(kind) && subject.safeParse(parsed.data.subject).success ? [{ ...record, value: parsed.data }] : [];
+    return parsed.success && parsed.data.$type === record.uri.split('/')[3] && [collectionFor(kind), ...(kind === 'project' ? [`${LEGACY_NS}.follow`] : [])].includes(parsed.data.$type) && subject.safeParse(parsed.data.subject).success ? [{ ...record, value: parsed.data }] : [];
   });
 
 const actorLocks = new Map<string, Promise<unknown>>();
@@ -68,7 +68,7 @@ export const withSocialLock = async <T>(actor: string, action: () => Promise<T>)
   try { return await current; }
   finally { if (actorLocks.get(actor) === current) actorLocks.delete(actor); }
 };
-const putSocialRecord = async (actor: string, collection: string, rkey: string, value: Record<string, unknown>) => {
+export const putSocialRecord = async (actor: string, collection: string, rkey: string, value: Record<string, unknown>) => {
   const uri = `at://${actor}/${collection}/${rkey}`;
   if (config().demo) putRecord(getDb(), demoNamespace(actor, collection), rkey, { uri, cid: 'demo', value });
   else await (await socialClient(actor))('com.atproto.repo.putRecord', { repo: actor, collection, rkey, record: value }, true);
@@ -79,7 +79,7 @@ export const changeFollow = (actor: string, kind: FollowKind, subject: string, e
   (kind === 'creator' ? didSchema : projectSubject).parse(subject);
   if (kind === 'creator' && subject === actor) throw new Error('You cannot follow your own account.');
   const collection = collectionFor(kind);
-  const existing = (await readFollows(actor, kind, true)).filter((record) => record.value.subject === subject);
+  const existing = (await readFollows(actor, kind, true)).filter((record) => (kind === 'project' ? sameProject(record.value.subject, subject) : record.value.subject === subject));
   const operation = `${actor}:${collection}:${subject}`;
   if (enabled) {
     if (existing.length) { deleteKv(getDb(), 'follow-pending', operation); return; }
@@ -91,13 +91,15 @@ export const changeFollow = (actor: string, kind: FollowKind, subject: string, e
     deleteKv(getDb(), 'follow-pending', operation);
   } else {
     for (const record of existing) {
-      const rkey = record.uri.slice(`at://${actor}/${collection}/`.length);
+      const recordCollection = record.value.$type;
+      const rkey = record.uri.slice(`at://${actor}/${recordCollection}/`.length);
       if (!/^[a-zA-Z0-9._~:-]+$/.test(rkey)) throw new Error('Invalid follow record key.');
-      if (config().demo) getDb().prepare('DELETE FROM records WHERE kind=? AND id=?').run(demoNamespace(actor, collection), rkey);
-      else await (await socialClient(actor))('com.atproto.repo.deleteRecord', { repo: actor, collection, rkey, swapRecord: record.cid }, true);
+      if (config().demo) getDb().prepare('DELETE FROM records WHERE kind=? AND id=?').run(demoNamespace(actor, recordCollection), rkey);
+      else await (await socialClient(actor))('com.atproto.repo.deleteRecord', { repo: actor, collection: recordCollection, rkey, swapRecord: record.cid }, true);
     }
     deleteKv(getDb(), 'follow-pending', operation);
     deleteKv(getDb(), 'social-read', `${actor}:${collection}`);
+    if (kind === 'project') deleteKv(getDb(), 'social-read', `${actor}:${LEGACY_NS}.follow`);
   }
 });
 

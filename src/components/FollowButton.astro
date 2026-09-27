@@ -1,6 +1,6 @@
 ---
 import { readFollows } from '../lib/social-repo';
-import type { FollowKind } from '../lib/social-model';
+import { sameProject, type FollowKind } from '../lib/social-model';
 import { safeReturnPath } from '../lib/http';
 interface Props { kind: FollowKind; subject: string; title: string; label?: string; returnTo?: string; }
 const { kind, subject, title, label = kind === 'project' ? 'Keep me updated' : 'Follow on Bluesky', returnTo = Astro.url.pathname } = Astro.props;
@@ -9,7 +9,7 @@ const path = safeReturnPath(returnTo);
 let following = false;
 let unavailable = false;
 if (user && subject !== user.did) {
-  try { following = (await readFollows(user.did, kind)).some(({ value }) => value.subject === subject); }
+  try { following = (await readFollows(user.did, kind)).some(({ value }) => kind === 'project' ? sameProject(value.subject, subject) : value.subject === subject); }
   catch { unavailable = true; }
 }
 ---

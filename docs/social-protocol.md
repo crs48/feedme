@@ -6,7 +6,7 @@ Feedme uses the supporter's own AT Protocol repository for social actions. Creat
 flowchart LR
   Supporter[Signed-in supporter] --> Follow[Explicit follow / unfollow]
   Follow --> Native[app.bsky.graph.follow: creator DID]
-  Follow --> Project[social.feedme.follow: project AT URI]
+  Follow --> Project[fund.feedme.follow: project AT URI]
   Native --> PDS[Supporter's public PDS through Habitat OAuth]
   Project --> PDS
   Creator[Creator project post] --> OptIn[Explicit publish with stable project tag]
@@ -30,7 +30,7 @@ flowchart LR
 ## Protocol contracts
 
 - `app.bsky.graph.follow` lives in the follower's public repo, targets a DID, and uses a TID record key. Existing records from other apps are honored.
-- `social.feedme.follow` lives in the follower's public repo and targets `at://<creator DID>/social.feedme.project/<project key>`. This draft lexicon is intentionally small. An optional title is a display hint, not an authority or payment destination.
+- `fund.feedme.follow` lives in the follower's public repo and targets `at://<creator DID>/fund.feedme.project/<project key>`. This lexicon is intentionally small. Legacy `social.feedme.follow` records remain readable during migration. An optional title is a display hint, not an authority or payment destination.
 - Creator shares are ordinary `app.bsky.feed.post` records with an external project card. An additional tag, `feedme-` plus the first 32 hexadecimal characters of SHA-256 of the project's AT URI, associates updates with a project across domains. Only posts authored by that project's DID count as its updates. A tip post is not a creator update.
 - Posts use TID keys and the Bluesky limits of 300 graphemes and 3,000 UTF-8 bytes. Private notes, amounts, payment IDs, receipt IDs, and billing data are never copied into a post.
 - Public tip posts are deliberately separate from public payment acknowledgments. Publishing identifies the author and project even when the receipt was anonymous. The app requires explicit consent and either the original checkout browser or the named tip's authenticated DID.

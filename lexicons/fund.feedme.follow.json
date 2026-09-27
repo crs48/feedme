@@ -1,11 +1,11 @@
 {
   "lexicon": 1,
-  "id": "social.feedme.follow",
+  "id": "fund.feedme.follow",
   "defs": {
     "main": {
       "type": "record",
       "key": "tid",
-      "description": "A public subscription to a project, stored in the follower's repository. The subject must identify a social.feedme.project record.",
+      "description": "A public subscription to a project, stored in the follower's repository. The subject must identify a fund.feedme.project record.",
       "record": {
         "type": "object",
         "required": ["subject", "createdAt"],

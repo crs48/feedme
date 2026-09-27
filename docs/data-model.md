@@ -6,16 +6,16 @@ Reviewed against Habitat revision [`85654a07dec6931925763e66c835f65d0cdf1e30`](h
 
 | Collection | Location | Fields and meaning |
 | --- | --- | --- |
-| `social.feedme.profile` / `self` | Public PDS | Creator display name, handle, biography, location, website |
-| `social.feedme.project` | Public PDS | Title, summary, body, category, project/ongoing kind, status, aspiration, image/link, creation time |
-| `social.feedme.update` | Public PDS | Project key, text, creation time |
-| `social.feedme.recommendation` | Public PDS | Friend name, optional DID, support URL, explanation |
-| `social.feedme.acknowledgment` | Public PDS, explicit consent only | Creator DID, project AT URI, supporter DID, net amount, currency, timestamp |
-| `social.feedme.support` | Habitat permissioned space only | Project key, gross amount, visibility, optional supporter DID, note, payment state, refund/dispute state, payment intent reference |
+| `fund.feedme.profile` / `self` | Public PDS | Creator display name, handle, biography, location, website, canonical Feedme URL, discovery preference |
+| `fund.feedme.project` | Public PDS | Title, summary, body, category, project/ongoing kind, status, aspiration, image/link, creation time |
+| `fund.feedme.update` | Public PDS | Project key, text, creation time |
+| `fund.feedme.recommendation` | Public PDS | Friend name, optional DID, support URL, explanation |
+| `fund.feedme.acknowledgment` | Public PDS, explicit consent only | Creator DID, project AT URI, supporter DID, net amount, currency, timestamp |
+| `fund.feedme.support` | Habitat permissioned space only | Project key, gross amount, visibility, optional supporter DID, note, payment state, refund/dispute state, payment intent reference |
 | `app.bsky.feed.post` | Public PDS, separate explicit creator opt-in | Short update with an external project link card |
 | Credentials, sessions, Connect account, checkout state, subscription/customer/invoice references, webhook IDs | Local encrypted operational store | Provider-specific operational details; never public records |
 
-`social.feedme.receipts` identifies the private space modality. All `social.feedme.*` identifiers are draft names, not a claim of domain ownership or registered lexicon discovery. The JSON schemas under `lexicons/` are validated using the AT Protocol Lexicons library in tests.
+`fund.feedme.receipts` identifies the private space modality. `fund.feedme.*` uses the owned feedme.fund domain. Official DNS and schema publication are separate from local schema validation; see [discovery](discovery.md#official-schema-publication). The JSON schemas under `lexicons/` are validated using the AT Protocol Lexicons library in tests.
 
 ```mermaid
 erDiagram
@@ -64,4 +64,4 @@ An anonymous receipt omits the supporter DID even if an upstream object accident
 
 ## Social and project-log records
 
-See [social protocol](social-protocol.md) for actor-owned native follows, project subscriptions, and explicit tip posts. See [project content](project-content.md) for Markdown descriptions, native post associations, media rendering, and `social.feedme.activity` timeline projections. Anonymous activity requires separate consent and includes only project and date; private receipts never become public records.
+See [social protocol](social-protocol.md) for actor-owned native follows, project subscriptions, and explicit tip posts. See [project content](project-content.md) for Markdown descriptions, native post associations, media rendering, and `fund.feedme.activity` timeline projections. Anonymous activity requires separate consent and includes only project and date; private receipts never become public records.

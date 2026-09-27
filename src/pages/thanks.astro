@@ -1,10 +1,11 @@
 ---
+import { creatorCircle } from '../lib/creator-circle';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
 import Avatar from '../components/Avatar.astro';
 import { demoPerson } from '../lib/demo-media';
 import FollowButton from '../components/FollowButton.astro';
-import { support, friends, project } from '../lib/repository';
+import { support, project } from '../lib/repository';
 import { config } from '../lib/config';
 import { canAccessTip, canShareTip } from '../lib/tip-sharing';
 import { publishedPost } from '../lib/social-repo';
@@ -42,7 +43,9 @@ const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
       </form>}
     </div>}
     <h2 class="section-title mt-12 mb-5">Discover more creators</h2><p class="muted text-xs mb-6">If you have a little more curiosity to give, meet some friends.</p>
-    {friends().slice(0, 3).map((f) => <article class="panel text-left mb-4"><a href={f.url} rel="noopener noreferrer" class="flex items-center gap-3"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined}/><span><strong class="text-sm">{f.name} ↗</strong><span class="block text-xs muted mt-1">{f.description}</span></span></a>{f.did && <div class="mt-4"><FollowButton kind="creator" subject={f.did} title={f.name} returnTo={returnTo}/></div>}</article>)}
+    {paid && <p class="my-6"><a class="button secondary" href={`/recommend?did=${encodeURIComponent(config().ownerDid)}`}>Recommend this creator ↗</a></p>}
+    <p class="my-5"><a class="text-sm underline" href="/discover">Find more creators in your Bluesky circle</a></p>
+    {creatorCircle().slice(0, 3).map((f) => <article class="panel text-left mb-4"><a href={f.url} rel="noopener noreferrer" class="flex items-center gap-3"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined}/><span><strong class="text-sm">{f.name} ↗</strong><span class="block text-xs muted mt-1">{f.description}</span></span></a>{f.did && <div class="mt-4"><FollowButton kind="creator" subject={f.did} title={f.name} returnTo={returnTo}/></div>}</article>)}
     <a class="button secondary mt-4" href="/">Back to projects</a>
   </div></section>
 </Layout>

@@ -60,6 +60,7 @@ See the [administration guide](docs/admin.md) for project workflows, report defi
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
 - Configurable Bluesky administrators (default `crs.land`) and a private dashboard: draft/publish/archive projects, Markdown previews, weekly/monthly earnings, project performance, recurring support, searchable payments, CSV exports, supporter profiles, connection health, and admin activity.
+- Discover creators you follow, mutuals, followers, and friends of friends through Bluesky; browse the public network or search a handle. Public recommendations travel with your own PDS. See [discovery](docs/discovery.md).
 - Native creator/friend follows, portable project subscriptions, a Following feed, and explicit public messages after tipping.
 - Markdown project stories with safe images and video embeds. Project logs use native Bluesky posts, including imported photo/video posts.
 - Author avatars on posts, with bundled demo portraits and responsive project photography. Missing portraits use initials; anonymous supporters use a generic icon.
@@ -164,7 +165,7 @@ A future static public profile/project mirror could run separately from a hosted
 | `lexicons/` | Draft public and private wire contracts |
 | `docs/plans/foundation/` | Checked implementation plan and later work |
 
-Read the [architecture](docs/architecture.md), [data model](docs/data-model.md), [social protocol](docs/social-protocol.md), [project content](docs/project-content.md), and [contributor guide](CONTRIBUTING.md). The `social.feedme.*` namespace is a **draft**; claim a domain you control and finalize lexicon discovery before a public protocol release.
+Read the [architecture](docs/architecture.md), [data model](docs/data-model.md), [social protocol](docs/social-protocol.md), [project content](docs/project-content.md), and [contributor guide](CONTRIBUTING.md). The `fund.feedme.*` namespace belongs to **feedme.fund**. See [discovery and schema publication](docs/discovery.md) for the creator directory, social recommendations, prototype migration, and the required DNS/PDS publication steps.
 
 The [verification report](docs/verification.md) records the passing local checks and the remaining real-account acceptance work.
 

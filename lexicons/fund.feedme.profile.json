@@ -1,6 +1,6 @@
 {
   "lexicon": 1,
-  "id": "social.feedme.profile",
+  "id": "fund.feedme.profile",
   "defs": {
     "main": {
       "type": "record",
@@ -39,6 +39,15 @@
             "type": "string",
             "format": "uri",
             "maxLength": 2048
+          },
+          "feedmeUrl": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "discoverable": {
+            "type": "boolean",
+            "description": "Whether Feedme directories should list this public profile. This is a preference, not access control."
           }
         }
       }

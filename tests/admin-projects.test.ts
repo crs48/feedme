@@ -15,10 +15,11 @@ import { projects, project, saveProject, saveUpdate } from '../src/lib/repositor
 import { POST } from '../src/pages/api/studio';
 import { GET as exportPayments } from '../src/pages/api/admin/export';
 import { adminReturnPath } from '../src/lib/admin';
+import { demoProfile } from '../src/lib/seed';
 import type { Project } from '../src/lib/model';
 const draft: Project = { id: 'private-draft', title: 'Private draft title', summary: 'A private introduction', description: 'Secret draft body that must not be public.', category: 'Making', kind: 'project', status: 'draft', color: 'blue', target: 10000, image: '', link: '', createdAt: '2026-09-26T00:00:00Z' };
 const context = (form: Record<string,string> = {}, path = '/api/studio') => ({ request: new Request(`https://feedme.example${path}`, { method: 'POST', body: new URLSearchParams(form) }), url: new URL(`https://feedme.example${path}`), cookies: {} }) as APIContext;
-beforeEach(() => { state.db = openDatabase(':memory:'); state.user = { did: helper }; });
+beforeEach(() => { state.db = openDatabase(':memory:'); putRecord(state.db, 'profile', 'self', demoProfile); state.user = { did: helper }; });
 afterEach(() => { state.db!.close(); });
 
 describe('admin project lifecycle and private reports', () => {
@@ -47,7 +48,7 @@ describe('admin project lifecycle and private reports', () => {
     await POST(context({ action: 'project-duplicate', id: draft.id }));
     const copies = projects(true);
     expect(copies).toHaveLength(2); expect(copies.find((p) => p.id !== draft.id)).toMatchObject({ status: 'draft', title: `${draft.title} (copy)` });
-    expect(pendingWrites(state.db!)).toHaveLength(1); expect(listRecords(state.db!, 'support')).toEqual([]);
+    expect(pendingWrites(state.db!).filter((r) => r.collection === 'fund.feedme.project')).toHaveLength(1); expect(listRecords(state.db!, 'support')).toEqual([]);
   });
   it('rejects unauthenticated and non-admin mutations and exports even when called without middleware', async () => {
     for (const user of [undefined, { did: 'did:plc:cccccccccccccccccccccccc' }]) {

@@ -46,16 +46,16 @@ describe('durable operational storage', () => {
   afterEach(() => { delete process.env.DATA_ENCRYPTION_KEY; delete process.env.FEEDME_MODE; delete process.env.OWNER_DID; delete process.env.PUBLIC_URL; });
   it('rolls back the record and outbox together', () => {
     const db = openDatabase(':memory:');
-    expect(() => transaction(db, () => { putRecord(db, 'support', sample.id, sample); enqueue(db, 'private', 'social.feedme.support', sample.id, sample); throw new Error('interrupted'); })).toThrow();
+    expect(() => transaction(db, () => { putRecord(db, 'support', sample.id, sample); enqueue(db, 'private', 'fund.feedme.support', sample.id, sample); throw new Error('interrupted'); })).toThrow();
     expect(listRecords(db, 'support')).toEqual([]);
     expect(pendingWrites(db)).toEqual([]);
     db.close();
   });
   it('preserves a newer write if an older in-flight sync completes', () => {
     const db = openDatabase(':memory:');
-    enqueue(db, 'public', 'social.feedme.project', 'sauna', { title: 'old' });
+    enqueue(db, 'public', 'fund.feedme.project', 'sauna', { title: 'old' });
     const old = pendingWrites(db)[0];
-    enqueue(db, 'public', 'social.feedme.project', 'sauna', { title: 'new' });
+    enqueue(db, 'public', 'fund.feedme.project', 'sauna', { title: 'new' });
     db.prepare('DELETE FROM outbox WHERE id=? AND revision=?').run(old.id, old.revision);
     expect(pendingWrites(db)[0].value).toEqual({ title: 'new' });
     db.close();

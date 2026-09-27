@@ -63,7 +63,7 @@ const olderLog = new URLSearchParams({ ...(log.cursor ? { cursor: log.cursor } :
           <p class="privacy-disclosure">Anonymous means no social identity in Feedme. Stripe and the recipient may still see billing information. Public records can be copied across the open network.</p>
         </form> : <div class="notice">This project is complete. Thank you for your support.</div>}
       </section>
-      <section class="follow-panel"><h2>Keep up with this project</h2><p>Follow updates, with or without a tip. You can share a public message after supporting.</p><FollowButton kind="project" subject={projectUri(cfg.ownerDid, p.id)} title={p.title}/></section>
+      <section class="follow-panel"><h2>Keep up with this project</h2><p>Follow updates, with or without a tip. You can share a public message after supporting.</p><FollowButton kind="project" subject={projectUri(cfg.ownerDid, p.id)} title={p.title}/><a class="button secondary social mt-4" href={`/recommend?did=${encodeURIComponent(cfg.ownerDid)}`}>Recommend this creator ↗</a></section>
     </aside>
     <div class="project-community">
       <section id="story" aria-label="Project story"><Markdown content={p.description}/>{p.link && <a class="button secondary mt-6" href={p.link} rel="noopener noreferrer">Explore the project ↗</a>}</section>

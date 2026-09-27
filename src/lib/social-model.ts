@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { didSchema, NS } from './model';
+import { didSchema, NS, LEGACY_NS } from './model';
 
 export const FOLLOW = 'app.bsky.graph.follow';
 export const PROJECT_FOLLOW = `${NS}.follow`;
@@ -9,11 +9,16 @@ export type FollowKind = 'creator' | 'project';
 export const collectionFor = (kind: FollowKind) => kind === 'creator' ? FOLLOW : PROJECT_FOLLOW;
 export const projectUri = (did: string, id: string) => `at://${did}/${NS}.project/${id}`;
 export const parseProjectUri = (uri: string) => {
-  const match = /^at:\/\/([^/]+)\/social\.feedme\.project\/([a-z0-9][a-z0-9-]{0,63})$/.exec(uri);
+  const match = /^at:\/\/([^/]+)\/(?:fund|social)\.feedme\.project\/([a-z0-9][a-z0-9-]{0,63})$/.exec(uri);
   return match && didSchema.safeParse(match[1]).success ? { did: match[1], id: match[2] } : undefined;
 };
 export const projectSubject = z.string().refine((value) => Boolean(parseProjectUri(value)), 'Choose a valid project.');
 export const projectTag = (uri: string) => `feedme-${createHash('sha256').update(projectSubject.parse(uri)).digest('hex').slice(0, 32)}`;
+export const projectTags = (uri: string) => {
+  const p = parseProjectUri(uri);
+  return p ? [NS, LEGACY_NS].map((ns) => projectTag(`at://${p.did}/${ns}.project/${p.id}`)) : [];
+};
+export const sameProject = (a: string, b: string) => { const x = parseProjectUri(a); const y = parseProjectUri(b); return Boolean(x && y && x.did === y.did && x.id === y.id); };
 export const followSchema = z.object({
   $type: z.string(), subject: z.string(), createdAt: z.iso.datetime(), title: z.string().max(100).optional(),
 });

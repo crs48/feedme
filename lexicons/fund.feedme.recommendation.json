@@ -1,6 +1,6 @@
 {
   "lexicon": 1,
-  "id": "social.feedme.recommendation",
+  "id": "fund.feedme.recommendation",
   "defs": {
     "main": {
       "type": "record",
@@ -34,6 +34,10 @@
           "description": {
             "type": "string",
             "maxLength": 180
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
           }
         }
       }
