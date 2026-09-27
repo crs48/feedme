@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { Lexicons } from '@atproto/lexicon';
 import { describe, expect, it } from 'vitest';
 import { demoFriends, demoProfile, demoProjects, demoSupports, demoUpdates } from '../src/lib/seed';
-import { privateReceipt, publicAcknowledgment, publicTipActivity } from '../src/lib/model';
+import { profileSchema, privateReceipt, publicAcknowledgment, publicTipActivity } from '../src/lib/model';
 
 const schemas = readdirSync(new URL('../lexicons/', import.meta.url)).filter((name) => name.endsWith('.json')).map((name) => JSON.parse(readFileSync(new URL(`../lexicons/${name}`, import.meta.url), 'utf8')));
 describe('wire record contracts', () => {
@@ -11,6 +11,8 @@ describe('wire record contracts', () => {
     const records = [
       ...demoProjects.map((p) => ({ $type: 'social.feedme.project', ...p })),
       { $type: 'social.feedme.profile', ...demoProfile },
+      { $type: 'social.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: '' }) },
+      { $type: 'social.feedme.profile', ...profileSchema.parse({ ...demoProfile, avatar: 'https://cdn.bsky.app/avatar.jpg' }) },
       ...demoFriends.map((p) => ({ $type: 'social.feedme.recommendation', ...p })),
       ...demoUpdates.map((p) => ({ $type: 'social.feedme.update', ...p })),
       privateReceipt(demoSupports[0]), privateReceipt({ ...demoSupports[0], frequency: 'monthly', subscriptionId: 'sub_private', invoiceId: 'in_private' }), publicAcknowledgment(demoSupports[0], 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa')!,

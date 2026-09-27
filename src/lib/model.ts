@@ -21,7 +21,7 @@ export const projectSchema = z.object({
 });
 export type Project = z.infer<typeof projectSchema>;
 export const profileSchema = z.object({
-  avatar: httpsUrl.optional(),
+  avatar: httpsUrl.refine((value) => value.length <= 2048, 'Avatar URL is too long').transform((value) => value || undefined).optional(),
   name: z.string().trim().min(1).max(80),
   handle: z.string().max(253),
   bio: z.string().trim().min(3).max(500),
