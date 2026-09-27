@@ -133,3 +133,17 @@ Use the [operator acceptance checklist](hosting.md#live-acceptance-checklist) be
 - [x] A fresh, isolated live-mode instance resolved `crs.land` through the actual Habitat SDK, stored encrypted DID/owner pins, served health HTTP 200, redirected unsigned dashboard requests, and rejected unsigned exports. The live identity is `did:plc:fvfdugmhgbbvxjppo2kkveq2`.
 
 The live bootstrap check used a temporary data directory and no Stripe credentials. It did not perform an interactive OAuth login, a PDS/Habitat write, or a payment. Real creator OAuth, delegated publication through the creator’s stored grant, Habitat membership, and Stripe payment acceptance still require the live acceptance checklist in [hosting](hosting.md#live-acceptance-checklist).
+
+## Network discovery and fund.feedme namespace · 2026-09-27
+
+- [x] `pnpm check`: 124 files, no errors, warnings, or hints.
+- [x] `pnpm test`: 154 tests across 24 suites. New coverage includes relationship ranking/deduplication, partial graph reads, viewer blocks/mutes, canonical site identity, unsafe endpoint rejection, lost-write retries, recommendation ownership/removal, local circle rendering, and namespace migration privacy.
+- [x] `pnpm build`: production Node bundle, public schema endpoints, and discovery pages build successfully.
+- [x] Running production demo: HTTP form sign-in, recommendation publish, creator-circle display, update, removal, explicit-consent rejection, cross-origin rejection, and sign-out. Temporary recommendation data was removed.
+- [x] Live read-only requests through the new pinned-DNS transport: @feedme.fund resolves to `did:plc:vbaugrge5ekw4tlghov4ydhi`, its DID document includes `at://feedme.fund`, and the configured relay accepts `listReposByCollection`. It returned zero Feedme profiles before initial publication.
+- [x] Public `/.well-known/feedme` and `/lexicons/fund.feedme.profile.json` return the expected identity/schema JSON in the production preview.
+- [ ] Official `_lexicon.feedme.fund` TXT record and nine schema records published to @feedme.fund's PDS. Vercel browser/CLI are signed out; the local preview is demo mode without a live authority OAuth grant. The `/protocol` workflow and exact DNS instructions are prepared.
+- [ ] Live authenticated discovery across actual creator accounts/PDSs, including friends of friends and cross-instance recommendation handoff. Adapter contracts are fixture-tested; the demo does not substitute for live account acceptance.
+
+See [discovery operations and migration](discovery.md). Native browser clicks could not be verified while the desktop was locked; form mutations were checked over HTTP and page layouts inspected in the browser.
+- [x] Browser layout inspection at 320, 390, 768, and 1440px: discovery, friends of friends, recommendation editor, and recommendation list. A 2px overflow at 320px was fixed and rechecked. Screenshots are saved in ignored `.data/` files.

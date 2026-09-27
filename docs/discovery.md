@@ -35,7 +35,7 @@ flowchart LR
 - A known DID is resolved to its current PDS. Handle lookup uses Bluesky's public identity endpoint. A typed handle does not grant administration rights.
 - Valid public profiles, PDS endpoints, and viewer-specific graph snapshots are cached for five minutes; explicit `RecordNotFound` results for one minute. Provider failures are not cached as absence.
 - Before showing suggestions, Feedme hydrates profiles in the viewer's Bluesky context. Blocked, blocking, muted, or hidden/explicitly labeled accounts are excluded. Failed visibility checks withhold suggestions. Anonymous Explore applies public label checks but has no personal mute/block context.
-- Custom PDS and Feedme-site requests require public HTTPS endpoints. DNS results are checked and pinned to the connection, redirects are rejected, and response size/time are bounded. No discovery request is made to a private IP, metadata service, or credential-bearing URL.
+- Custom PDS and Feedme-site requests require public HTTPS endpoints on port 443. DNS results are checked and pinned to the connection, redirects are rejected, and response size/time are bounded. No discovery request is made to a private IP, metadata service, or credential-bearing URL.
 
 This release queries the existing relay and public repositories directly; it does not require each installation to run a full firehose indexer. A future shared indexer can use Tap's collection signaling, backfill, and verified updates. It must remain replaceable. Public discovery cannot guarantee a complete instantaneous list of every isolated PDS.
 
