@@ -106,7 +106,7 @@ See [split support](split-support.md) for the deterministic cent-rounding and cu
 - [x] Render Blueprint validates against Render's official JSON Schema; Fly TOML parses with matching port and persistent-data mount settings.
 - [x] Generated provider domains and explicit custom-domain overrides are covered by five tests; request Host headers are not trusted for origin discovery.
 - [x] `pnpm check`, all 109 tests, and `pnpm build` pass.
-- [x] GitHub repository is private and enabled as a template repository.
+- [x] At the initial deployment check, the repository was private and enabled as a template. It is now public; see the Pages release verification below.
 - [x] [GitHub Actions](https://github.com/crs48/feedme/actions/runs/36270196045) builds the Docker image and passes the container smoke check: a fresh root-owned volume becomes writable, the server runs as UID 1000, OAuth metadata uses the generated origin, and SQLite data survives container replacement. Local Docker daemon remains unavailable.
 - [x] All 34 linked documentation/badge URLs resolve; relative file links and heading anchors in the hosting docs and README exist. Local production health endpoint returns HTTP 200 after rebuilding.
 - [ ] Provider-side deployment and redeployment on Render, Railway, Fly.io, Coolify, Dokploy, or Koyeb. The configurations and setup guides are prepared; no paid services were provisioned for this verification.
@@ -162,3 +162,21 @@ See [discovery operations and migration](discovery.md). Native browser clicks co
 - [ ] Live image upload through supporter OAuth and previews fetched by actual social crawlers on a public HTTPS deployment. These require authenticated live acceptance; local demos and adapter fixtures do not substitute for that check.
 
 See [support-card behavior and hosting](support-cards.md). The container smoke check also exercises a public checkout, share metadata, and PNG rendering with the production native renderer and bundled fonts.
+
+## Public product site and Pages demo · 2026-09-27
+
+- [x] `pnpm check`: 148 files, zero errors, warnings, or hints.
+- [x] `pnpm test`: 199 tests across 27 suites. Added cases for clean demo environments, credential exclusion, offline CSP, receipt URL removal, query-based screen routes, and sample external identities.
+- [x] `pnpm build:site`: normal Node production build plus static Astro landing pages and isolated demo export. Artifact check verifies 48 HTML pages, 1,711 local links/assets, all major public/admin routes, disabled forms without JavaScript, and the 1200×630 share PNG.
+- [x] Export always creates a new temporary database. The child environment excludes live secrets, `.env`, operator data paths, and Node preload hooks; outbound fetches are blocked. Browser fixture projections use explicit field lists, excluding session, checkout, Stripe, and OAuth bindings.
+- [x] Desktop, 390px mobile, and 320px narrow-screen browser checks. No horizontal page overflow on the checked landing, dashboard, discovery, and settings views.
+- [x] Browser flows: linked sliders, even split, monthly public demo tip, anonymous demo tip with no share card, report period/project grouping, project creation/publish/archive, friends-of-friends following, settings persistence, simulated cancellation, and reset.
+- [x] Static preview rejects POST requests with HTTP 405. The deployed demo blocks native form submission and network fetches through CSP; simulation actions produced no browser console errors.
+- [x] `pnpm audit --prod`: no known vulnerabilities reported. Gitleaks v8.30.1 scanned 35 commits and the staged release diff with no detected secrets. These scans are checks, not guarantees of production security.
+- [x] [Application CI](https://github.com/crs48/feedme/actions/runs/36345606277) passed on Node 24, including the Docker build and container startup/persistence checks. The local Docker daemon was unavailable, so the container validation for this release ran in GitHub Actions.
+- [x] [Pages deployment](https://github.com/crs48/feedme/actions/runs/36345606254) succeeded. The repository is public and remains a template, with the existing MIT license attributed to Christopher Smothers.
+- [x] `feedme.fund` resolves to GitHub Pages. HTTPS is enforced, the certificate is approved, and the public URL returns HTTP 200 from GitHub. Verified the actual deployed landing page, allocation/receipt flow, privacy behavior, and billing simulation in the browser.
+- [x] Nightly Pages rebuild configured for 08:17 UTC. It renders fictional examples, never the owner's live Bluesky feed or private financial data.
+- [ ] Real-account Habitat OAuth, PDS/private-space permissions and writes, Stripe Connect onboarding, Checkout and webhook acceptance, refunds, and payouts. These require an HTTPS live-mode staging instance and operator test accounts; the public Pages demo deliberately does not perform them. Continue with the [live acceptance checklist](hosting.md#live-acceptance-checklist).
+
+The public release remains a work in progress. Simulated local edits do not regenerate public demo pages or the example share PNG; those are fixed, explicitly labeled samples.
