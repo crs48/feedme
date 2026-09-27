@@ -147,3 +147,18 @@ The live bootstrap check used a temporary data directory and no Stripe credentia
 
 See [discovery operations and migration](discovery.md). Native browser clicks could not be verified while the desktop was locked; form mutations were checked over HTTP and page layouts inspected in the browser.
 - [x] Browser layout inspection at 320, 390, 768, and 1440px: discovery, friends of friends, recommendation editor, and recommendation list. A 2px overflow at 320px was fixed and rechecked. Screenshots are saved in ignored `.data/` files.
+
+## Public support cards · 2026-09-27
+
+- [x] `pnpm check`: 136 files, no errors, warnings, or hints.
+- [x] `pnpm test`: 177 tests across 26 suites, including public-only projections, private-total exclusion, deterministic rounding, top-six remainders, refunds, opaque IDs, real PNG rendering, and Bluesky upload/retry behavior.
+- [x] `pnpm build`: production Node bundle and bundled OFL fonts generated successfully.
+- [x] Production demo HTTP checkout for public, private, and anonymous support. Only the public receipt exposes a share link; the signed-out page contains no receipt ID, private note, or tip amount and has absolute PNG social metadata.
+- [x] Public PNG responds with `image/png` at 1200 × 630. Six-project sample visually inspected, including 125% and 250% goal progress, plus a project without an aspiration.
+- [x] After rendering/caching a PNG, full refund, dispute, and visibility-change fixtures each return HTTP 404 for both the share page and image. Temporary six-project fixtures and private/anonymous test receipts were removed.
+- [x] Browser inspection at 320, 390, and 1440px: no horizontal overflow, stacked mobile project details, readable desktop grid. The receipt's Copy link button produces its success message. Screenshots are retained in ignored `.data/` files.
+- [x] Demo public-post publish and retry succeed locally without sending a network post.
+- [x] [GitHub Actions run 36339100557](https://github.com/crs48/feedme/actions/runs/36339100557) passes on implementation commit `2519152`: checks, tests, build, Linux Docker build, and the new container checkout/PNG/font smoke test.
+- [ ] Live image upload through supporter OAuth and previews fetched by actual social crawlers on a public HTTPS deployment. These require authenticated live acceptance; local demos and adapter fixtures do not substitute for that check.
+
+See [support-card behavior and hosting](support-cards.md). The container smoke check also exercises a public checkout, share metadata, and PNG rendering with the production native renderer and bundled fonts.
