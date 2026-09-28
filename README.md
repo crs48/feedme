@@ -55,6 +55,9 @@ The demo uses a fictional account and an **Explore the demo studio** button, so 
 
 See the [administration guide](docs/admin.md) for project workflows, report definitions, admin removal, and identity recovery.
 
+**Backups and recovery:** connect private storage, then configure a separate `BACKUP_ENCRYPTION_KEY` and an S3-compatible backup bucket. Live instances create encrypted backups every 15 minutes and verify them with a temporary restore. The dashboard can discover your saved Feedme in Habitat and prepare a clean-server recovery, including Stripe reconciliation. See the [setup and restore guide](docs/backups-and-recovery.md). One active server per creator; restoration requires stopping the server and reviewing the recovered data before resuming.
+
+
 ## What works in this release
 
 - Server-rendered, responsive HTML pages with ordinary HTML forms. Core interactions work with JavaScript disabled; the allocation preview is a small progressive enhancement, and the optional video player loads on demand.
@@ -187,7 +190,7 @@ The [verification report](docs/verification.md) records the passing local checks
 
 ## What comes next
 
-Organization workspaces and Habitat roles; cross-instance discovery; remote re-indexing and recovery; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
+Organization workspaces and Habitat roles; cross-instance discovery; incremental PDS ingestion and multi-writer replication; media uploads/native Bluesky video embeds; a separate Bitcoin provider. Stripe’s current crypto checkout supports [stablecoins](https://docs.stripe.com/payments/stablecoin-payments), not a Bitcoin option in this application.
 
 This repository is a work in progress. The roadmap does not imply these later features already exist.
 

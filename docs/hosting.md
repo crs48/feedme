@@ -196,12 +196,15 @@ Treat it as a disposable preview: the button does not provision a volume and cha
 
 ## Backups and operations
 
-- Back up the data volume and `DATA_ENCRYPTION_KEY` separately. Without the key, live record values and OAuth credentials cannot be read.
-- Stop the service before a filesystem backup, or use SQLite’s online backup API. Copying only the main database while WAL writes are active is not a safe backup.
-- Keep the owner DID, Connect account, client URL, and encryption key stable through deploys. If the public URL changes, sign in again; OAuth grants are tied to client identity.
-- The studio shows pending writes and failed attempts. Background retries are active with `pnpm start`/Docker; the development server uses manual sync.
-- If using an external scheduler, POST to `/api/sync` with `Authorization: Bearer <SYNC_SECRET>`. No other internal job endpoints are exposed.
-- Set appropriate reverse-proxy request limits for a public launch. Review the initial app’s privacy copy and add operator contact, retention, and payment terms.
+Configure `BACKUP_ENCRYPTION_KEY` plus an independent S3-compatible bucket or mounted `BACKUP_DIR`. The production worker creates consistent encrypted snapshots every 15 minutes, verifies them by downloading and restoring a temporary database, and retains recent/daily/monthly history. Save the backup key outside the server. The Data & backups dashboard shows complete private Habitat checkpoints, backup freshness, failures, and recovery previews.
+
+Read the [backup and recovery guide](backups-and-recovery.md) before the first live payment. It covers clean-server Habitat recovery, offline database replacement, Stripe reconciliation, key rotation and single-writer requirements. Backup credentials and destinations are supplied by the operator; a directory on the same server is not an off-server backup.
+
+- Keep the owner DID and connected Stripe account stable. A new public URL requires signing in again.
+- `pnpm start`/Docker runs sync, backups and verification; development mode uses manual controls.
+- External schedulers may POST `/api/sync` with `Authorization: Bearer <SYNC_SECRET>`.
+- Use one replica. Stop the original writer before restoration; no automatic multi-server failover is supported.
+- Review reverse-proxy limits and add operator contact, retention and payment terms before public launch.
 
 ## Live acceptance checklist
 
@@ -218,9 +221,10 @@ These require your provider accounts and were not executed as part of the local 
 - [ ] Trigger a failed renewal, then recover payment; confirm no contribution is counted until settlement. Refund one renewal and verify that other periods remain intact.
 - [ ] Open Manage support, update a payment method, cancel future renewals, and confirm the verified subscription event updates the local state without removing earlier tips. Test Stripe email recovery from another browser.
 - [ ] Test asynchronous success/failure, partial/full refunds, and disputes.
-- [ ] Disable Habitat temporarily; payments persist and queued writes succeed after reconnection.
+- [ ] Disable Habitat temporarily; verified webhooks still persist, new Checkout sessions wait for protected intents, and queued writes succeed after reconnection.
 - [ ] Restart/redeploy with the volume retained; data and signing keys survive.
-- [ ] Test backup and restore with the same encryption key.
+- [ ] Test an off-server backup restore with a new database key; sign in and resume after review.
+- [ ] Recover a clean server from a Habitat checkpoint, including Stripe refunds and missed recurring invoices.
 
 ## Validation performed locally
 

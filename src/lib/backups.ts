@@ -60,6 +60,7 @@ export const restoreSnapshot = async (body: Buffer, path: string, owner: string,
       for (const table of ['records', 'kv', 'outbox']) for (const row of db.prepare(`SELECT rowid,value FROM ${table}`).all() as { rowid: number; value: string }[]) if (row.value !== null)
         db.prepare(`UPDATE ${table} SET value=? WHERE rowid=?`).run(seal(unseal(row.value, oldKey), nextKey), row.rowid);
       db.prepare("DELETE FROM kv WHERE namespace IN ('session','login-binding','oauth-state','oauth-session','credentials','checkout-form','checkout-owner','checkout-url')").run();
+      db.exec("DELETE FROM kv WHERE (namespace='recovery' AND key IN ('pending-checkpoint','candidate','spaces','verification','sync-error','reconciled-at','resumed-at')) OR (namespace='backup' AND key='status')");
       db.exec('DELETE FROM outbox'); // Never replay stale financial/public projections from an old snapshot.
       db.prepare("INSERT INTO kv VALUES ('recovery','paused',?,NULL) ON CONFLICT(namespace,key) DO UPDATE SET value=excluded.value").run(seal(true, nextKey));
       db.prepare("INSERT INTO kv VALUES ('recovery','restored-at',?,NULL) ON CONFLICT(namespace,key) DO UPDATE SET value=excluded.value").run(seal(new Date().toISOString(), nextKey));

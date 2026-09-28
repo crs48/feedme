@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { openDatabase, getKv, putRecord, readRecord } from '../src/lib/db';
 import { snapshotDatabase } from '../src/lib/backups';
 import { acquireDataLock } from '../scripts/data-lock.mjs';
@@ -26,6 +26,16 @@ describe('offline restore activation', () => {
     const live = openDatabase(join(root, 'demo.sqlite')); try { expect(readRecord(live, 'profile', 'self')).toEqual({ name: 'Recovered creator' }); expect(getKv(live, 'recovery', 'paused')).toBe(true); } finally { live.close(); }
     const [previous] = (await readdir(join(root, 'recovery'))).filter(name => name.startsWith('previous-'));
     const old = openDatabase(join(root, 'recovery', previous)); try { expect(readRecord(old, 'profile', 'self')).toEqual({ name: 'Previous creator' }); } finally { old.close(); }
+  });
+  it('automatically releases the writer lock after a forced process exit', async () => {
+    const { root, run } = await setup();
+    const child = spawn(process.execPath, ['--input-type=module', '-e', `import { acquireDataLock } from './scripts/data-lock.mjs'; acquireDataLock(process.argv[1]); console.log('locked'); setInterval(() => {}, 1000);`, root], { cwd: resolve('.'), stdio: ['ignore', 'pipe', 'pipe'] });
+    try {
+      await new Promise<void>((resolve, reject) => { child.stdout.once('data', () => resolve()); child.once('error', reject); child.once('exit', code => reject(new Error('Lock process exited: ' + code))); });
+      expect(run().status).not.toBe(0);
+      const stopped = new Promise(resolve => child.once('exit', resolve)); child.kill('SIGKILL'); await stopped;
+      const restored = run(); expect(restored.status, restored.stderr).toBe(0);
+    } finally { if (child.exitCode === null && !child.killed) child.kill('SIGKILL'); }
   });
   it('leaves the current database intact when decryption or candidate validation fails', async () => {
     const { root, file, run } = await setup(); await writeFile(file, 'bad snapshot');

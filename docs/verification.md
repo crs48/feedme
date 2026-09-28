@@ -180,3 +180,15 @@ See [support-card behavior and hosting](support-cards.md). The container smoke c
 - [ ] Real-account Habitat OAuth, PDS/private-space permissions and writes, Stripe Connect onboarding, Checkout and webhook acceptance, refunds, and payouts. These require an HTTPS live-mode staging instance and operator test accounts; the public Pages demo deliberately does not perform them. Continue with the [live acceptance checklist](hosting.md#live-acceptance-checklist).
 
 The public release remains a work in progress. Simulated local edits do not regenerate public demo pages or the example share PNG; those are fixed, explicitly labeled samples.
+
+
+## Backups and recovery · 2026-09-27
+
+- `pnpm check`: 164 files, zero errors/warnings/hints.
+- `pnpm test`: 226 tests across 32 suites, including immutable checkpoint recovery, interrupted writes, lost responses, privacy boundaries, corrupt/wrong-key snapshots, WAL data, encryption-key replacement, retention, Stripe recovery, creator-only actions and paused middleware.
+- Offline command tests use separate processes: active writers block activation; forced exits release the sentinel lock; successful activation retains the previous database and starts paused; invalid candidates leave the original intact.
+- `pnpm build:site`: production server plus 49 static HTML pages and 1,761 local links/assets verified. The fictional export still blocks outbound provider requests.
+- Protection dashboard inspected in the browser at desktop, 390 px and 320 px widths; no horizontal overflow. The setup disclosure expands and demo provider actions remain disabled.
+- `pnpm audit --prod`: no known vulnerabilities.
+
+Real Habitat OAuth/checkpoint restoration, S3 bucket permissions/readback/retention, and Stripe test-mode end-to-end recovery still need operator accounts. No production data was restored and no backup destination or live provider credentials were configured during this implementation. See [acceptance checks](backups-and-recovery.md#verification-checklist).

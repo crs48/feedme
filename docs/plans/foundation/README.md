@@ -45,7 +45,8 @@ Public records are deliberately constructed from an allowlist. Private support r
 - [ ] Federation discovery/indexing across independently hosted instances.
 - [ ] Rich media upload, native Bluesky image/video embeds, and moderation.
 - [ ] Bitcoin provider (separate from Stripe's stablecoin payment method).
-- [ ] Automatic restore/reconciliation from PDS and Habitat after local data loss.
+- [x] Verified encrypted backups and complete private Habitat checkpoint recovery with Stripe reconciliation; see [recovery guide](../../backups-and-recovery.md).
+- [ ] Incremental ingestion of arbitrary public PDS edits and automatic multi-server failover.
 
 ## Validation
 

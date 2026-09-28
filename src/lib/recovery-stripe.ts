@@ -14,6 +14,7 @@ export const reconcileStripe = async (db: DatabaseSync, client?: Stripe) => {
   if (!account) { if (before.length) throw new Error('Payments cannot be reconciled without a connected account.'); setKv(db, 'recovery', 'reconciled-at', new Date().toISOString()); return 'No Stripe account or payments to reconcile.'; }
   const stripe = client || stripeClient(); const options = { stripeAccount: account }; const now = Math.floor(Date.now() / 1000);
   await stripe.accounts.retrieve(account);
+  const seenSubscriptions = new Set<string>(); const seenInvoices = new Set<string>();
   let scanned = 0; const limit = () => { if (++scanned > MAX_RESOURCES) throw new Error('Stripe recovery exceeded the resource limit; no partial recovery may resume.'); };
   for await (const session of stripe.checkout.sessions.list({ limit: 100 }, options)) {
     limit(); const id = session.metadata?.feedme_support_id; if (!id) continue;
@@ -26,14 +27,18 @@ export const reconcileStripe = async (db: DatabaseSync, client?: Stripe) => {
   for await (const subscription of stripe.subscriptions.list({ status: 'all', limit: 100 }, options)) {
     limit(); const id = subscription.metadata.feedme_support_id; if (!id) continue;
     if (!readRecord(db, 'support', id)) throw new Error('Stripe contains a subscription whose allocation intent is missing.');
+    seenSubscriptions.add(subscription.id);
     applyBillingEvent(db, { type: 'customer.subscription.updated', created: now, account, data: { object: subscription } } as Stripe.Event, config().ownerDid, { subscription });
     for await (const invoice of stripe.invoices.list({ subscription: subscription.id, limit: 100 }, options)) {
       limit(); if (invoice.status !== 'paid' && invoice.status !== 'open' && invoice.status !== 'uncollectible') continue;
+      seenInvoices.add(invoice.id);
       const payment = invoice.status === 'paid' ? await verifiedInvoicePayment(stripe, invoice, account) : undefined;
       applyBillingEvent(db, { type: payment ? 'invoice.paid' : 'invoice.payment_failed', created: now, account, data: { object: invoice } } as Stripe.Event, config().ownerDid, { payment });
     }
   }
   for (const support of listRecords<Support>(db, 'support')) {
+    if (support.subscriptionId && !seenSubscriptions.has(support.subscriptionId)) throw new Error('A recovered subscription could not be verified in Stripe.');
+    if (support.invoiceId && !seenInvoices.has(support.invoiceId)) throw new Error('A recovered invoice could not be verified in Stripe.');
     if (!support.paymentIntentId) { if (['paid', 'refunded', 'disputed'].includes(support.status)) throw new Error('A settled payment cannot be verified with Stripe.'); continue; }
     limit(); const intent = await stripe.paymentIntents.retrieve(support.paymentIntentId, { expand: ['latest_charge'] }, options);
     if (support.accountId !== account || intent.amount !== support.amount || intent.currency !== support.currency || (!support.invoiceId && intent.metadata.feedme_support_id !== support.id)) throw new Error('Stripe payment amount, currency or identity mismatch.');
@@ -42,7 +47,7 @@ export const reconcileStripe = async (db: DatabaseSync, client?: Stripe) => {
       putRecord(db, 'support', support.id, { ...support, status: intent.status === 'canceled' ? 'failed' : 'pending' }); continue;
     }
     const charge = typeof intent.latest_charge === 'object' ? intent.latest_charge : undefined;
-    if (intent.amount_received !== support.amount || !charge || charge.amount !== support.amount || charge.currency !== support.currency || charge.amount_refunded > support.amount || !charge.paid) throw new Error('Stripe charge cannot verify the recovered payment.');
+    if (intent.amount_received !== support.amount || !charge || charge.amount !== support.amount || charge.currency !== support.currency || (charge.amount_refunded > support.amount || charge.amount_refunded < support.refundedAmount) || !charge.paid) throw new Error('Stripe charge cannot verify the recovered payment.');
     let disputed = false;
     for await (const dispute of stripe.disputes.list({ payment_intent: intent.id, limit: 100 }, options)) {
       limit(); if (!['won', 'warning_closed'].includes(dispute.status)) disputed = true;

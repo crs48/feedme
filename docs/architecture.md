@@ -55,14 +55,16 @@ The success page never writes payment state. The public feed counts only confirm
 
 ## Consistency and portability
 
-SQLite is the application’s operational source for rendering and payment reconciliation. Habitat/private space records and public PDS records are asynchronous portable copies. This is a write-through architecture, not a complete bidirectional AppView or remote recovery system. A full re-indexer is future work; until then, back up the database and encryption key.
+SQLite is the application’s operational source for rendering and payment reconciliation. Transactional change tracking feeds both the public outbox and complete private Habitat recovery snapshots. Immutable, content-addressed records and indexes are verified before publishing a checkpoint. An interrupted sync leaves the previous checkpoint usable. Stable payloads handle lost checkpoint responses; provider receipts retain content hashes, CIDs and timestamps. Exactly one server writes to a creator's space.
 
-The outbox coalesces writes by destination, collection, and record key. A revision number prevents an older in-flight write from deleting a newer queued update. Stable record keys make retries safe. Remote delete of an already-absent acknowledgment succeeds. A failure leaves the item in the queue and stops that drain; manual retry and the production loop use the same path. An unavailable Habitat instance does not discard a verified payment.
+New Checkout sessions require a verified checkpoint containing the full allocation/privacy intent. Verified payment webhooks still commit locally during Habitat outages; recurring Stripe billing continues independently. Off-server AES-256-GCM snapshots use SQLite's online backup API every 15 minutes and are downloaded, decrypted and restored for verification. Retention preserves recent, daily and monthly versions.
+
+The creator dashboard can discover owned spaces and build an isolated SQLite candidate from a complete checkpoint. Restoration reconciles current Stripe resources without charging, rekeys local values, clears sessions and stale queued projections, retains the prior database and starts paused for review. Activation requires stopping the server; a local process lock prevents app/restore overlap. Unexpected remote checkpoint edits are detected, but Habitat offers no compare-and-swap, so this is not multi-master synchronization or a distributed lock. See [backups and recovery](backups-and-recovery.md) for setup, recovery commands, format, loss windows and limits.
 
 ## Deliberate first-release limits
 
 - One owner, one connected account, USD one-time, monthly, and yearly tips, a single application replica.
-- No automatic group payouts, peer indexing, remote import, or Bitcoin checkout.
+- No automatic group payouts, multi-writer replication, arbitrary PDS-edit ingestion, or Bitcoin checkout.
 - Images are HTTPS URLs; uploads and video processing need separate storage and moderation work.
 - A shared demo is intentionally editable by anyone using its demo login.
 - Operator acceptance of real OAuth and test payments is required before live use. Provider contract fixtures cannot prove service interoperability.

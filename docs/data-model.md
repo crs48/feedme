@@ -65,3 +65,8 @@ An anonymous receipt omits the supporter DID even if an upstream object accident
 ## Social and project-log records
 
 See [social protocol](social-protocol.md) for actor-owned native follows, project subscriptions, and explicit tip posts. See [project content](project-content.md) for Markdown descriptions, native post associations, media rendering, and `fund.feedme.activity` timeline projections. Anonymous activity requires separate consent and includes only project and date; private receipts never become public records.
+
+
+## Complete private recovery format
+
+Per-project `fund.feedme.support` receipts remain a compatibility projection. Complete recovery uses private, versioned `fund.feedme.recovery` records containing root payments with exact allocations, subscription/invoice/account bindings, privacy and public activity IDs; project drafts and other authored records; public share mappings; and allowlisted operational settings. Credentials, sessions and caches never enter Habitat. `fund.feedme.recoveryIndex` shards reference immutable records, and `fund.feedme.checkpoint/self` identifies a complete validated inventory. Public PDS projections never contain these records. See the [format and recovery guide](backups-and-recovery.md#implementation-and-boundaries).

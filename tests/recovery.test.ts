@@ -11,6 +11,7 @@ import { openDatabase, putRecord, setKv, getKv, enqueue, readRecord, transaction
 import { prepareRecovery, localCheckpoint } from '../src/lib/recovery-tracking';
 import { CHECKPOINT, RECOVERY, recoveryKey, hashValue } from '../src/lib/recovery-model';
 import { downloadRecovery, importRecovery } from '../src/lib/recovery-import';
+import { resumeRecovery, verifyRecovery } from '../src/lib/recovery-control';
 import { createPrivateSpace, drainOutbox, protectCheckoutIntent } from '../src/lib/habitat';
 import { demoProfile, demoProjects } from '../src/lib/seed';
 import type { Support } from '../src/lib/model';
@@ -93,7 +94,15 @@ describe('complete private recovery checkpoints', () => {
     await expect(createPrivateSpace()).rejects.toThrow('already exists');
     expect(transport.mock.calls.some(([path]) => path.includes('createSpace'))).toBe(false);
   });
-  it('does not import a payment whose project is missing', async () => {
+  it('pauses on an unexpected complete remote checkpoint and requires a matching checkpoint to resume', async () => {
+    seed(); await drainOutbox(); const saved = remote.get(`${CHECKPOINT}/self`) as Record<string, unknown>;
+    remote.set(`${CHECKPOINT}/self`, { ...saved, createdAt: '2026-09-28T12:00:00Z' });
+    await verifyRecovery(true); expect(getKv(db, 'recovery', 'paused')).toBe(true);
+    await expect(resumeRecovery()).rejects.toThrow('different checkpoint');
+    remote.set(`${CHECKPOINT}/self`, saved); await resumeRecovery(); expect(getKv(db, 'recovery', 'paused')).toBe(false);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE destination='public'").get()?.n).toBe(2);
+  });
+  it('does not import an incomplete checkpoint or another space', async () => {
     seed(); await drainOutbox(); const { checkpoint, entries } = await downloadRecovery(space); const target = openDatabase(':memory:');
     try { await expect(downloadRecovery('at://wrong')).rejects.toThrow(); expect(() => importRecovery(target, { ...checkpoint, count: 99 }, entries)).toThrow('incomplete'); expect(target.prepare('SELECT COUNT(*) AS n FROM records').get()?.n).toBe(0); } finally { target.close(); }
     expect(recoveryKey(entries[0])).toHaveLength(64);

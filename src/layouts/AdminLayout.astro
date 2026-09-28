@@ -9,7 +9,7 @@ interface Props { title: string; description?: string; }
 const { title, description } = Astro.props;
 const cfg = config();
 const p = profile();
-const navigation = [['Overview', '/studio'], ['Projects', '/studio/projects'], ['Payments', '/studio/payments'], ['Supporters', '/studio/supporters'], ['Updates', '/studio/updates'], ['Settings', '/studio/settings']];
+const navigation = [['Overview', '/studio'], ['Projects', '/studio/projects'], ['Payments', '/studio/payments'], ['Supporters', '/studio/supporters'], ['Updates', '/studio/updates'], ['Settings', '/studio/settings'], ['Data & backups', '/studio/data']];
 ---
 <Layout title={`${title} · Dashboard`} noindex>
   <div class="shell admin-shell">

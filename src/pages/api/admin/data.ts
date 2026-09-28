@@ -10,8 +10,9 @@ import { drainOutbox } from '../../../lib/habitat';
 
 let staging: Promise<unknown> | undefined;
 export const POST: APIRoute = async (context) => {
+  let user;
+  try { user = requireAdmin(context); } catch { return new Response('Administrator access is required.', { status: 403 }); }
   try {
-    const user = requireAdmin(context);
     if (user.did !== config().ownerDid) return new Response('Only the creator can manage recovery.', { status: 403 });
     if (config().demo) return redirectNotice('/studio/data', 'This is a preview. Backups and recovery connect in live mode.');
     const form = await formObject(context.request);

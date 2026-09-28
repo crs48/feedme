@@ -1,0 +1,62 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { config } from '../../lib/config';
+import { getDb, getKv } from '../../lib/db';
+import { privateSpace } from '../../lib/habitat';
+import { recoveryPending } from '../../lib/recovery-tracking';
+import type { Checkpoint } from '../../lib/recovery-model';
+import type { BackupStatus } from '../../lib/backups';
+import type { VerificationStatus } from '../../lib/recovery-control';
+import type { RecoveryReport } from '../../lib/recovery-import';
+const cfg = config(); const db = getDb();
+const owner = Astro.locals.user?.did === cfg.ownerDid;
+const paused = getKv(db, 'recovery', 'paused');
+const checkpoint = getKv<Checkpoint>(db, 'recovery', 'checkpoint');
+const backup = getKv<BackupStatus>(db, 'backup', 'status');
+const verification = getKv<VerificationStatus>(db, 'recovery', 'verification');
+const candidate = getKv<RecoveryReport>(db, 'recovery', 'candidate');
+const spaces = getKv<{ space: string; checkpoint: Checkpoint | null }[]>(db, 'recovery', 'spaces');
+const pending = cfg.demo ? 0 : recoveryPending(db);
+const syncError = getKv<{ message: string } | null>(db, 'recovery', 'sync-error');
+const date = (value?: string) => value ? `${new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC` : 'Not yet verified';
+const backupConfigured = Boolean(process.env.BACKUP_S3_BUCKET || process.env.BACKUP_DIR);
+const backupStale = !backup?.verifiedAt || Date.now() - Date.parse(backup.verifiedAt) > 30 * 60_000;
+const title = cfg.demo ? 'Your work, protected' : paused ? 'Ready for your review' : checkpoint && !pending && !syncError ? 'Your changes are protected in Habitat' : 'Protect your work';
+---
+<AdminLayout title="Data & backups" description="Keep your work safe, and take it with you when you move.">
+  <section class="admin-card protection-summary">
+    <span class="protection-symbol" aria-hidden="true">↺</span>
+    <div><h2>{title}</h2><p class="admin-help mt-3">{cfg.demo ? 'A preview of data protection for your self-hosted Feedme. No backups or provider connections run in this demo.' : paused ? 'Checkout, publishing, and webhook processing are paused until the creator reviews this recovery.' : 'Your pages use fast local storage. Changes are copied to a private Habitat space, and encrypted backups preserve earlier versions.'}</p></div>
+  </section>
+  {!owner && <p class="admin-warning mb-6">Only the creator can create backups, restore data, or resume this server.</p>}
+  <div class="admin-settings-grid"><section class="admin-card"><div class="flex items-center justify-between gap-3"><h2>Private recovery</h2><span class="status-pill">{cfg.demo ? 'Preview' : pending ? 'Syncing' : checkpoint ? 'Checkpoint saved' : 'Set up storage'}</span></div>
+    <dl class="mt-5"><div class="admin-stat-line"><dt>Complete checkpoint</dt><dd>{cfg.demo ? 'Example · a few minutes ago' : date(checkpoint?.createdAt)}</dd></div><div class="admin-stat-line"><dt>Changes awaiting sync</dt><dd>{pending}</dd></div><div class="admin-stat-line"><dt>Full remote verification</dt><dd>{cfg.demo ? 'Example · today' : date(verification?.verifiedAt)}</dd></div></dl>
+    {(syncError || verification?.error) && <p class="admin-warning mt-4">{syncError?.message || verification?.error}</p>}
+    <p class="admin-help mt-4">Includes projects and drafts, complete tip allocations, privacy choices, subscriptions, public share links, and admin history. A partial sync keeps the previous complete checkpoint available.</p>
+    <div class="flex flex-wrap gap-3 mt-5"><form method="post" action="/api/admin/data"><input type="hidden" name="action" value="sync"/><button class="button secondary" disabled={cfg.demo || !owner || Boolean(paused)}>Sync now</button></form><form method="post" action="/api/admin/data"><input type="hidden" name="action" value="verify"/><button class="button secondary" disabled={cfg.demo || !owner || !checkpoint || Boolean(paused)}>Verify recovery</button></form></div>
+    {!cfg.demo && !privateSpace() && <a href="/studio/settings" class="admin-link mt-5 inline-block">Connect private storage in Settings ↗</a>}
+  </section><section class="admin-card"><div class="flex items-center justify-between gap-3"><h2>Versioned backups</h2><span class="status-pill">{cfg.demo ? 'Preview' : !backupConfigured ? 'Not configured' : backupStale ? 'Needs attention' : backup?.remote ? 'Off-server' : 'Local directory'}</span></div>
+    <dl class="mt-5"><div class="admin-stat-line"><dt>Last verified restore</dt><dd>{cfg.demo ? 'Example · 12 minutes ago' : date(backup?.verifiedAt)}</dd></div><div class="admin-stat-line"><dt>Schedule</dt><dd>Every 15 minutes</dd></div><div class="admin-stat-line"><dt>History retained</dt><dd>96 recent · 30 daily · 12 monthly</dd></div></dl>
+    {backup?.error && <p class="admin-warning mt-4">{backup.error}</p>}
+    {!cfg.demo && backupConfigured && backupStale && <p class="admin-warning mt-4">A recent backup has not been verified. Changes since the last successful backup may need Habitat recovery.</p>}
+    <p class="admin-help mt-4">Every backup is encrypted, downloaded again, decrypted, and opened as a temporary SQLite database. Only verified backups count as protected.</p>
+    {!cfg.demo && process.env.BACKUP_DIR && !process.env.BACKUP_S3_BUCKET && <p class="admin-help mt-3">A directory on this server does not protect against server loss. Mount independent storage or use an S3-compatible bucket.</p>}
+    <form method="post" action="/api/admin/data" class="mt-5"><input type="hidden" name="action" value="backup"/><button class="button secondary" disabled={cfg.demo || !owner || !backupConfigured}>Back up now</button></form>
+    <details class="mt-5"><summary class="admin-link cursor-pointer">One-time backup setup</summary><p class="admin-help mt-3">Set <code>BACKUP_ENCRYPTION_KEY</code> to a separate random 32-byte hex key and keep a copy in your password manager. Configure <code>BACKUP_S3_BUCKET</code>, region, and scoped bucket credentials. Use <code>BACKUP_S3_ENDPOINT</code> for another S3-compatible provider. Restart Feedme.</p><a class="admin-link inline-block mt-3" href="https://github.com/crs48/feedme/blob/main/docs/backups-and-recovery.md">Setup and recovery guide ↗</a></details>
+  </section></div>
+  <section class="admin-card"><h2>Restore from Habitat</h2><p class="admin-help mt-3">Sign in as the same creator on a new server to find your saved Feedme. Recovery builds a separate database and checks Stripe’s current payment and subscription records. It never creates a charge.</p>
+    <form method="post" action="/api/admin/data" class="mt-5"><input type="hidden" name="action" value="discover"/><button class="button secondary" disabled={cfg.demo || !owner}>Find my Feedme</button></form>
+    {spaces && !spaces.length && <p class="admin-help mt-5">No owned Feedme spaces were found on this Habitat host. Check HABITAT_URL and the creator account.</p>}
+    {spaces?.map(({ space, checkpoint: saved }) => <div class="protection-space mt-5"><h3>{saved ? `Saved ${date(saved.createdAt)}` : 'Older space · no recovery checkpoint'}</h3><p class="admin-code mt-2 break-all">{space}</p>{saved ? <form method="post" action="/api/admin/data" class="mt-4"><input type="hidden" name="action" value="stage"/><input type="hidden" name="space" value={space}/><p class="admin-help">{saved.count} records. Set a backup encryption key before creating the recovery preview.</p><label class="flex gap-3 items-start my-4 text-sm"><input type="checkbox" name="oldServerStopped" value="yes" required/><span>The previous Feedme server is stopped. Only this replacement will write to this space.</span></label><button class="button" disabled={!owner}>Prepare recovery preview</button></form> : <p class="admin-help mt-3">Use a database backup, or update and sync the original server first. Old per-project receipts do not contain enough information to safely rebuild recurring billing.</p>}</div>)}
+    {candidate && <div class="protection-space mt-6"><h3>Your recovery preview is ready</h3><p class="admin-help mt-3">{candidate.projects} projects · {candidate.payments} payments · {candidate.subscriptions} subscriptions. {candidate.stripe}</p><p class="admin-help mt-3">Stop this server, then run the command below in its deployment environment. The previous database is retained. Restart and sign in again to review and resume.</p><pre class="protection-command">pnpm data restore --file '{candidate.file}' --owner '{cfg.ownerDid}'</pre></div>}
+    {paused && <div class="protection-space mt-6"><h3>Resume this restored Feedme</h3><p class="admin-help mt-3">Review projects, payments, and supporters in the dashboard first. Resuming checks Stripe again and refuses to overwrite a newer Habitat checkpoint. Stripe will retry webhooks received while this server was paused.</p><form method="post" action="/api/admin/data" class="mt-4"><input type="hidden" name="action" value="resume"/><label class="flex gap-3 items-start my-4 text-sm"><input type="checkbox" name="oldServerStopped" value="yes" required/><span>I reviewed the restored data, and the previous server is stopped.</span></label><button class="button" disabled={!owner}>Review checks & resume</button></form></div>}
+  </section>
+</AdminLayout>
+<style>
+  .protection-summary {display:flex;align-items:center;gap:1.25rem;background:linear-gradient(110deg,#f1f7ff,#fff)}
+  .protection-symbol{display:grid;place-items:center;background:#e4efff;color:#0866ff;font-size:2rem;width:3.5rem;height:3.5rem;flex-shrink:0;border-radius:1rem}
+  .protection-space{padding:1.25rem;border:1px solid #e3e8ef;border-radius:1rem}
+  .protection-command{padding:1rem;background:#f4f7fa;border-radius:.75rem;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem;margin-top:1rem}
+  .admin-stat-line{gap:1rem}.admin-stat-line dd{text-align:right}
+  @media(max-width:480px){.protection-summary{align-items:flex-start}.protection-symbol{width:2.5rem;height:2.5rem}.admin-stat-line{align-items:flex-start;flex-direction:column;gap:.35rem}.admin-stat-line dd{text-align:left}}
+</style>
