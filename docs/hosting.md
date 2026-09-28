@@ -113,6 +113,8 @@ Set `PUBLIC_URL=https://support.example.com`, and retain the application’s sam
 
 ## Docker Compose
 
+For prebuilt release images, download a numbered deployment bundle and follow its [installation and upgrade guide](../deploy/README.md). The commands below build from source for development/customization. Preserve your Compose project name and existing volume when switching between them. See [releases](releases.md) for publication status and compatibility policy.
+
 ```sh
 cp .env.example .env
 docker compose up --build -d

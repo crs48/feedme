@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "cd4a0262811d7ff5599db330b051f5adede532da",
+  "release-type": "node",
+  "include-component-in-tag": false,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "prerelease": true,
+  "packages": {
+    ".": {
+      "extra-files": [{ "type": "generic", "path": "deploy/compose.yaml" }]
+    }
+  }
+}

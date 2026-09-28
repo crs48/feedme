@@ -1,0 +1,42 @@
+name: Prepare release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.repository == 'crs48/feedme' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+      pr: ${{ steps.release.outputs.pr }}
+    steps:
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        id: release
+  # GITHUB_TOKEN-created PRs/tags do not trigger new Actions runs. Call checks
+  # and publishing directly here instead of depending on those suppressed events.
+  check-release-pr:
+    needs: prepare
+    if: needs.prepare.outputs.pr != ''
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ fromJSON(needs.prepare.outputs.pr).headBranchName }}
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.created == 'true'
+    permissions:
+      contents: write
+      packages: write
+    uses: ./.github/workflows/publish-release.yml
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}

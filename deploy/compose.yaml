@@ -1,0 +1,20 @@
+services:
+  feedme:
+    image: ghcr.io/crs48/feedme:0.1.0 # x-release-please-version
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4321
+      DATA_DIR: /data
+    ports:
+      - '127.0.0.1:4321:4321'
+    volumes:
+      - feedme-data:/data
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:4321/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+volumes:
+  feedme-data:

@@ -14,6 +14,8 @@ Your community gives you resources **and a signal about what they want more of**
 
 ## Try it
 
+For a self-hosted installation that is easy to update, use the small deployment bundle attached to a [numbered release](https://github.com/crs48/feedme/releases) once its publishing workflow has completed. It runs a prebuilt container with a pinned version and digest; your configuration and data survive image upgrades. See [releases and upgrades](docs/releases.md). The source template below remains useful for development and code customization.
+
 Use Node **24 LTS** and pnpm **10.11.1**.
 
 ```sh
@@ -56,6 +58,8 @@ The demo uses a fictional account and an **Explore the demo studio** button, so 
 See the [administration guide](docs/admin.md) for project workflows, report definitions, admin removal, and identity recovery.
 
 **Backups and recovery:** connect private storage, then configure a separate `BACKUP_ENCRYPTION_KEY` and an S3-compatible backup bucket. Live instances create encrypted backups every 15 minutes and verify them with a temporary restore. The dashboard can discover your saved Feedme in Habitat and prepare a clean-server recovery, including Stripe reconciliation. See the [setup and restore guide](docs/backups-and-recovery.md). One active server per creator; restoration requires stopping the server and reviewing the recovered data before resuming.
+
+**Releases and updates:** reviewed release PRs produce numbered preview releases, tested amd64/arm64 container images and a small deployment bundle. Optional Renovate PRs update your pinned image; automatic upgrades are off. Studio → Settings shows the installed version. Follow the [upgrade procedure](deploy/README.md#upgrade) to take a verified backup and preserve your data volume before replacing the container. A GitHub template copy does not automatically receive source updates.
 
 
 ## What works in this release
