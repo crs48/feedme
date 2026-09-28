@@ -23,8 +23,8 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         id: release
-  # GITHUB_TOKEN-created PRs/tags do not trigger new Actions runs. Call checks
-  # and publishing directly here instead of depending on those suppressed events.
+  # Do not rely on token-created PR/tag events automatically starting Actions.
+  # Call checks and publishing directly (separate PR checks may need approval).
   check-release-pr:
     needs: prepare
     if: needs.prepare.outputs.pr != ''

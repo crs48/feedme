@@ -8,7 +8,13 @@
   "prerelease": true,
   "packages": {
     ".": {
-      "extra-files": [{ "type": "generic", "path": "deploy/compose.yaml" }]
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "deploy/compose.yaml"
+        }
+      ]
     }
-  }
+  },
+  "pull-request-footer": "Release review: check the current PR head in the Prepare release workflow before merging. Merging publishes an early-preview GitHub release, then builds and tests both container architectures before attaching deployment assets. Review the [upgrade and rollback guide](https://github.com/crs48/feedme/blob/main/docs/releases.md) and add release-specific compatibility notes to the changelog. Real Habitat and Stripe acceptance remains outstanding; this release is not a production-readiness claim."
 }

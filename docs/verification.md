@@ -192,3 +192,15 @@ The public release remains a work in progress. Simulated local edits do not rege
 - `pnpm audit --prod`: no known vulnerabilities.
 
 Real Habitat OAuth/checkpoint restoration, S3 bucket permissions/readback/retention, and Stripe test-mode end-to-end recovery still need operator accounts. No production data was restored and no backup destination or live provider credentials were configured during this implementation. See [acceptance checks](backups-and-recovery.md#verification-checklist).
+
+## Release process — 2026-09-27
+
+- [x] `pnpm check`: 172 files, no errors, warnings or hints.
+- [x] `pnpm test`: 236 tests across 35 suites, including encrypted legacy-database upgrades, failed migration rollback, newer-schema rejection, deployment file allowlists and immutable image publication.
+- [x] `pnpm build:site`: production server build plus 49 static HTML pages and 1,761 checked local links/assets.
+- [x] Deployment bundle generation and GitHub workflow validation with actionlint pass.
+- [x] GitHub Actions successfully generated release PR #1 for 0.2.0, including package, manifest, Compose and changelog updates. Its directly invoked reusable CI passed, including Docker startup, image version reporting and persistence after forced container replacement.
+- [x] The source baseline is tagged `v0.1.0` for working changelog comparisons; no container was published for that baseline.
+- [ ] Merge the reviewed first release PR, complete actual multi-architecture publication, make the initial GHCR package public if necessary, and verify an unauthenticated pull and release-archive installation. Publication logic is tested with controlled fake registry/GitHub commands; it has not yet published a real image.
+
+The new process and operator upgrade procedure are documented in [releases](releases.md). GitHub may request approval for a separate token-created PR workflow; the direct release-PR checks run independently. Real provider acceptance remains outstanding.
