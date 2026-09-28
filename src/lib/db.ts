@@ -4,20 +4,18 @@ import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { config } from './config';
 import { acquireDataLock } from '../../scripts/data-lock.mjs';
-import { installRecoveryTracking } from './recovery-tracking';
+import { assertDatabaseCompatible, migrateDatabase } from './database-migrations';
 import { migrateProtocol } from './protocol-migration';
 import { demoFriends, demoProfile, demoProjects, demoSupports, demoUpdates } from './seed';
 
 export const openDatabase = (path: string) => {
   const db = new DatabaseSync(path);
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
-    CREATE TABLE IF NOT EXISTS records (kind TEXT NOT NULL, id TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY(kind,id));
-    CREATE TABLE IF NOT EXISTS kv (namespace TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, expires INTEGER, PRIMARY KEY(namespace,key));
-    CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, destination TEXT NOT NULL, collection TEXT NOT NULL, rkey TEXT NOT NULL, value TEXT, attempts INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 0, error TEXT, UNIQUE(destination,collection,rkey));
-    CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, created INTEGER NOT NULL);
-  `);
-  installRecoveryTracking(db);
-  return db;
+  try {
+    assertDatabaseCompatible(db);
+    db.exec('PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL');
+    migrateDatabase(db);
+    return db;
+  } catch (error) { db.close(); throw error; }
 };
 let database: DatabaseSync;
 export const getDb = () => {

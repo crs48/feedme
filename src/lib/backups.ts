@@ -1,3 +1,4 @@
+import { assertDatabaseCompatible } from './database-migrations';
 import { backup, DatabaseSync } from 'node:sqlite';
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -27,6 +28,7 @@ export const decryptBackup = (data: Buffer, key: Buffer) => {
   } catch { throw new Error('Backup could not be authenticated. Check the recovery key and file integrity.'); }
 };
 export const validateDatabase = (db: DatabaseSync, key: Buffer | null) => {
+  assertDatabaseCompatible(db);
   const checks = db.prepare('PRAGMA integrity_check').all();
   if (checks.length !== 1 || Object.values(checks[0])[0] !== 'ok') throw new Error('SQLite integrity check failed.');
   for (const table of ['records', 'kv', 'outbox']) {
