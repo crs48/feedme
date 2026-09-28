@@ -19,7 +19,7 @@ export const demoPath = (input, base = '/', origin = demoOrigin) => {
     return input;
   }
   const path = url.pathname;
-  if (/^\/(?:_astro|fonts)\//.test(path) || /^\/demo\/(avatars|projects)\//.test(path) || /\.(svg|jpg|webp|woff2?|png|json|css|js)$/.test(path)) {
+  if (/^\/(?:_astro|fonts)\//.test(path) || /^\/demo\/(avatars|projects)\//.test(path) || /\.(svg|jpg|webp|woff2?|png|ico|webmanifest|json|css|js)$/.test(path)) {
     return path.startsWith('/share/') ? '/demo/share/sample.png' : path;
   }
   if (path === '/api/admin/export') return '#demo-export';

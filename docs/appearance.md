@@ -13,6 +13,12 @@ Feedme combines Bluesky’s social layout with Stripe’s restrained payment int
 
 Shared tokens and components live in [`global.css`](../src/styles/global.css). Payment controls use a 6px radius; social buttons use a pill shape, and cards use 12–16px radii. The primary blue has a 4.82:1 contrast ratio against white. Body copy uses the platform system sans-serif stack. Captions are at least 12px; text inputs are at least 16px to avoid focus zoom on iOS. Primary controls and navigation have at least 44px touch targets, with a visible keyboard focus ring and reduced-motion support.
 
+## Feedme artwork and app icons
+
+The shared brand mark uses the creator-supplied bowl-and-hearts artwork in [`public/brand/feedme.jpg`](../public/brand/feedme.jpg). Its original framing and colors are preserved. `pnpm icons` exports the browser favicons (PNG, ICO and SVG), Apple home-screen icon, 192px/512px app icons, a trusted embedded image for support cards, and the default PNG social card. The generated assets are committed; hosts do not need to regenerate them during installation.
+
+`BrandIcon.astro` supplies responsive, fixed-size images for the app and product-site navigation, footer and community illustration. `BrandMeta.astro` shares icon and manifest declarations between both layouts. `site.webmanifest` supplies the app name and home-screen artwork; it does not add an offline service worker. OAuth client metadata also exposes the brand icon to the sign-in provider. Shared support cards embed the bundled image directly and never fetch user-supplied image URLs while rendering.
+
 ## Dropdowns
 
 Native select controls share an 8px radius, inset chevron, subtle shadow, and blue focus ring. Desktop browsers supporting [customizable selects](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Customizable_select) also display a rounded, padded menu with a checkmark and blue selected option. Touch devices and other browsers retain their native picker. No JavaScript is required; keyboard navigation, form values, reduced motion, and system high-contrast controls are preserved.

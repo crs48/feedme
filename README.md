@@ -1,4 +1,6 @@
-# Feedme 🌱
+<img src="public/icons/icon-192.png" alt="Feedme" width="64" height="64"/>
+
+# Feedme
 
 **A little support. A world of possibility.**
 

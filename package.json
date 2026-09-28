@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs dev --host 127.0.0.1",
     "build": "astro build",
+    "icons": "node scripts/build-icons.mjs",
     "build:site": "pnpm build && astro build --config astro.site.config.mjs && node scripts/export-demo.mjs && node scripts/check-static-site.mjs",
     "preview:site": "node scripts/serve-static-site.mjs",
     "start": "node --env-file-if-exists=.env scripts/start.mjs",

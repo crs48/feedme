@@ -26,6 +26,7 @@ export const oauthClient = () => clientPromise ??= (async () => {
     identityResolver: new HabitatIdentityResolver(habitatUrl),
     clientMetadata: {
       client_id: `${origin}/oauth-client-metadata.json`, client_name: 'Feedme', client_uri: origin,
+      logo_uri: `${origin}/icons/icon-192.png`,
       redirect_uris: [`${origin}/auth/callback`], grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'], scope: 'atproto transition:generic', application_type: 'web',
       token_endpoint_auth_method: 'private_key_jwt', token_endpoint_auth_signing_alg: 'ES256',

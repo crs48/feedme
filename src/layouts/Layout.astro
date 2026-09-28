@@ -1,6 +1,8 @@
 ---
 import '../styles/global.css';
 import Icon from '../components/Icon.astro';
+import BrandIcon from '../components/BrandIcon.astro';
+import BrandMeta from '../components/BrandMeta.astro';
 import { config } from '../lib/config';
 import { isAdmin } from '../lib/auth';
 interface Props { title?: string; description?: string; noindex?: boolean; image?: { url: string; alt: string; width: number; height: number }; }
@@ -10,17 +12,17 @@ const user = Astro.locals.user;
 const canonical = new URL(Astro.url.pathname, cfg.origin).href;
 const notice = Astro.url.searchParams.get('notice');
 const error = Astro.url.searchParams.get('error');
-const socialImage = Astro.props.image;
+const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`, alt: 'Feedme: independent work, supported. A white bowl of hearts and creative possibilities on a coral and lavender background.', width: 1200, height: 630 };
 ---
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{title} · Feedme</title><meta name="description" content={description}/>
-    <link rel="canonical" href={canonical}/><link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+    <link rel="canonical" href={canonical}/><BrandMeta/>
     <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · Feedme`}/>
     <meta property="og:description" content={description}/><meta property="og:url" content={canonical}/>
-    <meta property="og:image" content={socialImage?.url || `${cfg.origin}/social-card.svg`}/><meta name="theme-color" content="#ffffff"/>
+    <meta property="og:image" content={socialImage.url}/><meta name="theme-color" content="#ffffff"/>
     {socialImage && <><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content={String(socialImage.width)}/><meta property="og:image:height" content={String(socialImage.height)}/><meta property="og:image:alt" content={socialImage.alt}/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content={socialImage.url}/><meta name="twitter:image:alt" content={socialImage.alt}/></>}
     {(cfg.demo || noindex) && <meta name="robots" content="noindex,nofollow"/>}
   </head>
@@ -28,7 +30,7 @@ const socialImage = Astro.props.image;
     <a href="#main" class="skip-link">Skip to content</a>
     {cfg.demo && <div class="demo-strip"><span class="demo-label">Demo</span> Explore Feedme. No real payments.</div>}
     <header class="site-header shell">
-      <a href="/" class="brand" aria-label="Feedme home"><span class="brand-symbol" aria-hidden="true">f</span>feedme</a>
+      <a href="/" class="brand" aria-label="Feedme home"><BrandIcon/>feedme</a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">
         <a href="/discover" class="nav-link">Discover</a>
         <a href="/about" class="about-link muted nav-link">About</a>
@@ -50,13 +52,12 @@ const socialImage = Astro.props.image;
   .demo-strip { background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: center; padding: 8px 12px; font-size: 12px; color: var(--color-muted); }
   .demo-label { display: inline-block; margin-right: 8px; border: 1px solid #d8dce5; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   .site-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--color-border); }
-  .brand { display: flex; align-items: center; min-height: 44px; font-weight: 700; font-size: 23px; letter-spacing: -.06em; }
-  .brand-symbol { display: grid; place-items: center; width: 27px; height: 29px; margin-right: 8px; border-radius: 6px; background: var(--color-primary); color: white; font-size: 25px; font-weight: 700; line-height: 1; letter-spacing: 0; }
+  .brand { display: flex; align-items: center; gap:8px; min-height: 44px; font-weight: 700; font-size: 23px; letter-spacing: -.06em; }
   .nav-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; }
   .site-footer { padding-block: 24px; margin-top: 64px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-muted); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
   @media(max-width:700px) { .site-header { min-height: 68px; gap: 8px; flex-wrap:wrap; padding-block:10px; } .site-header nav { gap: 12px; flex-wrap:wrap; } .site-header .button { padding: 8px 12px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; gap: 0; margin-top: 40px; } }
-  @media(max-width:359px) { .brand { font-size: 21px; } .brand-symbol { display: none; } .site-header nav { gap: 10px; width:100%; justify-content:space-between; } }
+  @media(max-width:359px) { .brand { font-size: 21px; } .site-header nav { gap: 10px; width:100%; justify-content:space-between; } }
 </style>

@@ -64,7 +64,9 @@ describe('public allocation cards', () => {
     const result = card()!;
     result.projects[0].title = '</text><image href="https://evil.example/a"/>';
     const svg = supportCardSvg(result);
-    expect(svg).not.toContain('<image');
+    expect(svg).not.toContain('<image href="https://');
+    expect(svg.match(/<image /g)).toHaveLength(1); // Only the bundled brand image may render.
+    expect(svg).toContain('<image href="data:image/png;base64,');
     expect(svg).toContain('&lt;/text&gt;');
     expect(svg).toContain('$2,500 aspiration');
     const png = await supportCardPng(result);

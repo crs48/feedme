@@ -4,6 +4,7 @@ import { renderAsync } from '@resvg/resvg-js';
 import { aspirationLabel, percentageLabel } from './aspiration';
 import type { SupportCard } from './support-card';
 import { money } from './model';
+import brandIcon from '../assets/brand-icon.json';
 
 const xml = (value: string) => value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);
 // Bound text by conservative glyph widths, including unbroken words and CJK.
@@ -47,7 +48,7 @@ export const supportCardSvg = (card: SupportCard, demo = false) => {
     <defs><linearGradient id="wash" x2="1" y2="1"><stop stop-color="#f5f9ff"/><stop offset="1" stop-color="#f8f6ff"/></linearGradient><linearGradient id="rainbow"><stop stop-color="#7764f4"/><stop offset=".25" stop-color="#eb67ab"/><stop offset=".5" stop-color="#f6b753"/><stop offset=".75" stop-color="#4cc8a2"/><stop offset="1" stop-color="#479bff"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#wash)"/>
     <g font-family="Lato">
-      ${bar(52, 39, 30, 32, '#0866ff')}${text(61, 64, 'f', 28, '#fff', true)}${text(92, 64, 'feedme', 26, '#192940', true)}
+      <image href="${brandIcon.dataUrl}" x="52" y="37" width="36" height="36"/>${text(99, 64, 'feedme', 26, '#192940', true)}
       ${text(930, 61, demo ? 'DEMO · NO PAYMENT' : 'MY SUPPORT SPLIT', 16, '#627088', true)}
       ${text(52, 127, 'Good things, backed.', 46, '#192940', true)}
       ${text(52, 165, `Supporting ${fit(card.creator.name, 40)}`, 24, '#627088')}
