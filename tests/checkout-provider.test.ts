@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Support } from '../src/lib/model';
 let db: DatabaseSync;
-const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn(), portal: vi.fn() }));
+const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn(), portal: vi.fn(), protect: vi.fn() }));
 vi.mock('stripe', () => ({ default: class { accounts = { retrieve: mock.retrieve }; billingPortal = { configurations: { create: mock.portal } }; checkout = { sessions: { create: mock.create } }; } }));
 vi.mock('../src/lib/config', () => ({ config: () => ({ stripeKey: 'sk_test_fixture', origin: 'https://feedme.example' }) }));
-vi.mock('../src/lib/habitat', () => ({ privateSpace: () => 'space' }));
+vi.mock('../src/lib/habitat', () => ({ privateSpace: () => 'space', protectCheckoutIntent: mock.protect }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 import { openDatabase, putRecord, readRecord, setKv } from '../src/lib/db';
 import { checkout } from '../src/lib/payments';
@@ -16,6 +16,7 @@ const items = [{ title: 'Sauna', amount: 667 }, { title: 'Writing', amount: 333 
 describe('split Stripe Checkout contract', () => {
   beforeEach(() => {
     db = openDatabase(':memory:'); setKv(db, 'app', 'stripe-account', 'acct_creator');
+    mock.protect.mockReset().mockResolvedValue(undefined);
     mock.portal.mockReset().mockResolvedValue({ id: 'bpc_test', login_page: { url: 'https://billing.stripe.com/test' } });
     mock.retrieve.mockReset().mockResolvedValue({ charges_enabled: true, payouts_enabled: true });
     mock.create.mockReset().mockResolvedValue({ id: 'cs_one', url: 'https://checkout.stripe.com/one' });
@@ -66,6 +67,12 @@ describe('split Stripe Checkout contract', () => {
     });
     await checkout(intent, items);
     expect(readRecord<Support>(db, 'support', intent.id)).toMatchObject({ status: 'paid', checkoutId: 'cs_one', paymentIntentId: 'pi_one' });
+  });
+  it('does not create a Stripe checkout when remote intent protection fails', async () => {
+    mock.protect.mockRejectedValue(new Error('Habitat unavailable'));
+    await expect(checkout(intent, items)).rejects.toThrow('Habitat unavailable');
+    expect(mock.create).not.toHaveBeenCalled();
+    expect(readRecord<Support>(db, 'support', intent.id)?.accountId).toBe('acct_creator');
   });
   it('rejects line items that do not add up to the stored total before contacting Stripe', async () => {
     await expect(checkout(intent, [{ title: 'Sauna', amount: 999 }])).rejects.toThrow('match the total');

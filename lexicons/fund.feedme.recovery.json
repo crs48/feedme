@@ -1,0 +1,56 @@
+{
+  "lexicon": 1,
+  "id": "fund.feedme.recovery",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "description": "PRIVATE ONLY. Versioned application data for restoring a Feedme. Contains private financial data; never publish in a public repository. The record key is the SHA-256 hash of canonical JSON including $type. Parse the inner JSON using the v1 Feedme recovery schemas.",
+      "record": {
+        "type": "object",
+        "required": [
+          "version",
+          "owner",
+          "instance",
+          "table",
+          "kind",
+          "key",
+          "json"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1
+          },
+          "owner": {
+            "type": "string",
+            "format": "did"
+          },
+          "instance": {
+            "type": "string",
+            "maxLength": 36
+          },
+          "table": {
+            "type": "string",
+            "enum": [
+              "records",
+              "kv"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "json": {
+            "type": "string",
+            "maxLength": 200000
+          }
+        }
+      }
+    }
+  }
+}

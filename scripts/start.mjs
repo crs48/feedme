@@ -1,5 +1,9 @@
 import { randomBytes } from 'node:crypto';
 
+// Release local writer locks on an ordinary container shutdown.
+process.once('SIGTERM', () => process.exit(0));
+process.once('SIGINT', () => process.exit(130));
+
 // Keep one replica. The HTTP server and retry loop share the same environment.
 process.env.SYNC_SECRET ||= randomBytes(32).toString('hex');
 await import('../dist/server/entry.mjs');

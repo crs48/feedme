@@ -45,8 +45,8 @@ describe('portable recommendations', () => {
   });
   it('pins official schema publication to the feedme.fund DID', async () => {
     await expect(publishProtocol(actor)).rejects.toThrow('@feedme.fund');
-    expect(protocolSchemas).toHaveLength(9);
-    expect(await publishProtocol(PROTOCOL_AUTHORITY)).toBe(9);
+    expect(protocolSchemas).toHaveLength(12);
+    expect(await publishProtocol(PROTOCOL_AUTHORITY)).toBe(12);
     const records = listRecords<{ value: { $type: string; id: string } }>(state.db!, `demo-social:${PROTOCOL_AUTHORITY}:com.atproto.lexicon.schema`);
     expect(records.every((r) => r.value.$type === 'com.atproto.lexicon.schema' && r.value.id.startsWith('fund.feedme.'))).toBe(true);
   });

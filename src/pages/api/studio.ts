@@ -108,7 +108,7 @@ export const POST: APIRoute = async (context) => {
         const result = await drainOutbox();
         await refreshCreatorCircle();
         auditAdmin(user.did, 'records.sync', String(result.sent));
-        return redirectNotice(returnTo, `${result.sent} records synced. ${result.failed ? 'The remaining records are queued for retry.' : 'Your data is up to date.'}`);
+        return redirectNotice(returnTo, `${result.sent} records synced. ${result.failed ? 'The remaining records are queued for retry.' : 'Check Data & backups for checkpoint and backup status.'}`);
       }
       default: throw new Error('Unknown action.');
     }

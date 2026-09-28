@@ -1,0 +1,63 @@
+{
+  "lexicon": 1,
+  "id": "fund.feedme.checkpoint",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "literal:self",
+      "description": "PRIVATE ONLY. Complete recovery checkpoint published after immutable records and indexes have been read back and verified. The digest commits to sorted logical-key/content-hash pairs. One writer only; this is not a distributed lock.",
+      "record": {
+        "type": "object",
+        "required": [
+          "version",
+          "owner",
+          "instance",
+          "space",
+          "indexes",
+          "digest",
+          "count",
+          "createdAt"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1
+          },
+          "owner": {
+            "type": "string",
+            "format": "did"
+          },
+          "instance": {
+            "type": "string",
+            "maxLength": 36
+          },
+          "space": {
+            "type": "string",
+            "format": "at-uri"
+          },
+          "indexes": {
+            "type": "array",
+            "maxLength": 200,
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "digest": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

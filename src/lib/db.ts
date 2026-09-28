@@ -3,6 +3,8 @@ import { mkdirSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 import { config } from './config';
+import { acquireDataLock } from '../../scripts/data-lock.mjs';
+import { installRecoveryTracking } from './recovery-tracking';
 import { migrateProtocol } from './protocol-migration';
 import { demoFriends, demoProfile, demoProjects, demoSupports, demoUpdates } from './seed';
 
@@ -14,6 +16,7 @@ export const openDatabase = (path: string) => {
     CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, destination TEXT NOT NULL, collection TEXT NOT NULL, rkey TEXT NOT NULL, value TEXT, attempts INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 0, error TEXT, UNIQUE(destination,collection,rkey));
     CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, created INTEGER NOT NULL);
   `);
+  installRecoveryTracking(db);
   return db;
 };
 let database: DatabaseSync;
@@ -21,6 +24,7 @@ export const getDb = () => {
   if (database) { migrateProtocol(database, config()); return database; }
   const cfg = config();
   mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
+  acquireDataLock(cfg.dataDir);
   const path = join(cfg.dataDir, cfg.demo ? 'demo.sqlite' : 'feedme.sqlite');
   database = openDatabase(path);
   chmodSync(path, 0o600);
@@ -61,18 +65,16 @@ export const getDb = () => {
 };
 
 const encryptionKey = () => process.env.DATA_ENCRYPTION_KEY ? Buffer.from(process.env.DATA_ENCRYPTION_KEY, 'hex') : null;
-const seal = (value: unknown) => {
+export const seal = (value: unknown, key: Buffer | null = encryptionKey()) => {
   const json = JSON.stringify(value);
-  const key = encryptionKey();
   if (!key) return json;
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const body = Buffer.concat([cipher.update(json, 'utf8'), cipher.final()]);
   return `enc:${iv.toString('base64')}:${cipher.getAuthTag().toString('base64')}:${body.toString('base64')}`;
 };
-const unseal = <T>(value: string): T => {
+export const unseal = <T>(value: string, key: Buffer | null = encryptionKey()): T => {
   if (!value.startsWith('enc:')) return JSON.parse(value) as T;
-  const key = encryptionKey();
   if (!key) throw new Error('The database encryption key is required.');
   const [, iv, tag, body] = value.split(':');
   const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'base64'));
@@ -103,9 +105,11 @@ export const getKv = <T>(db: DatabaseSync, ns: string, key: string): T | undefin
 };
 export const deleteKv = (db: DatabaseSync, ns: string, key: string) => db.prepare('DELETE FROM kv WHERE namespace=? AND key=?').run(ns, key);
 export type OutboxEntry = { id: number; destination: 'public' | 'private'; collection: string; rkey: string; value: unknown | null; attempts: number; revision: number };
-export const enqueue = (db: DatabaseSync, destination: OutboxEntry['destination'], collection: string, rkey: string, value: unknown | null) =>
-  db.prepare(`INSERT INTO outbox(destination,collection,rkey,value) VALUES(?,?,?,?)
+export const enqueue = (db: DatabaseSync, destination: OutboxEntry['destination'], collection: string, rkey: string, value: unknown | null) => {
+  if (destination === 'public' && ['fund.feedme.recovery', 'fund.feedme.checkpoint', 'fund.feedme.recoveryIndex', 'fund.feedme.support'].includes(collection)) throw new Error('Private records cannot be sent to a public repository.');
+  return db.prepare(`INSERT INTO outbox(destination,collection,rkey,value) VALUES(?,?,?,?)
     ON CONFLICT(destination,collection,rkey) DO UPDATE SET value=excluded.value,attempts=0,revision=outbox.revision+1,error=NULL`).run(destination, collection, rkey, seal(value));
-export const pendingWrites = (db: DatabaseSync): OutboxEntry[] =>
-  (db.prepare('SELECT * FROM outbox ORDER BY id LIMIT 50').all() as unknown as (Omit<OutboxEntry, 'value'> & { value: string })[])
+};
+export const pendingWrites = (db: DatabaseSync, destination?: OutboxEntry['destination']): OutboxEntry[] =>
+  (db.prepare('SELECT * FROM outbox WHERE (? IS NULL OR destination=?) ORDER BY id LIMIT 50').all(destination || null, destination || null) as unknown as (Omit<OutboxEntry, 'value'> & { value: string })[])
     .map((row) => ({ ...row, value: unseal(row.value) }));

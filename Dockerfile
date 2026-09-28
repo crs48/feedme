@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf 
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/package.json ./package.json
-COPY --from=build --chown=node:node /app/scripts/start.mjs ./scripts/start.mjs
+COPY --from=build --chown=node:node /app/scripts ./scripts
+COPY --from=build --chown=node:node /app/src/lib ./src/lib
 COPY --chmod=755 scripts/container-entrypoint.sh /usr/local/bin/feedme-entrypoint
 RUN mkdir -p /data && chown node:node /data
 EXPOSE 4321

@@ -12,14 +12,14 @@ describe('Habitat wire adapter', () => {
   beforeEach(() => { db = openDatabase(':memory:'); transport.mockReset(); });
   afterEach(() => db.close());
   it('creates an explicitly member-only space and uses the returned authority URI', async () => {
-    transport.mockResolvedValue(Response.json({ uri: 'at://did:web:pear.example/space/fund.feedme.receipts/123' }));
+    transport.mockResolvedValueOnce(Response.json({ spaces: [] })).mockResolvedValueOnce(Response.json({ uri: 'at://did:web:pear.example/space/fund.feedme.receipts/123' }));
     const uri = await createPrivateSpace();
-    const [path, request] = transport.mock.calls[0];
+    const [path, request] = transport.mock.calls[1];
     expect(path).toBe('/xrpc/network.habitat.simplespace.createSpace');
     expect(JSON.parse(request.body).config.policy).toBe('member-list');
     expect(uri).toContain('did:web:pear.example');
     expect(await createPrivateSpace()).toBe(uri);
-    expect(transport).toHaveBeenCalledTimes(1);
+    expect(transport).toHaveBeenCalledTimes(2);
   });
   it('never falls back to public storage when the private space is missing', async () => {
     enqueue(db, 'private', 'fund.feedme.support', 'tip', { note: 'secret' });

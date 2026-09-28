@@ -6,7 +6,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.11.1",
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.16.0 || >=23.8.0"
   },
   "scripts": {
     "dev": "node --env-file-if-exists=.env node_modules/astro/bin/astro.mjs dev --host 127.0.0.1",
@@ -17,7 +17,8 @@
     "check": "astro check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "data": "node --env-file-if-exists=.env --import tsx scripts/data.ts"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
@@ -25,6 +26,7 @@
     "@atproto/common-web": "^0.5.12",
     "@atproto/jwk-jose": "^0.2.4",
     "@atproto/oauth-client-node": "^0.5.7",
+    "@aws-sdk/client-s3": "^3.1141.0",
     "@habitat-network/habitat": "0.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
@@ -34,6 +36,7 @@
     "sanitize-html": "^2.17.7",
     "stripe": "^22.6.2",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5"
   },
   "devDependencies": {

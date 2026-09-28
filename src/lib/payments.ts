@@ -4,7 +4,7 @@ import { config } from './config';
 import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
 import type { Support } from './model';
 import { queueSupport } from './support-ledger';
-import { privateSpace } from './habitat';
+import { privateSpace, protectCheckoutIntent } from './habitat';
 import { billingInterval } from './billing-frequency';
 import { ensureBillingPortal } from './billing';
 import { applyBillingEvent, bindSubscriptionCheckout, type BillingEventContext, type Subscription } from './recurring';
@@ -44,6 +44,8 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
   if (stored?.accountId && stored.accountId !== account) throw new Error('This checkout belongs to a different connected account. Start a new one.');
   const current = { ...intent, ...stored, accountId: account };
   putRecord(getDb(), 'support', intent.id, current);
+  // Do not issue a charge-capable URL until allocations and consent are remotely recoverable.
+  await protectCheckoutIntent();
   // Reuse the customer only when the server can prove the same supporter or browser.
   const binding = getKv<string>(getDb(), 'checkout-owner', intent.id);
   const previousRoot = interval ? listRecords<Support>(getDb(), 'support').find((s) => s.id !== intent.id && !s.recurringRootId && s.accountId === account && s.subscriptionId &&

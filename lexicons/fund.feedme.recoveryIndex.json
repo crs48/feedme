@@ -1,0 +1,42 @@
+{
+  "lexicon": 1,
+  "id": "fund.feedme.recoveryIndex",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "any",
+      "description": "PRIVATE ONLY. Immutable shard of content-addressed recovery record keys, referenced by a complete checkpoint.",
+      "record": {
+        "type": "object",
+        "required": [
+          "version",
+          "owner",
+          "instance",
+          "records"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 1
+          },
+          "owner": {
+            "type": "string",
+            "format": "did"
+          },
+          "instance": {
+            "type": "string",
+            "maxLength": 36
+          },
+          "records": {
+            "type": "array",
+            "maxLength": 500,
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        }
+      }
+    }
+  }
+}

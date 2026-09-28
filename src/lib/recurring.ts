@@ -6,7 +6,7 @@ import type { Support } from './model';
 import { queueSupport } from './support-ledger';
 import { billingInterval } from './billing-frequency';
 
-// Operational billing identifiers stay local; public projections never copy these fields.
+// Operational billing identifiers stay private; public projections never copy these fields.
 export type Subscription = {
   id: string; accountId: string; subscriptionId: string; customerId: string;
   status: string; cancelAtPeriodEnd: boolean; currentPeriodEnd?: number; eventCreated: number;
