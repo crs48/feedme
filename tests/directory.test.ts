@@ -134,4 +134,18 @@ describe('public creator directory', () => {
     const exhausted = await collectDirectory({ policy: { seeds: [did] }, budgetMs: 0, read: transport });
     expect(exhausted.stats.checked).toBe(0); expect(exhausted.snapshot.source.partial).toBe(true);
   });
+  it('keeps large retained state readable and caps public JSON without losing candidate identities', async () => {
+    const first = await observe(); const alphabet = 'abcdefghijklmnopqrstuvwxyz234567';
+    const origin = `https://${'a'.repeat(1980)}.example`;
+    const candidates = Array.from({ length: 3500 }, (_, i) => {
+      const owner = `did:plc:${'a'.repeat(21)}${alphabet[Math.floor(i / 1024)]}${alphabet[Math.floor(i / 32) % 32]}${alphabet[i % 32]}`;
+      return { ...first, did: owner, advertisedUrl: origin, creator: { ...first.creator!, did: owner, url: origin, profileUri: profileUri(owner), bio: 'x'.repeat(500) } };
+    });
+    const result = await collectDirectory({ previous: { schemaVersion: 1, relay: 'https://relay.example', candidates }, read: transport, now: new Date(time), maxChecks: 1 });
+    expect(result.state.candidates).toHaveLength(3500);
+    expect(result.state.candidates.some(candidate => !candidate.creator)).toBe(true);
+    expect(Buffer.byteLength(JSON.stringify(result.state))).toBeLessThan(16_000_000);
+    expect(Buffer.byteLength(JSON.stringify(result.snapshot))).toBeLessThan(2_000_000);
+    expect(result.snapshot.source.partial).toBe(true);
+  });
 });

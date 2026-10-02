@@ -72,7 +72,7 @@ Keep collector state separate from exported cards: last observation, next retry 
 
 ## Implementation
 
-The collector and CLI are implemented with public-only module imports. State is capped at 5,000 candidate DIDs and exports at 2 MB. HTTP 429/503 responses cool the origin for the remaining run; retries occur on later runs, with no aggressive immediate retry. Large relays and full candidate capacity report partial coverage. Per-request byte statistics and batched display-profile reads remain future optimizations.
+The collector and CLI are implemented with public-only module imports. State is capped at 5,000 candidate DIDs and 15 MB; oversized observations are compacted without dropping candidate identities. Exports are capped at 2 MB using linear size accounting. HTTP 429/503 responses cool the origin for the remaining run; retries occur on later runs, with no aggressive immediate retry. Large relays and full candidate capacity report partial coverage. Per-request byte statistics and batched display-profile reads remain future optimizations.
 
 ## Validation and checklist
 

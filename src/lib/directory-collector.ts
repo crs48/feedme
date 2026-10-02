@@ -83,7 +83,7 @@ export const collectDirectory = async (options: {
   if (cursor) cursors.add(cursor);
   for (let page = 0; page < Math.min(options.maxPages ?? 5, 50); page++) {
     try {
-      const data = z.object({ repos: z.array(z.object({ did: didSchema })).max(2000), cursor: z.string().max(2048).optional() }).parse(await read(xrpcUrl(relay, 'com.atproto.sync.listReposByCollection', { collection: `${NS}.profile`, limit: '200', ...(cursor ? { cursor } : {}) })));
+      const data = z.object({ repos: z.array(z.object({ did: candidateSchema.shape.did })).max(2000), cursor: z.string().max(2048).optional() }).parse(await read(xrpcUrl(relay, 'com.atproto.sync.listReposByCollection', { collection: `${NS}.profile`, limit: '200', ...(cursor ? { cursor } : {}) })));
       for (const { did } of data.repos) {
         if (!candidates.has(did) && candidates.size >= 5000) { partial = true; break; }
         if (!candidates.has(did)) candidates.set(did, { did });
@@ -114,8 +114,23 @@ export const collectDirectory = async (options: {
     }
   }));
   const state: DirectoryState = directoryStateSchema.parse({ schemaVersion: 1, relay, cursor, completedAt, candidates: [...candidates.values()] });
+  // Leave room below the CLI's 16 MB read limit. Keep candidate DIDs so a
+  // full state file remains recoverable instead of breaking every future run.
+  let stateBytes = Buffer.byteLength(JSON.stringify(state));
+  for (let i = 0; stateBytes > 15_000_000 && i < state.candidates.length; i++) {
+    const candidate = state.candidates[i];
+    if (!candidate.creator && !candidate.advertisedUrl) continue;
+    const minimal = { did: candidate.did, attemptedAt: candidate.attemptedAt, outcome: candidate.outcome };
+    stateBytes -= Buffer.byteLength(JSON.stringify(candidate)) - Buffer.byteLength(JSON.stringify(minimal));
+    state.candidates[i] = minimal; partial = true;
+  }
   const snapshot = directorySnapshotSchema.parse({ schemaVersion: 1, generatedAt: now, source: { relays: [relay], completedAt, partial }, creators: publicDirectoryCreators(state.candidates, Date.parse(now)) });
-  // A size cap is part of the public contract; never silently truncate JSON.
-  while (Buffer.byteLength(JSON.stringify(snapshot)) > 2_000_000) { snapshot.creators.pop(); snapshot.source.partial = true; }
+  // Count each removed entry once; repeatedly serializing the full array would
+  // make a large valid input consume quadratic CPU just to enforce the cap.
+  let snapshotBytes = Buffer.byteLength(JSON.stringify(snapshot));
+  while (snapshotBytes > 1_999_999 && snapshot.creators.length) {
+    snapshotBytes -= Buffer.byteLength(JSON.stringify(snapshot.creators.pop())) + Number(snapshot.creators.length > 0);
+    snapshot.source.partial = true;
+  }
   return { state, snapshot, stats: { candidates: candidates.size, checked, listed: snapshot.creators.length, partial: snapshot.source.partial, elapsedMs: Date.now() - start } };
 };

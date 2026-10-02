@@ -7,8 +7,9 @@ export const DIRECTORY_RELAY = 'https://relay1.us-east.bsky.network';
 export const DAY = 86_400_000;
 export const originSchema = z.string().max(2048).refine((value) => { try { return publicOriginUrl(value) === value; } catch { return false; } }, 'Invalid public origin');
 const timestamp = z.iso.datetime();
+const directoryDid = didSchema.max(512);
 export const directoryCreatorSchema = z.object({
-  did: didSchema, handle: z.string().regex(/^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/).max(253).optional(),
+  did: directoryDid, handle: z.string().regex(/^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/).max(253).optional(),
   name: z.string().min(1).max(80), bio: z.string().max(500), url: originSchema.optional(),
   profileUri: z.string().max(1024), profileCid: z.string().min(1).max(256),
   advertisementCheckedAt: timestamp, siteCheckedAt: timestamp, lastVerifiedAt: timestamp.optional(),
@@ -23,7 +24,7 @@ export const directorySnapshotSchema = z.object({
 });
 export type DirectorySnapshot = z.infer<typeof directorySnapshotSchema>;
 export const candidateSchema = z.object({
-  did: didSchema, attemptedAt: timestamp.optional(), advertisedUrl: originSchema.optional(),
+  did: directoryDid, attemptedAt: timestamp.optional(), advertisedUrl: originSchema.optional(),
   outcome: z.enum(['listed', 'withdrawn', 'suppressed', 'mismatch', 'unverified', 'error']).optional(),
   creator: directoryCreatorSchema.optional(),
 }).refine((value) => !value.creator || value.creator.did === value.did, 'Candidate identity mismatch');
@@ -35,7 +36,7 @@ export const directoryStateSchema = z.object({
 });
 export type DirectoryState = z.infer<typeof directoryStateSchema>;
 export const directoryPolicySchema = z.object({
-  seeds: z.array(didSchema).max(1000).default([]), suppressed: z.array(didSchema).max(5000).default([]),
+  seeds: z.array(directoryDid).max(1000).default([]), suppressed: z.array(directoryDid).max(5000).default([]),
 });
 export const emptyDirectory = (): DirectorySnapshot => ({ schemaVersion: 1, generatedAt: '1970-01-01T00:00:00.000Z', source: { relays: [], partial: true }, creators: [] });
 export const freshDirectory = (snapshot: DirectorySnapshot, now = Date.now()) => {

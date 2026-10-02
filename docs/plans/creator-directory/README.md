@@ -106,7 +106,7 @@ Steps 01–04 are included in this release. Step 05 is not required and remains 
 
 - [ ] Confirm the publication/opt-out contract with a real test creator and official schema resolution.
 - [x] Build and validate the public-only collector with bounded network access.
-- [ ] Publish the static directory and versioned JSON format without modifying demo isolation.
+- [x] Publish the static directory and versioned JSON format without modifying demo isolation.
 - [x] Reuse the directory in personal-instance discovery and offer an explicit launch-post action.
 - [ ] Evaluate a live index only after collecting operational measurements.
 
@@ -133,8 +133,10 @@ External contracts were reviewed on 2026-10-02. Actions are pinned to immutable 
 
 ### Verification record
 
-- 265 tests passed, including public transport DNS pinning, mixed public/private DNS rejection, byte limits, provider cooldown, opt-out and deletion, PDS migration, profile compare-and-swap and lost-response retry, and snapshot fallback with current viewer visibility.
+- 266 tests passed, including public transport DNS pinning, mixed public/private DNS rejection, byte limits, provider cooldown, opt-out and deletion, PDS migration, profile compare-and-swap and lost-response retry, and snapshot fallback with current viewer visibility.
 - App and populated static builds passed. The fixture contained 27 synthetic profiles across two static pages; hostile `</script>` text stayed text, search reached page-two results, and unreachable cards had no site link. The fixture stays in ignored local output and is never deployed.
 - Browser review at desktop, 390 px, and 320 px found no horizontal overflow. Static HTML inspection verified cards and ordinary pagination without JavaScript.
 - Live relay enumeration succeeded with zero candidates. A real creator’s complete PDS → website → directory round trip, opt-out across deployed builds, and official schema publication still need test accounts. Automated adapter tests are not evidence of live Habitat interoperability.
 - Current bounds are documented in the discovery guide. Avatars use initials; provider retries wait for the next run; batch AppView reads, richer traffic metrics, and a continuous index remain future optimizations.
+
+The first official [Pages deployment](https://github.com/crs48/feedme/actions/runs/37063517803) and [container/CI checks](https://github.com/crs48/feedme/actions/runs/37063517750) passed. The deployed `/creators/` route correctly shows zero verified creators after a successful empty relay scan.
