@@ -39,6 +39,8 @@ flowchart LR
 
 This release queries the existing relay and public repositories directly; it does not require each installation to run a full firehose indexer. A future shared indexer can use Tap's collection signaling, backfill, and verified updates. It must remain replaceable. Public discovery cannot guarantee a complete instantaneous list of every isolated PDS.
 
+The [creator directory plan](plans/creator-directory/README.md) proposes a real public directory on GitHub Pages, starting with scheduled collection and site verification. It also covers setup announcements, reachability, opt-out, Bluesky search visibility, and an optional continuously running index. This is a proposal; the official Pages demo does not yet publish that directory.
+
 ## Portable recommendations
 
 **Recommend this creator** appears on creator pages, project pages, after a confirmed tip, and on discovery cards. The user reviews an explanation and explicitly confirms publication. `fund.feedme.recommendation` lives in the recommender's PDS; its `did` field identifies the recommended creator. The server obtains the name and canonical URL from that creator's validated profile, rather than trusting form-supplied URLs.
