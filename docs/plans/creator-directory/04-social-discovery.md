@@ -44,12 +44,16 @@ Search results, hashtags, and mentions are supplementary hints. Search paginatio
 
 An optional future **Feedme creators** custom feed could show actual `app.bsky.feed.post` records from verified members, especially explicit project announcements. The [feed skeleton API](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/getFeedSkeleton.json) is a separate feed service interface; an arbitrary Feedme project record is not automatically a Bluesky post. Building and operating this feed, choosing its content rules, and indexing member posts should be deferred until there is enough activity to justify it.
 
+## Implementation
+
+`directory-hints.ts` validates and caches the replaceable export. Discovery prioritizes known DIDs within existing connection categories, rechecks PDS/site identity, and applies current viewer visibility before showing cards. Explore continues from snapshot pages to relay pages. Settings provides a Bluesky compose intent after confirmed profile publication; it never submits a post.
+
 ## Validation and checklist
 
-- [ ] Verify discovery with the official directory down, disabled, stale, incomplete, or replaced by another operator's export.
-- [ ] Test mutual/follow/follower/second-degree ranking and explicit recommendation labels without treating either as endorsement.
-- [ ] Confirm private viewer context is never sent to the directory, logged into public artifacts, or inferred from tip records.
-- [ ] Test opt-out, block, mute, and label changes after a snapshot was downloaded.
-- [ ] Confirm launch text appears for review and nothing publishes without the creator's explicit action.
+- [x] Verify discovery with the official directory down, disabled, stale, incomplete, or replaced by another operator's export.
+- [x] Test mutual/follow/follower/second-degree ranking and explicit recommendation labels without treating either as endorsement.
+- [x] Confirm private viewer context is never sent to the directory, logged into public artifacts, or inferred from tip records.
+- [x] Test opt-out, block, mute, and label changes after a snapshot was downloaded.
+- [x] Confirm launch text appears for review and nothing publishes without the creator's explicit action.
 - [ ] Test that spoofed launch posts, hashtags, and third-party submitted URLs cannot bypass PDS/site verification.
-- [ ] Document actual Bluesky visibility without promising a native membership badge or exhaustive search.
+- [x] Document actual Bluesky visibility without promising a native membership badge or exhaustive search.

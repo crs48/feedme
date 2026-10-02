@@ -10,7 +10,7 @@ TypeScript · pnpm · Astro · Tailwind CSS · Node · MIT licensed
 
 > **Work in progress · early public preview.** Feedme is not production-validated yet. Automated tests and the fictional demo cover the implemented flows; real Stripe onboarding/payments and Habitat/AT Protocol account interoperability still need the [live acceptance checklist](docs/hosting.md#live-acceptance-checklist). Please use test accounts before accepting real money.
 
-**[Explore Feedme at feedme.fund](https://feedme.fund) · [Try the demo](https://feedme.fund/demo/) · [Use this template](https://github.com/crs48/feedme/generate)**
+**[Explore Feedme at feedme.fund](https://feedme.fund) · [Find creators](https://feedme.fund/creators/) · [Try the demo](https://feedme.fund/demo/) · [Use this template](https://github.com/crs48/feedme/generate)**
 
 Your community gives you resources **and a signal about what they want more of**. Supporters allocate a tip across your projects, from open source to everyday life. You receive their support regardless of progress and decide how to spend your time and resources. Public posts, follows, recommendations, and opt-in support cards help people discover the work around you.
 
@@ -74,7 +74,7 @@ See the [administration guide](docs/admin.md) for project workflows, report defi
 - One creator per instance, with projects and ongoing support categories, optional aspirations, images, external links, and project status.
 - AT Protocol OAuth through Habitat’s TypeScript identity resolver; any provider Habitat supports can supply the identity.
 - Configurable Bluesky administrators (default `crs.land`) and a private dashboard: draft/publish/archive projects, Markdown previews, weekly/monthly earnings, project performance, recurring support, searchable payments, CSV exports, supporter profiles, connection health, and admin activity.
-- Discover creators you follow, mutuals, followers, and friends of friends through Bluesky; browse the public network or search a handle. Public recommendations travel with your own PDS. See [discovery](docs/discovery.md).
+- A real [public creator directory](https://feedme.fund/creators/) refreshed nightly from opt-in PDS profiles and matching websites. Join from **Dashboard → Settings → Save & publish profile**; no registry account required. Discover creators you follow, mutuals, followers, and friends of friends through Bluesky; browse the public network or search a handle. Public recommendations travel with your own PDS. See [discovery](docs/discovery.md).
 - Native creator/friend follows, portable project subscriptions, a Following feed, and explicit public messages after tipping.
 - Markdown project stories with safe images and video embeds. Project logs use native Bluesky posts, including imported photo/video posts.
 - Author avatars on posts, with bundled demo portraits and responsive project photography. Missing portraits use initials; anonymous supporters use a generic icon.
@@ -173,7 +173,7 @@ pnpm preview:site
 
 `build:site` builds the Node app, builds the marketing pages, and renders an explicit list of demo screens from a **new, temporary, fictional database**. It ignores `.env`, existing databases, provider credentials, and live mode. Only static files go into `site-dist/`. Demo edits stay in the current browser tab and can be reset; no payments or social posts are created. The example share link has a fixed sample image. With JavaScript disabled, screens remain browsable and simulation forms stay disabled.
 
-[The Pages workflow](.github/workflows/pages.yml) checks and rebuilds on pushes to `main`, manual runs, and nightly at **08:17 UTC**, then publishes `site-dist/` to **feedme.fund**. The nightly build refreshes fictional examples; it **does not ingest real Bluesky posts**. Live instances read social feeds through their server and run synchronization independently. Forks do not automatically deploy the official domain. See the [Pages deployment guide](docs/github-pages.md).
+[The Pages workflow](.github/workflows/pages.yml) checks and rebuilds on pushes to `main`, manual runs, and nightly at **08:17 UTC**, then publishes `site-dist/` to **feedme.fund**. The nightly build refreshes fictional examples and collects the **real public creator directory** from opt-in PDS profiles. Collection is separate from the isolated demo export; it does not ingest live post feeds or private data. Creators publish once from Settings and appear after a successful verification scan. Clearing the discovery checkbox withdraws the profile from subsequent exports. Live instances read social feeds through their server and run synchronization independently. Forks do not automatically deploy the official domain. See the [Pages deployment guide](docs/github-pages.md).
 
 Your own live Feedme still needs the [Node server and persistent storage](docs/hosting.md). Pages cannot run OAuth sessions, Stripe webhooks, or private Habitat synchronization. Never upload `.data/` or the server's `dist/` directory as a public artifact.
 

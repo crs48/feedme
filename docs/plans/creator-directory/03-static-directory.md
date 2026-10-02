@@ -20,7 +20,7 @@ flowchart TD
   Artifact --> Pages[Deploy official Pages site]
 ```
 
-Propose new `scripts/collect-directory.ts`, pure `src/lib/directory-*.ts` modules, `site/pages/creators/index.astro`, and a generated public `/directory/v1.json`. These paths are planned, not existing implementation. Avoid generating thousands of individual profile pages in v1; link to the creator's own site, where canonical content lives.
+Implemented `scripts/collect-directory.ts`, public-only `src/lib/directory-*.ts` collection modules, `site/pages/creators/index.astro`, and generated `/directory/v1.json`. The separate directory-hints adapter is allowed to cache snapshots in the personal instance database. Avoid generating thousands of individual profile pages in v1; link to the creator's own site, where canonical content lives.
 
 Run network collection only in the trusted official Pages workflow, with no creator OAuth, Habitat, Stripe, backup, or app-database credentials. Keep network collection separate from `pnpm build:site`; ordinary builds and pull-request CI consume a validated fixture or explicit snapshot and never crawl the network. Do not weaken `scripts/demo-offline.mjs` or the exporter's clean temporary database/environment boundary.
 
@@ -53,10 +53,10 @@ Public JSON should have a versioned, documented schema and a bounded size. Perso
 
 ## Validation and checklist
 
-- [ ] Extend static artifact checks for real-directory routes, JSON schema, local avatars, freshness text, and demo separation.
+- [x] Extend static artifact checks for real-directory routes, JSON schema, local avatars, freshness text, and demo separation.
 - [ ] Test an initial empty scan, stale prior data, explicit withdrawals amid partial failures, and expired workflow state.
 - [ ] Test delayed/out-of-order jobs and ensure an older snapshot cannot replace a newer accepted deployment.
-- [ ] Verify no private database, credentials, receipt fields, or demo user edits enter the directory artifact.
-- [ ] Review mobile and desktop rendering, keyboard controls, no-JavaScript pagination, long handles, hostile text, and missing avatars.
-- [ ] Run `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm build:site` with deterministic directory fixtures.
+- [x] Verify no private database, credentials, receipt fields, or demo user edits enter the directory artifact.
+- [x] Review mobile and desktop rendering, keyboard controls, no-JavaScript pagination, long handles, hostile text, and missing avatars.
+- [x] Run `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm build:site` with deterministic directory fixtures.
 - [ ] Manually verify real creator publication, subsequent nightly inclusion, opt-out removal, and stale-state behavior before launch.

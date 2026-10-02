@@ -1,6 +1,6 @@
 # Feedme creator directory 🌐
 
-**Status: proposal only · 2026-10-02.** No directory, protocol, workflow, or deployment changes are implemented by this plan. The folder name `creator-directory` is inferred from the requested public directory of personal Feedme instances.
+**Status: phases 01–04 implemented · 2026-10-02.** The static directory, scheduled public collector, explicit PDS publication, and optional personal-instance discovery hints are implemented. Phase 05 remains deferred. Real-account publication through Habitat and official schema authority resolution remain acceptance checks; the live relay scan currently returns no candidates.
 
 Build `https://feedme.fund/creators/` as a static, searchable directory generated from creators' public AT Protocol records. Start with a scheduled TypeScript collector in GitHub Actions. Keep `profiles.feedme.fund` available for a future continuously running indexer if measured freshness or scale requires it.
 
@@ -12,7 +12,7 @@ A new instance should be easy to find, particularly by people already connected 
 
 The directory should survive changes of hosting provider and have useful alternatives if the official index becomes unavailable. It cannot enumerate every private, opted-out, or isolated AT Protocol repository. Product copy should say **known public Feedme creators**, with coverage and freshness information, rather than promise an exhaustive global list.
 
-## Current state in the repository
+## Starting point before implementation
 
 | Existing piece | What it does | Remaining work |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ Discovery through the protocol and discovery inside the Bluesky application are 
 | [04 · Social discovery](04-social-discovery.md) | Reuse snapshots in personal instances, launch-post flow | Steps 01–03 |
 | [05 · Optional live index](05-optional-live-index.md) | Replaceable service only if required by observed usage | Steps 02–04 plus a demonstrated need |
 
-The smallest useful release is steps 01–03. Existing personal-instance social discovery continues to work while step 04 is developed. Step 05 is not required for launch.
+Steps 01–04 are included in this release. Step 05 is not required and remains deferred. Implementation and operating instructions are in the [discovery guide](../../discovery.md#the-public-creator-directory).
 
 ## Risks and decisions to revisit
 
@@ -105,19 +105,19 @@ The smallest useful release is steps 01–03. Existing personal-instance social 
 ## Implementation checklist
 
 - [ ] Confirm the publication/opt-out contract with a real test creator and official schema resolution.
-- [ ] Build and validate the public-only collector with bounded network access.
+- [x] Build and validate the public-only collector with bounded network access.
 - [ ] Publish the static directory and versioned JSON format without modifying demo isolation.
-- [ ] Reuse the directory in personal-instance discovery and offer an explicit launch-post action.
+- [x] Reuse the directory in personal-instance discovery and offer an explicit launch-post action.
 - [ ] Evaluate a live index only after collecting operational measurements.
 
 ## Validation checklist
 
-- [ ] Test first publication, URL migration, handle changes, PDS migration, opt-out, deletion, and rejoining.
-- [ ] Test outages, partial scans, stale records, domain mismatch, SSRF, and hostile profile content.
-- [ ] Verify no private records, graph snapshots, sessions, secrets, or financial data enter public outputs.
-- [ ] Verify static browsing without JavaScript, mobile layouts, accessible search, and honest freshness labels.
-- [ ] Confirm personal discovery still works with the official directory disabled.
-- [ ] Run `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm build:site` before implementation ships.
+- [x] Test first publication, URL migration, handle changes, PDS migration, opt-out, deletion, and rejoining.
+- [x] Test outages, partial scans, stale records, domain mismatch, SSRF, and hostile profile content.
+- [x] Verify no private records, graph snapshots, sessions, secrets, or financial data enter public outputs.
+- [x] Verify static browsing without JavaScript, mobile layouts, accessible search, and honest freshness labels.
+- [x] Confirm personal discovery still works with the official directory disabled.
+- [x] Run `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm build:site` before implementation ships.
 
 ## References
 
@@ -129,4 +129,12 @@ The smallest useful release is steps 01–03. Existing personal-instance social 
 - [Bluesky post search](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/searchPosts.json) and [actor search](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/actor/searchActors.json)
 - [GitHub Actions schedule behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)
 
-External contracts were reviewed on 2026-10-02. Recheck and pin upstream versions during implementation; unimplemented interfaces below are proposals.
+External contracts were reviewed on 2026-10-02. Actions are pinned to immutable revisions. Phase 05 interfaces remain proposals.
+
+### Verification record
+
+- 265 tests passed, including public transport DNS pinning, mixed public/private DNS rejection, byte limits, provider cooldown, opt-out and deletion, PDS migration, profile compare-and-swap and lost-response retry, and snapshot fallback with current viewer visibility.
+- App and populated static builds passed. The fixture contained 27 synthetic profiles across two static pages; hostile `</script>` text stayed text, search reached page-two results, and unreachable cards had no site link. The fixture stays in ignored local output and is never deployed.
+- Browser review at desktop, 390 px, and 320 px found no horizontal overflow. Static HTML inspection verified cards and ordinary pagination without JavaScript.
+- Live relay enumeration succeeded with zero candidates. A real creator’s complete PDS → website → directory round trip, opt-out across deployed builds, and official schema publication still need test accounts. Automated adapter tests are not evidence of live Habitat interoperability.
+- Current bounds are documented in the discovery guide. Avatars use initials; provider retries wait for the next run; batch AppView reads, richer traffic metrics, and a continuous index remain future optimizations.

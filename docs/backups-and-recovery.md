@@ -135,6 +135,8 @@ An older backup can lack intents for payments created afterwards. Stripe cannot 
 
 The adapters were checked against [Habitat's pinned API contracts](https://github.com/habitat-network/habitat/tree/85654a07dec6931925763e66c835f65d0cdf1e30/lexicons/network/habitat/space), [Node's SQLite online backup API](https://nodejs.org/api/sqlite.html#sqlitebackupsource-db-path-options), and [SQLite's backup semantics](https://sqlite.org/backup.html). The backup API requires Node 22.16+ or 23.8+; Node 24 LTS is recommended.
 
+After restoring to a new address, open **Settings**, review the current PDS announcement, and explicitly save the profile to advertise this server. Recovery does not overwrite a newer site address or remote discovery opt-out. Old queued announcements need the same review before they can sync.
+
 ## Verification checklist
 
 - [x] Transaction rollback also rolls back private change tracking; credentials never enter a Habitat snapshot.

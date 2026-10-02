@@ -34,7 +34,7 @@ Start with these adjustable defaults: recheck known creators nightly; mark verif
 
 ## Output and state boundaries
 
-Proposed public format (types are illustrative, not added to the application):
+Implemented public format (validated in `src/lib/directory-model.ts`):
 
 ```ts
 type DirectorySnapshot = {
@@ -70,11 +70,15 @@ Keep collector state separate from exported cards: last observation, next retry 
 - Directory listing must not depend on arbitrary remote HTML, Markdown execution, scripts, or payment readiness probes.
 - Reuse public label filtering and add maintainer suppression policy. If visibility checks fail, withhold new suggestions and mark prior observations stale; do not silently bypass checks. Authentication context is required for personal blocks/mutes and is handled only on the user's chosen instance.
 
+## Implementation
+
+The collector and CLI are implemented with public-only module imports. State is capped at 5,000 candidate DIDs and exports at 2 MB. HTTP 429/503 responses cool the origin for the remaining run; retries occur on later runs, with no aggressive immediate retry. Large relays and full candidate capacity report partial coverage. Per-request byte statistics and batched display-profile reads remain future optimizations.
+
 ## Validation and checklist
 
-- [ ] Add collector tests for pagination, duplicate/repeated cursors, partial budgets, resumed/cold scans, and no starvation.
-- [ ] Cover withdrawal, PDS migration, URL replacement, domain takeover/mismatch, transient outages, and stale consent expiry.
-- [ ] Reuse and extend SSRF tests for every new request path; verify a relay candidate cannot trigger internal-network access.
-- [ ] Validate explicit public JSON allowlists, untrusted strings, size ceilings, and separation from live database modules.
+- [x] Add collector tests for pagination, duplicate/repeated cursors, partial budgets, resumed/cold scans, and no starvation.
+- [x] Cover withdrawal, PDS migration, URL replacement, domain takeover/mismatch, transient outages, and stale consent expiry.
+- [x] Reuse and extend SSRF tests for every new request path; verify a relay candidate cannot trigger internal-network access.
+- [x] Validate explicit public JSON allowlists, untrusted strings, size ceilings, and separation from live database modules.
 - [ ] Demonstrate successful collection with real opt-in test creators; confirm the empty-directory case remains honest.
 - [ ] Measure requests, bytes, scan duration, throttling, and retry counts before increasing limits.

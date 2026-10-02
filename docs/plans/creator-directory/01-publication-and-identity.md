@@ -36,7 +36,7 @@ The site responds at `/.well-known/feedme`:
 }
 ```
 
-These fields already exist. Propose adding an optional `mode: "live" | "demo"` to this HTTP document, not the PDS schema. Exclude explicit demos; classify old endpoints without `mode` as identity-checked with unspecified deployment mode. A claimed live mode cannot establish that payments work. Do not add application versions, account secrets, payment configuration, or periodic heartbeat timestamps.
+The implementation adds an optional `mode: "live" | "demo"` to this HTTP document, not the PDS schema. Exclude explicit demos; classify old endpoints without `mode` as identity-checked with unspecified deployment mode. A claimed live mode cannot establish that payments work. Do not add application versions, account secrets, payment configuration, or periodic heartbeat timestamps.
 
 ## Setup and update behavior
 
@@ -56,7 +56,7 @@ sequenceDiagram
 
 - Make publication part of the first explicit setup completion; login alone is not consent to publish a new site. Keep the existing clearly labeled discovery checkbox. A default can be checked, but the creator confirms it before publication.
 - Display which DID and HTTPS origin will be advertised. Require the configured creator identity and a real HTTPS origin; development/demo processes must never advertise themselves.
-- Reuse profile save and project publication. Change the singleton only when public profile, origin, or preference changes; do not write on every boot, timer tick, or page view.
+- Reuse profile save. Project publication deliberately does not rewrite the announcement. Change the singleton only when public profile, origin, or preference changes; do not write on every boot, timer tick, or page view.
 - On canonical URL change, show the stale published address and provide a deliberate republish action. Keep one writer per creator, matching the current app's constraints. Starting a restored server must not overwrite a different current announcement silently.
 - Read any existing marker during setup reconciliation. If it has `discoverable: false` or a different canonical site, preserve it until the creator explicitly resolves the difference. This is a narrow setup check, not a general inbound sync implementation.
 - Verify a newly announced site from an external environment before marking setup healthy. Public directory inclusion remains asynchronous and may be moderated.
@@ -75,11 +75,15 @@ Initial verification establishes a reciprocal PDS/site claim using trusted ident
 
 This is not proof of ongoing control by the same website operator. A reassigned domain can reproduce the publicly known declaration while an old PDS marker still points there. Periodic fetches do not solve that attack. Keep directory links distinct from payment authorization and describe verification narrowly. If stronger hosting continuity becomes a requirement, evaluate a per-installation public key authorized in the creator's PDS and challenge signatures from the site; that would add key lifecycle and migration work and is outside the minimal directory contract.
 
+## Implementation
+
+Implemented in `profile-publication.ts`, Settings, the transactional outbox, and the existing public Space Proxy adapter. The reviewed PDS CID becomes `swapRecord`; a retry only acknowledges a lost successful response when the current remote value exactly matches the intended public record. Imports remain local until reviewed. Restores and protocol migration do not automatically republish the profile.
+
 ## Validation and checklist
 
-- [ ] Extend existing profile/outbox tests for setup publication, explicit opt-out, no-change restarts, and retries.
+- [x] Extend profile/outbox tests for reviewed publication, remote opt-out conflicts, and lost-response retries. Restarts no longer enqueue a profile through migration.
 - [ ] Test that a draft, demo startup, failed login, or incomplete setup never announces an instance.
-- [ ] Test URL changes, reused handles, changed PDS endpoints, mismatched DIDs, and absent optional mode.
+- [x] Test URL changes, handle mismatch, changed PDS endpoints, mismatched DIDs, and absent optional mode.
 - [ ] Exercise two externally reachable test sites: confirm each PDS points only to its own matching declaration.
 - [ ] Verify `@feedme.fund` schema authority publication separately from creator publication.
-- [ ] Document that a verified domain association is neither a payment guarantee nor an endorsement.
+- [x] Document that a verified domain association is neither a payment guarantee nor an endorsement.
