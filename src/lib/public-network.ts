@@ -16,7 +16,7 @@ export const publicUrl = (input: string) => {
   return url;
 };
 export class PublicHttpError extends Error { constructor(readonly status: number, readonly code?: string) { super(`Public provider returned HTTP ${status}.`); } }
-export const publicJson = async (input: string): Promise<unknown> => {
+export const publicJson = async (input: string, { maxBytes = 2_000_000 }: { maxBytes?: number } = {}): Promise<unknown> => {
   const url = publicUrl(input);
   const signal = AbortSignal.timeout(5000);
   const addresses = await Promise.race([lookup(url.hostname, { all: true }), new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new Error('Discovery timed out.')), { once: true }))]);
@@ -28,9 +28,17 @@ export const publicJson = async (input: string): Promise<unknown> => {
       lookup: (_host, _options, callback) => callback(null, pinned.address, pinned.family),
     }, (res) => {
       const chunks: Buffer[] = []; let size = 0;
-      res.on('data', (chunk: Buffer) => { size += chunk.length; if (size > 2_000_000) req.destroy(new Error('Discovery response is too large.')); else chunks.push(chunk); });
+      res.on('data', (chunk: Buffer) => { size += chunk.length; if (size > maxBytes) req.destroy(new Error('Discovery response is too large.')); else chunks.push(chunk); });
       res.on('error', reject);
-      res.on('end', () => { try { const body = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (res.statusCode !== 200) reject(new PublicHttpError(res.statusCode || 502, body?.error)); else resolve(body); } catch { reject(new Error('Invalid discovery response.')); } });
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        if (res.statusCode !== 200) {
+          let code: string | undefined;
+          try { const body = JSON.parse(text); if (typeof body?.error === 'string' && body.error.length < 100) code = body.error; } catch { /* Providers can return HTML error pages. */ }
+          reject(new PublicHttpError(res.statusCode || 502, code)); return;
+        }
+        try { resolve(JSON.parse(text)); } catch { reject(new Error('Invalid discovery response.')); }
+      });
     });
     req.on('error', reject); req.end();
   });

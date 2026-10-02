@@ -100,7 +100,8 @@ describe('complete private recovery checkpoints', () => {
     await verifyRecovery(true); expect(getKv(db, 'recovery', 'paused')).toBe(true);
     await expect(resumeRecovery()).rejects.toThrow('different checkpoint');
     remote.set(`${CHECKPOINT}/self`, saved); await resumeRecovery(); expect(getKv(db, 'recovery', 'paused')).toBe(false);
-    expect(db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE destination='public'").get()?.n).toBe(2);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE destination='public'").get()?.n).toBe(1);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM outbox WHERE collection='fund.feedme.profile'").get()?.n).toBe(0);
   });
   it('does not import an incomplete checkpoint or another space', async () => {
     seed(); await drainOutbox(); const { checkpoint, entries } = await downloadRecovery(space); const target = openDatabase(':memory:');

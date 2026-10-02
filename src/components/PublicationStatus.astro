@@ -1,0 +1,23 @@
+---
+import type { Publication } from '../lib/profile-publication';
+import { launchPostUrl } from '../lib/profile-publication';
+import { directoryHints } from '../lib/directory-hints';
+import { getDb } from '../lib/db';
+import { config } from '../lib/config';
+interface Props { publication: Publication; }
+const { publication } = Astro.props;
+const cfg = config();
+const pending = Boolean(getDb().prepare("SELECT 1 FROM outbox WHERE destination='public' AND collection='fund.feedme.profile' LIMIT 1").get());
+const advertised = publication.state === 'ready' ? publication.profile : undefined;
+const published = advertised?.feedmeUrl === cfg.origin && advertised.discoverable !== false;
+const hints = published ? await directoryHints() : undefined;
+const listed = hints?.dids.includes(cfg.ownerDid);
+---
+<section class="admin-card">
+  <h2>Your place in the network</h2>
+  <p class="admin-help mt-3">Your profile tells other Feedme instances where to find you. The public directory checks for new profiles nightly.</p>
+  <dl class="mt-4"><div class="admin-stat-line"><dt>Public announcement</dt><dd>{cfg.demo ? 'Demo preview' : pending ? 'Awaiting sync' : publication.state === 'unavailable' ? 'Could not check PDS' : published ? 'Published to your PDS' : advertised?.discoverable === false ? 'Discovery disabled' : 'Save profile to publish'}</dd></div><div class="admin-stat-line"><dt>Directory</dt><dd>{cfg.demo ? 'Sample only' : listed ? 'Found in directory' : published ? 'Not confirmed yet' : 'Not listed'}</dd></div></dl>
+  {published && <><p class="admin-help mt-4">Introduce your Feedme on Bluesky. You’ll review the post in Bluesky before sharing it.</p><a class="button secondary mt-3" href={launchPostUrl(cfg.origin)} rel="noopener noreferrer">Share your Feedme ↗</a></>}
+  {!cfg.demo && <a class="button secondary mt-3" href="https://feedme.fund/creators/">Browse the public directory ↗</a>}
+  <p class="admin-help mt-4">A missing listing may mean the next scan is pending, your website could not be verified, or the relay has not found your account. Website checks do not verify payment readiness.</p>
+</section>

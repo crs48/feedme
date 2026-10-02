@@ -21,7 +21,7 @@ describe('fund.feedme migration', () => {
     const publicWrites = pendingWrites(db).filter((r) => r.destination === 'public');
     expect(JSON.stringify(publicWrites)).not.toContain('PRIVATE');
     expect(publicWrites.some((r) => r.rkey === 'draft')).toBe(false);
-    expect(publicWrites.find((r) => r.collection === 'fund.feedme.profile')?.value).toMatchObject({ feedmeUrl: 'https://feedme.example', discoverable: true });
+    expect(publicWrites.some((r) => r.collection === 'fund.feedme.profile')).toBe(false);
     expect(publicWrites.filter((r) => r.collection.startsWith('social.feedme.')).every((r) => r.value === null)).toBe(true);
     expect(getKv(db, 'app', 'private-space')).toBe('at://existing/social.feedme.receipts/original');
     const before = pendingWrites(db); migrateProtocol(db, { demo: false, ownerDid, origin: 'https://feedme.example' }); expect(pendingWrites(db)).toEqual(before);

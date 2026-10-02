@@ -5,7 +5,7 @@ let db: DatabaseSync;
 vi.mock('../src/lib/config', () => ({ config: () => ({ demo: false, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' }) }));
 vi.mock('../src/lib/auth', () => ({ oauthClient: async () => ({ restore: async () => ({ fetchHandler: transport }) }) }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
-import { enqueue, openDatabase, pendingWrites, setKv } from '../src/lib/db';
+import { enqueue, openDatabase, pendingWrites, setKv, getKv } from '../src/lib/db';
 import { createPrivateSpace, drainOutbox } from '../src/lib/habitat';
 
 describe('Habitat wire adapter', () => {
@@ -54,5 +54,29 @@ describe('Habitat wire adapter', () => {
     transport.mockResolvedValue(Response.json({ error: 'RecordNotFound' }, { status: 400 }));
     expect(await drainOutbox()).toEqual({ sent: 1, failed: 0 });
     expect(pendingWrites(db)).toHaveLength(0);
+  });
+  it('uses the reviewed profile CID and will not overwrite a concurrent remote edit', async () => {
+    const profile = { name: 'Creator', feedmeUrl: 'https://creator.example', discoverable: true };
+    enqueue(db, 'public', 'fund.feedme.profile', 'self', { $type: 'fund.feedme.profile', ...profile });
+    setKv(db, 'profile-publication', 'expected', { profile, cid: 'old-cid' });
+    transport.mockResolvedValueOnce(Response.json({ error: 'InvalidSwap' }, { status: 400 })).mockResolvedValueOnce(Response.json({ cid: 'new-cid', value: { ...profile, discoverable: false } }));
+    expect(await drainOutbox()).toEqual({ sent: 0, failed: 1 });
+    expect(JSON.parse(transport.mock.calls[0][1].body).swapRecord).toBe('old-cid');
+    expect(pendingWrites(db)).toHaveLength(1);
+  });
+  it('acknowledges a lost profile write response only after an exact readback', async () => {
+    const profile = { name: 'Creator', feedmeUrl: 'https://creator.example', discoverable: true };
+    const record = { $type: 'fund.feedme.profile', ...profile };
+    enqueue(db, 'public', 'fund.feedme.profile', 'self', record);
+    setKv(db, 'profile-publication', 'expected', { profile, cid: null });
+    transport.mockResolvedValueOnce(new Response('lost response', { status: 503 })).mockResolvedValueOnce(Response.json({ cid: 'saved-cid', value: record }));
+    expect(await drainOutbox()).toEqual({ sent: 1, failed: 0 });
+    expect(JSON.parse(transport.mock.calls[0][1].body).swapRecord).toBeNull();
+    expect(getKv(db, 'profile-publication', 'expected')).toBeUndefined(); expect(pendingWrites(db)).toEqual([]);
+  });
+  it('does not publish a stale restored announcement without review', async () => {
+    enqueue(db, 'public', 'fund.feedme.profile', 'self', { name: 'Old profile' });
+    expect(await drainOutbox()).toEqual({ sent: 0, failed: 1 });
+    expect(transport).not.toHaveBeenCalled();
   });
 });

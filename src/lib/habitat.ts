@@ -1,7 +1,7 @@
 import { oauthClient } from './auth';
 import { config } from './config';
-import { getDb, getKv, setKv, pendingWrites, transaction, readRecord } from './db';
-import { NS } from './model';
+import { getDb, getKv, setKv, deleteKv, pendingWrites, transaction, readRecord } from './db';
+import { NS, type Profile } from './model';
 import { CHECKPOINT, RECOVERY, RECOVERY_INDEX, hashValue, type Checkpoint } from './recovery-model';
 import { localCheckpoint, prepareRecovery } from './recovery-tracking';
 
@@ -77,13 +77,25 @@ const drain = async () => {
         await writeVerifiedPrivate(space!, row.collection, row.rkey, row.value);
       } else {
         const method = isPrivate ? 'network.habitat.space' : 'com.atproto.repo';
-        const result = await habitatCall<{ cid?: string }>(`${method}.${row.value === null ? 'deleteRecord' : 'putRecord'}`, {
+        const condition = !isPrivate && row.collection === `${NS}.profile` ? getKv<{ profile: Profile; cid: string | null }>(db, 'profile-publication', 'expected') : undefined;
+        if (!isPrivate && row.collection === `${NS}.profile` && row.value && (!condition || hashValue({ $type: `${NS}.profile`, ...condition.profile }) !== hashValue(row.value))) throw new Error('Review and save your public profile in Settings before publishing its discovery address.');
+        let result: { cid?: string } | undefined;
+        try { result = await habitatCall<{ cid?: string }>(`${method}.${row.value === null ? 'deleteRecord' : 'putRecord'}`, {
           repo: config().ownerDid, collection: row.collection, rkey: row.rkey,
           ...(isPrivate ? { space } : {}), ...(row.value === null ? {} : { record: row.value }),
-        });
+          ...(condition ? { swapRecord: condition.cid } : {}),
+        }); } catch (error) {
+          if (!condition) throw error;
+          // A successful write with a lost response may fail CAS on retry. Only
+          // the exact intended remote value can acknowledge that queued write.
+          const remote = await habitatCall<{ cid: string; value: unknown } | undefined>('com.atproto.repo.getRecord', { repo: config().ownerDid, collection: row.collection, rkey: row.rkey }, true);
+          if (!remote || hashValue(remote.value) !== hashValue(row.value)) throw new Error('Your PDS profile changed or could not be published. Reload Settings, review its current address and save again.');
+          result = remote;
+        }
         db.prepare('INSERT INTO sync_receipts VALUES (?,?,?,?,?,?) ON CONFLICT(destination,collection,rkey) DO UPDATE SET digest=excluded.digest,cid=excluded.cid,verified_at=excluded.verified_at').run(row.destination, row.collection, row.rkey, hashValue(row.value), result?.cid || null, new Date().toISOString());
       }
-      db.prepare('DELETE FROM outbox WHERE id=? AND revision=?').run(row.id, row.revision);
+      const removed = db.prepare('DELETE FROM outbox WHERE id=? AND revision=?').run(row.id, row.revision);
+      if (Number(removed.changes) && row.collection === `${NS}.profile`) deleteKv(db, 'profile-publication', 'expected');
       sent++;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Synchronization failed';

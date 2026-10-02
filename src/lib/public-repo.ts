@@ -1,37 +1,16 @@
 import { z } from 'zod';
 import { didSchema, NS, profileSchema } from './model';
 import { getDb, getKv, setKv, readRecord } from './db';
-import { publicJson, PublicHttpError, publicUrl } from './public-network';
+import { publicJson, PublicHttpError } from './public-network';
 import { config } from './config';
 import { demoCreators } from './discovery-demo';
+import { creatorFromRecord, resolvePublicIdentity, siteDeclaration, xrpcUrl, type CreatorProfile } from './public-identity';
+export { creatorFromRecord, didDocumentUrl, xrpcUrl, type CreatorProfile } from './public-identity';
 
-export type CreatorProfile = { did: string; name: string; handle: string; bio: string; url: string; avatar?: string };
-export const xrpcUrl = (origin: string, method: string, params: Record<string, string>) => {
-  const url = new URL(`/xrpc/${method}`, publicUrl(origin));
-  url.search = new URLSearchParams(params).toString(); return url.href;
-};
-export const didDocumentUrl = (did: string) => {
-  didSchema.parse(did);
-  if (did.startsWith('did:plc:')) return `https://plc.directory/${encodeURIComponent(did)}`;
-  const parts = did.slice(8).split(':').map(decodeURIComponent);
-  if (parts.some((part) => !part || /[/\\?#@]/.test(part) || part === '..' || part === '.')) throw new Error('Invalid DID web path.');
-  return publicUrl(`https://${parts.shift()}/${parts.length ? `${parts.join('/')}/did.json` : '.well-known/did.json'}`).href;
-};
 export const publicPds = async (did: string) => {
   const cached = getKv<string>(getDb(), 'discovery-pds', did); if (cached) return cached;
-  const doc = z.object({ id: z.literal(did), service: z.array(z.object({ id: z.string(), type: z.string(), serviceEndpoint: z.string() })).default([]) }).parse(await publicJson(didDocumentUrl(did)));
-  const service = doc.service.find((s) => (s.id === '#atproto_pds' || s.id === `${did}#atproto_pds`) && s.type === 'AtprotoPersonalDataServer');
-  if (!service) throw new Error('This account has no public PDS.');
-  const pds = publicUrl(service.serviceEndpoint).origin;
+  const { pds } = await resolvePublicIdentity(did);
   setKv(getDb(), 'discovery-pds', did, pds, 300_000); return pds;
-};
-export const creatorFromRecord = (did: string, input: unknown): CreatorProfile | null => {
-  const record = z.object({ uri: z.literal(`at://${did}/${NS}.profile/self`), value: profileSchema.extend({ $type: z.literal(`${NS}.profile`) }) }).parse(input);
-  if (record.value.discoverable === false || !record.value.feedmeUrl) return null;
-  const url = publicUrl(record.value.feedmeUrl);
-  if (url.pathname !== '/' || url.search || url.hash) throw new Error('A Feedme home must be an HTTPS origin.');
-  const { name, handle, bio, avatar } = record.value;
-  return { did, name, handle, bio, avatar, url: url.origin };
 };
 export const discoverCreator = async (did: string, fresh = false): Promise<CreatorProfile | null> => {
   didSchema.parse(did);
@@ -49,7 +28,7 @@ export const discoverCreator = async (did: string, fresh = false): Promise<Creat
     creator = null;
   }
   if (creator) {
-    z.object({ did: z.literal(did), url: z.literal(creator.url), protocol: z.literal(NS) }).parse(await publicJson(new URL('/.well-known/feedme', creator.url).href));
+    if (siteDeclaration(did, creator.url, await publicJson(new URL('/.well-known/feedme', creator.url).href, { maxBytes: 65_536 })).mode === 'demo') creator = null;
   }
   setKv(getDb(), 'discovery-profile', did, { creator }, creator ? 300_000 : 60_000); return creator;
 };

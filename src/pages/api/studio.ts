@@ -6,10 +6,12 @@ import { config } from '../../lib/config';
 import { formObject, errorMessage, redirectNotice } from '../../lib/http';
 import { adminReturnPath, auditAdmin } from '../../lib/admin';
 import { people } from '../../lib/people';
-import { profile, project, saveFriend, saveProfile, saveProject, saveUpdate, updates } from '../../lib/repository';
+import { profile, project, saveFriend, saveProject, saveUpdate, updates } from '../../lib/repository';
+import { publishProfile } from '../../lib/profile-publication';
+import { profileSchema } from '../../lib/model';
 import { createPrivateSpace, drainOutbox } from '../../lib/habitat';
 import { connectStripe } from '../../lib/payments';
-import { getDb, enqueue } from '../../lib/db';
+import { getDb, enqueue, putRecord } from '../../lib/db';
 import { TID } from '@atproto/common-web';
 import { POST as POST_COLLECTION, projectPost, projectUri, shortPostText } from '../../lib/social-model';
 import { publishPost } from '../../lib/social-repo';
@@ -55,11 +57,11 @@ export const POST: APIRoute = async (context) => {
       case 'profile-import': {
         const person = (await people([config().ownerDid])).get(config().ownerDid);
         if (!person) throw new Error('Bluesky could not be reached. Your saved profile is unchanged.');
-        saveProfile({ ...profile(), name: person.name, handle: person.handle, avatar: config().demo ? '' : person.avatar || '', bio: person.bio && person.bio.length >= 3 ? person.bio : profile().bio });
+        putRecord(getDb(), 'profile', 'self', profileSchema.parse({ ...profile(), name: person.name, handle: person.handle, avatar: config().demo ? '' : person.avatar || '', bio: person.bio && person.bio.length >= 3 ? person.bio : profile().bio }));
         auditAdmin(user.did, 'profile.import', 'self');
         break;
       }
-      case 'profile': saveProfile({ ...profile(), ...form, discoverable: form.discoverable === 'yes' }); auditAdmin(user.did, 'profile.edit', 'self'); break;
+      case 'profile': await publishProfile({ ...profile(), ...form, discoverable: form.discoverable === 'yes' }, String(form.profileToken || ''), form.confirmProfileChange === 'yes'); auditAdmin(user.did, 'profile.edit', 'self'); break;
       case 'friend': saveFriend({ ...form, id: randomUUID() }); auditAdmin(user.did, 'circle.add', String(form.name)); break;
       case 'post-update': {
         const p = project(String(form.projectId));
@@ -112,6 +114,6 @@ export const POST: APIRoute = async (context) => {
       }
       default: throw new Error('Unknown action.');
     }
-    return redirectNotice(returnTo, config().demo ? 'Saved to this demo.' : 'Saved. Published changes are visible here; Sync records sends them to AT Protocol.');
+    return redirectNotice(returnTo, config().demo ? 'Saved to this demo.' : form.action === 'profile-import' ? 'Imported locally. Review and save your profile to publish it.' : 'Saved. Published changes sync to AT Protocol automatically; you can also use Sync records.');
   } catch (error) { return redirectNotice(returnTo, errorMessage(error), true); }
 };

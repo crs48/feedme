@@ -8,6 +8,7 @@ import { discoverCreator, xrpcUrl, type CreatorProfile } from './public-repo';
 import { publicJson } from './public-network';
 import { connections, graphPersonSchema, inView, visiblePerson, type Connection, type DiscoveryView, type GraphPerson } from './discovery-model';
 import { demoCreators, demoGraphPeople } from './discovery-demo';
+import { directoryHints } from './directory-hints';
 
 export const mapConcurrent = async <T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency = 6) => {
   const result: PromiseSettledResult<R>[] = new Array(items.length); let next = 0;
@@ -48,15 +49,24 @@ const demoConnections = async (actor: string, extended: boolean) => {
 };
 export const discover = async (actor: string | undefined, view: DiscoveryView, page = 0, circle = 0, cursor?: string): Promise<DiscoveryResult> => {
   const result = resultBase(); let candidates: Connection[] = [];
+  const directory = !config().demo ? await directoryHints() : undefined;
   if (config().demo) {
     const connected = actor ? await demoConnections(actor, view === 'extended') : [];
     candidates = view === 'explore' || !actor ? demoCreators.filter((p) => p.did !== actor).map((p) => connected.find((c) => c.did === p.did) || { did: p.did, following: false, follower: false, via: [] }) : connected;
   } else if (view === 'explore') {
+    const offset = cursor?.startsWith('directory:') ? Number(cursor.slice(10)) : 0;
+    if (directory?.dids.length && (!cursor || cursor.startsWith('directory:')) && Number.isSafeInteger(offset) && offset >= 0 && offset < directory.dids.length) {
+      candidates = directory.dids.slice(offset, offset + 24).filter(did => did !== actor).map(did => ({ did, following: false, follower: false, via: [] }));
+      result.nextCursor = offset + 24 < directory.dids.length ? `directory:${offset + 24}` : 'relay:';
+      if (directory.partial) result.warnings.push('The public directory has partial coverage. Continue to the relay or look up an account directly.');
+    } else {
     try {
-      const data = z.object({ repos: z.array(z.object({ did: graphPersonSchema.shape.did })).max(2000), cursor: z.string().max(2048).optional() }).parse(await publicJson(xrpcUrl(config().discoveryRelay, 'com.atproto.sync.listReposByCollection', { collection: `${NS}.profile`, limit: '24', ...(cursor ? { cursor } : {}) })));
+      const relayCursor = cursor?.startsWith('relay:') ? cursor.slice(6) : cursor?.startsWith('directory:') ? undefined : cursor;
+      const data = z.object({ repos: z.array(z.object({ did: graphPersonSchema.shape.did })).max(2000), cursor: z.string().max(2048).optional() }).parse(await publicJson(xrpcUrl(config().discoveryRelay, 'com.atproto.sync.listReposByCollection', { collection: `${NS}.profile`, limit: '24', ...(relayCursor ? { cursor: relayCursor } : {}) })));
       candidates = [...new Set(data.repos.map((r) => r.did))].filter((did) => did !== actor).map((did) => ({ did, following: false, follower: false, via: [] }));
-      result.nextCursor = data.cursor !== cursor ? data.cursor : undefined;
+      result.nextCursor = data.cursor && data.cursor !== relayCursor ? `relay:${data.cursor}` : undefined;
     } catch { result.warnings.push('The public directory is unavailable. Your Bluesky network and direct handle search are independent of this directory.'); return result; }
+    }
   } else if (actor) {
     const graphs = await Promise.allSettled([readGraph(actor, actor, 'follows'), readGraph(actor, actor, 'followers')]);
     if (graphs.some((g) => g.status === 'rejected')) { result.warnings.push('Part of your Bluesky network could not be loaded. Reconnect your account or retry; missing results do not mean someone has no Feedme.'); }
@@ -76,6 +86,11 @@ export const discover = async (actor: string | undefined, view: DiscoveryView, p
     candidates = connections(actor, follows, followers, branches);
   }
   candidates = candidates.filter((c) => inView(c, view)); result.candidates = candidates.length;
+  if (directory && view !== 'explore') {
+    const known = new Set(directory.dids);
+    const rank = (c: Connection) => (c.following && c.follower ? 10000 : c.following ? 5000 : c.follower ? 3000 : 0) + (known.has(c.did) ? 500 : 0) + c.via.length;
+    candidates.sort((a,b) => rank(b) - rank(a) || a.did.localeCompare(b.did));
+  }
   const batch = config().demo ? candidates : candidates.slice(view === 'explore' ? 0 : page * 24, view === 'explore' ? 24 : (page + 1) * 24);
   result.checked = batch.length; result.more = view !== 'explore' && candidates.length > (page + 1) * 24;
   const profiles = await mapConcurrent(batch, async (connection) => {

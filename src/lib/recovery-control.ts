@@ -4,7 +4,7 @@ import { downloadRecovery, validateRecoveryRelations } from './recovery-import';
 import { CHECKPOINT, hashValue, type Checkpoint } from './recovery-model';
 import { privateSpace, readPrivateRecord } from './habitat';
 import { reconcileStripe } from './recovery-stripe';
-import { NS, projectSchema, profileSchema, updateSchema, friendSchema, type Support } from './model';
+import { NS, projectSchema, updateSchema, friendSchema, type Support } from './model';
 import { queueSupport } from './support-ledger';
 
 export type VerificationStatus = { attemptedAt: string; verifiedAt?: string; error?: string };
@@ -38,10 +38,11 @@ const resume = async () => {
   await reconcileStripe(db); // Recheck after downtime, while webhooks and mutations are still paused.
   validateRecoveryRelations(db);
   transaction(db, () => {
-    for (const [kind, collection, schema] of [['profile', 'profile', profileSchema], ['project', 'project', projectSchema], ['update', 'update', updateSchema], ['friend', 'recommendation', friendSchema]] as const) {
+    // Restoring elsewhere must not silently replace the creator's advertised site.
+    for (const [kind, collection, schema] of [['project', 'project', projectSchema], ['update', 'update', updateSchema], ['friend', 'recommendation', friendSchema]] as const) {
       for (const value of listRecords(db, kind)) {
         const record = schema.parse(value); if ('status' in record && record.status === 'draft') continue;
-        enqueue(db, 'public', `${NS}.${collection}`, 'id' in record ? record.id : 'self', { $type: `${NS}.${collection}`, ...record, ...(kind === 'profile' ? { feedmeUrl: config().origin } : {}) });
+        enqueue(db, 'public', `${NS}.${collection}`, record.id, { $type: `${NS}.${collection}`, ...record });
       }
     }
     for (const support of listRecords<Support>(db, 'support')) queueSupport(db, support, config().ownerDid);

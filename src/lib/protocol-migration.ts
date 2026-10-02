@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { enqueue, getKv, listRecords, readRecord, setKv, transaction } from './db';
-import { NS, LEGACY_NS, profileSchema, projectSchema, updateSchema, friendSchema, type Support } from './model';
+import { enqueue, getKv, listRecords, setKv, transaction } from './db';
+import { NS, LEGACY_NS, projectSchema, updateSchema, friendSchema, type Support } from './model';
 import { queueSupport } from './support-ledger';
 
 // Local operational records keep their keys. Old public project records are retained
@@ -12,8 +12,7 @@ export const migrateProtocol = (db: DatabaseSync, cfg: { demo: boolean; ownerDid
       const projects = listRecords(db, 'project').flatMap((value) => { const p = projectSchema.safeParse(value); return p.success && p.data.status !== 'draft' ? [p.data] : []; });
       const queued = db.prepare('SELECT 1 FROM outbox WHERE collection LIKE ?').get(`${LEGACY_NS}.%`);
       if (projects.length || queued) {
-        const p = profileSchema.safeParse(readRecord(db, 'profile', 'self'));
-        if (p.success) enqueue(db, 'public', `${NS}.profile`, 'self', { $type: `${NS}.profile`, ...p.data, feedmeUrl: cfg.origin, discoverable: p.data.discoverable ?? true });
+        // Announce a canonical site only after the creator reviews Settings.
         projects.forEach((p) => enqueue(db, 'public', `${NS}.project`, p.id, { $type: `${NS}.project`, ...p }));
         const published = new Set(projects.map((p) => p.id));
         for (const value of listRecords(db, 'update')) { const u = updateSchema.safeParse(value); if (u.success && published.has(u.data.projectId)) enqueue(db, 'public', `${NS}.update`, u.data.id, { $type: `${NS}.update`, ...u.data }); }

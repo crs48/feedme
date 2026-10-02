@@ -38,6 +38,7 @@ export const config = () => {
   return {
     demo, origin, ownerDid, adminDids, identities, tipAmounts, defaultTipAmount: tipAmounts[1], dataDir,
     discoveryRelay: process.env.DISCOVERY_RELAY_URL || 'https://relay1.us-east.bsky.network',
+    directoryUrl: process.env.DIRECTORY_URL === 'off' ? '' : process.env.DIRECTORY_URL || 'https://feedme.fund/directory/v1.json',
     habitatUrl: process.env.HABITAT_URL || 'https://pear.habitat.network',
     stripeKey: process.env.STRIPE_SECRET_KEY || '',
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',

@@ -1,0 +1,8 @@
+---
+import CreatorDirectory from '../../../components/CreatorDirectory.astro';
+import { directory } from '../../../lib/directory';
+import { publicDirectoryCreators } from '../../../../src/lib/directory-model';
+export const getStaticPaths = () => Array.from({ length: Math.max(0, Math.ceil(publicDirectoryCreators(directory.creators.map(c => ({ did: c.did, creator: c })), Date.now()).length / 24) - 1) }, (_, i) => ({ params: { page: String(i + 2) }, props: { page: i + 2 } }));
+const { page } = Astro.props;
+---
+<CreatorDirectory page={page} />

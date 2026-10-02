@@ -45,6 +45,18 @@ for (const file of html) {
 }
 for (const route of ['', 'get-started/', 'demo/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
 const png = await readFile(join(root, 'demo/share/sample.png'));
+assert(all.has(join(root, 'creators/index.html')), 'Missing real creator directory.');
+const directorySource = await readFile(join(root, 'directory/v1.json'), 'utf8');
+assert(Buffer.byteLength(directorySource) <= 2_000_000, 'Directory snapshot is too large.');
+const directory = JSON.parse(directorySource);
+assert.equal(directory.schemaVersion, 1);
+assert.deepEqual(Object.keys(directory).sort(), ['creators', 'generatedAt', 'schemaVersion', 'source']);
+const creatorFields = new Set(['did', 'handle', 'name', 'bio', 'url', 'profileUri', 'profileCid', 'advertisementCheckedAt', 'siteCheckedAt', 'lastVerifiedAt', 'siteStatus']);
+for (const creator of directory.creators) {
+  assert(Object.keys(creator).every(key => creatorFields.has(key)), 'Unexpected field in public directory.');
+  assert.equal(creator.profileUri, `at://${creator.did}/fund.feedme.profile/self`);
+  assert(!creator.url || (creator.siteStatus === 'reachable' && creator.lastVerifiedAt), 'Unverified directory link.');
+}
 assert.equal(png.subarray(1,4).toString(), 'PNG'); assert.equal(png.readUInt32BE(16), 1200); assert.equal(png.readUInt32BE(20), 630);
 assert((await stat(join(root, 'index.html'))).size < 50_000, 'Keep the landing page small.');
 console.log(`Static site verified: ${html.length} HTML pages, ${links} local links/assets, offline forms, no server files, 1200×630 share image.`);
