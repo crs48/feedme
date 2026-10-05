@@ -1,10 +1,10 @@
 import { config } from './config';
-import { enqueue, getDb, getKv, listRecords, setKv, transaction } from './db';
+import { enqueue, getDb, getKv, readRecord, listRecords, setKv, transaction } from './db';
 import { downloadRecovery, validateRecoveryRelations } from './recovery-import';
 import { CHECKPOINT, hashValue, type Checkpoint } from './recovery-model';
 import { privateSpace, readPrivateRecord } from './habitat';
 import { reconcileStripe } from './recovery-stripe';
-import { NS, projectSchema, updateSchema, friendSchema, type Support } from './model';
+import { NS, projectSchema, updateSchema, friendSchema, type Support, type Project } from './model';
 import { queueSupport } from './support-ledger';
 
 export type VerificationStatus = { attemptedAt: string; verifiedAt?: string; error?: string };
@@ -41,7 +41,7 @@ const resume = async () => {
     // Restoring elsewhere must not silently replace the creator's advertised site.
     for (const [kind, collection, schema] of [['project', 'project', projectSchema], ['update', 'update', updateSchema], ['friend', 'recommendation', friendSchema]] as const) {
       for (const value of listRecords(db, kind)) {
-        const record = schema.parse(value); if ('status' in record && record.status === 'draft') continue;
+        const record = schema.parse(value); if (('status' in record && record.status === 'draft') || ('libcard' in record && record.libcard) || ('projectId' in record && readRecord<Project>(db, 'project', record.projectId)?.libcard)) continue;
         enqueue(db, 'public', `${NS}.${collection}`, record.id, { $type: `${NS}.${collection}`, ...record });
       }
     }

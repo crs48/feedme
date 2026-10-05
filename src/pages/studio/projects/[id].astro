@@ -7,6 +7,7 @@ import { projectPerformance } from '../../../lib/analytics';
 import { money } from '../../../lib/model';
 const p = project(Astro.params.id || '');
 if (!p) return Astro.redirect('/404');
+if (p.libcard) return Astro.redirect('/studio/projects#libcard');
 const stats = projectPerformance(payments(), [p]).find((s) => s.id === p.id)!;
 ---
 <AdminLayout title={p.title} description={`${p.status === 'draft' ? 'Private draft' : p.status === 'active' ? 'Published' : p.status} · ${money(stats.net)} net support · ${stats.count} contributions, all time`}>

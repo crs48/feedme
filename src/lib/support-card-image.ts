@@ -31,15 +31,15 @@ export const supportCardSvg = (card: SupportCard, demo = false) => {
     const y = start + Math.floor(index / 2) * (height + gap);
     const pct = percentageLabel(project.percentage);
     const progress = project.progress;
-    const label = progress ? aspirationLabel(progress) : 'Ongoing work · every bit helps';
+    const label = card.pickMode ? (project.target ? `${money(project.target)} aspiration` : 'A suggestion, freely given') : progress ? aspirationLabel(progress) : 'Ongoing work · every bit helps';
     const titleY = y + (rows === 1 ? 61 : rows === 2 ? 43 : 29);
     const barY = titleY + (rows === 1 ? 50 : rows === 2 ? 31 : 20);
     const goalY = y + height - 21;
     return `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="16" fill="#ffffff" stroke="#e1e8f2"/>
       ${text(x + 22, titleY, fit(project.title, width === 540 ? 17.5 : 40), 22, '#192940', true)}
       ${text(x + width - 108, titleY, pct, 26, '#0866ff', true)}
-      ${bar(x + 22, barY, width - 44, 8, '#edf2fa')}${bar(x + 22, barY, Math.max(2, (width - 44) * project.percentage / 100), 8, '#0866ff')}
-      ${rows === 1 ? text(x + 22, barY + 40, 'of this support', 18, '#627088') : ''}
+      ${card.pickMode ? '' : `${bar(x + 22, barY, width - 44, 8, '#edf2fa')}${bar(x + 22, barY, Math.max(2, (width - 44) * project.percentage / 100), 8, '#0866ff')}`}
+      ${rows === 1 ? text(x + 22, barY + 40, card.pickMode ? 'of these picks' : 'of this support', 18, '#627088') : ''}
       ${progress ? text(x + 22, goalY - 20, `${money(project.target)} aspiration`, 16, '#26334b', true) : ''}
       ${text(x + 22, goalY, fit(label, 28), 16, progress?.exceeded ? '#7246b5' : '#627088')}
       ${progress ? `${bar(x + width - 170, goalY - 9, 148, 5, '#edf2fa')}${bar(x + width - 170, goalY - 9, 148 * progress.fill / 100, 5, '#a9caff')}${progress.exceeded ? bar(x + width - 170, goalY - 9, Math.max(2, 148 * progress.surplusFill / 100), 5, 'url(#rainbow)') : ''}` : ''}`;
@@ -50,7 +50,7 @@ export const supportCardSvg = (card: SupportCard, demo = false) => {
     <g font-family="Lato">
       <image href="${brandIcon.dataUrl}" x="52" y="37" width="36" height="36"/>${text(99, 64, 'feedme', 26, '#192940', true)}
       ${text(930, 61, demo ? 'DEMO · NO PAYMENT' : 'MY SUPPORT SPLIT', 16, '#627088', true)}
-      ${text(52, 127, 'Good things, backed.', 46, '#192940', true)}
+      ${text(52, 127, card.pickMode ? 'More of what matters.' : 'Good things, backed.', 46, '#192940', true)}
       ${text(52, 165, `Supporting ${fit(card.creator.name, 40)}`, 24, '#627088')}
       ${cells}
       ${text(52, 608, card.other.count ? `+ ${card.other.count} other ${card.other.count === 1 ? 'project' : 'projects'} · ${percentageLabel(card.other.percentage)} of this support` : 'A little support. A lot of possibility.', 17, '#627088')}

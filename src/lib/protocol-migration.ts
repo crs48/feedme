@@ -9,7 +9,7 @@ export const migrateProtocol = (db: DatabaseSync, cfg: { demo: boolean; ownerDid
   if (getKv(db, 'app', 'protocol-version') === NS) return;
   transaction(db, () => {
     if (!cfg.demo) {
-      const projects = listRecords(db, 'project').flatMap((value) => { const p = projectSchema.safeParse(value); return p.success && p.data.status !== 'draft' ? [p.data] : []; });
+      const projects = listRecords(db, 'project').flatMap((value) => { const p = projectSchema.safeParse(value); return p.success && !p.data.libcard && p.data.status !== 'draft' ? [p.data] : []; });
       const queued = db.prepare('SELECT 1 FROM outbox WHERE collection LIKE ?').get(`${LEGACY_NS}.%`);
       if (projects.length || queued) {
         // Announce a canonical site only after the creator reviews Settings.

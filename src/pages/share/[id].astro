@@ -14,17 +14,17 @@ const description = `Supporting ${card.creator.name}: ${card.projects.map((p) =>
 ---
 <Layout title={`Supporting ${card.creator.name}`} description={description} image={{ url: imageUrl, alt: description, width: 1200, height: 630 }}>
   <section class="shell share-page">
-    <header class="share-heading"><p class="eyebrow">{cfg.demo ? 'Demo public support' : 'Public support'}</p><h1>Good things, backed.</h1><p>A little encouragement for <a href="/">{card.creator.name}</a> and the things they’re making.</p></header>
+    <header class="share-heading"><p class="eyebrow">{cfg.demo ? 'Demo public support' : 'Public support'}</p><h1>{card.pickMode ? 'More of what matters.' : 'Good things, backed.'}</h1><p>A little encouragement for <a href="/">{card.creator.name}</a> and the things they’re making.</p></header>
     <img class="share-image" src={imageUrl} alt={description} width="1200" height="630" fetchpriority="high"/>
     <div class="share-detail-heading"><h2>The support breakdown</h2><span>{card.projectCount} {card.projectCount === 1 ? 'project' : 'projects'} supported</span></div>
     <div class="share-projects">{card.projects.map((p) => <article>
       <div class="share-project-heading"><div><p class="eyebrow">{p.category}{p.archived && ' · Archived'}</p><h3>{p.archived ? p.title : <a href={`/support/${p.id}`}>{p.title} ↗</a>}</h3></div><strong>{percentageLabel(p.percentage)}</strong></div>
-      <div class="share-allocation" aria-hidden="true"><span style={`width:${Math.max(1, p.percentage)}%`}></span></div>
-      <p class="share-caption">of this support</p>
-      {p.progress ? <div class="share-aspiration"><p>{money(p.target)} aspiration</p><AspirationProgress progress={p.progress}/></div> : <p class="share-caption">Ongoing work · every bit helps</p>}
+      <>{!card.pickMode && <div class="share-allocation" aria-hidden="true"><span style={`width:${Math.max(1, p.percentage)}%`}></span></div>}</>
+      <p class="share-caption">{card.pickMode ? 'of these picks' : 'of this support'}</p>
+      {p.progress ? <div class="share-aspiration"><p>{money(p.target)} aspiration</p><AspirationProgress progress={p.progress}/></div> : <p class="share-caption">{card.pickMode ? p.target > 0 ? `${money(p.target)} aspiration` : 'A suggestion, freely given' : 'Ongoing work · every bit helps'}</p>}
     </article>)}</div>
     {card.other.count > 0 && <p class="share-footnote">Another {percentageLabel(card.other.percentage)} went to {card.other.count} other {card.other.count === 1 ? 'project' : 'projects'}. The six largest available projects appear above.</p>}
-    <p class="share-footnote">Allocation percentages reflect this confirmed public tip. Project progress reflects all current public support. Private support is never included.</p>
+    <p class="share-footnote">{card.pickMode ? 'These picks are suggestions. The creator receives the whole gift and chooses how to use it.' : 'Allocation percentages reflect this confirmed public tip. Project progress reflects all current public support. Private support is never included.'}</p>
     <div class="share-invitation"><div><h2>Make a little room for good things.</h2><p>Choose the projects you’d love to see more of.</p></div><a class="button" href="/">Support {card.creator.name} ↗</a></div>
     <div class="share-follow"><FollowButton kind="creator" subject={cfg.ownerDid} title={card.creator.name} returnTo={Astro.url.pathname}/><a href="/discover">Discover more creators ↗</a></div>
   </section>

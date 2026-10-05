@@ -1,0 +1,31 @@
+---
+import type { APIContext } from 'astro';
+import Layout from '../layouts/Layout.astro';
+import Creator from '../components/Creator.astro';
+import PickVisit from '../components/PickVisit.astro';
+import { config } from '../lib/config';
+import { libcardSnapshot, libcardTargets } from '../lib/libcard';
+import { prefillPicks } from '../lib/picks';
+import { pickFormValues, readPickReview, oneField, type PickValues } from '../lib/pick-checkout';
+import { errorMessage } from '../lib/http';
+const cfg = config();
+if (!cfg.libcard) return Astro.redirect('/');
+const snapshot = libcardSnapshot();
+if (!snapshot) Astro.response.status = 503;
+const prefill = prefillPicks(Astro.url.searchParams, libcardTargets(snapshot).map(p => p.id), cfg.defaultTipAmount);
+let values: PickValues = { ...prefill, frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
+let notice = prefill.removed ? 'Unavailable or invalid selections were removed. Please review your picks.' : '';
+if (Astro.request.method === 'POST') {
+  try {
+    const form = await Astro.request.formData();
+    const edit = oneField(form, 'editReview');
+    values = edit ? readPickReview(Astro, edit) : pickFormValues(Astro as APIContext, form);
+    const ids = new Set(libcardTargets(snapshot).map(p => p.id));
+    if (values.picks.some(p => !ids.has(p.projectId))) notice = 'Unavailable selections were removed. Please review your picks.';
+    values = { ...values, picks: values.picks.filter(p => ids.has(p.projectId)) };
+  } catch (error) { notice = errorMessage(error); Astro.response.status = 400; }
+}
+---
+<Layout title={`Give to ${snapshot?.document.profile.name || 'this creator'}`} noindex>
+  <Creator/><div class="shell"><PickVisit values={values} notice={notice}/></div>
+</Layout>

@@ -1,0 +1,122 @@
+---
+import { config } from '../lib/config';
+import { libcardSnapshot, libcardTargets } from '../lib/libcard';
+import { createPickForm, type PickValues } from '../lib/pick-checkout';
+import { money } from '../lib/model';
+import Markdown from './Markdown.astro';
+interface Props { values?: PickValues; notice?: string; }
+const cfg = config();
+const snapshot = libcardSnapshot();
+const targets = libcardTargets(snapshot);
+const values = Astro.props.values || { amount: cfg.defaultTipAmount, picks: [], frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
+const requestId = snapshot ? createPickForm(Astro, targets.map(p => p.id)) : '';
+const total = values.picks.reduce((n, p) => n + p.count, 0);
+const untippable = snapshot?.document.items.filter(i => !i.feedme) || [];
+---
+{!snapshot ? <section class="panel"><h2 class="section-title">This page is getting ready.</h2><p class="muted mt-3">The creator’s LibCard is not available yet. Please try again shortly.</p></section> : <>
+  {snapshot.document.about && <div class="pick-about"><Markdown content={snapshot.document.about}/></div>}
+  {Astro.props.notice && <p class="notice" role="status">{Astro.props.notice}</p>}
+  <form class="pick-visit" data-pick-visit action="/api/checkout/review" method="post">
+    <input type="hidden" name="requestId" value={requestId}/>
+    <section aria-labelledby="pick-heading">
+      <p class="eyebrow">A little encouragement</p><h2 id="pick-heading" class="section-title mt-2">What would you love to see more of?</h2>
+      <p class="muted pick-intro">Pick what speaks to you. Extra picks add emphasis.</p>
+      <div class="pick-shortcuts"><button class="button secondary" name="intent" value="all" formaction="/checkout" data-pick-shortcut="all">All of these, equally</button><button class="pick-quiet" name="intent" value="creator" formaction="/checkout" data-pick-shortcut="creator">Just them</button></div>
+      <noscript><p class="notice">Choose a whole count from 0 to 9 for each item. You’ll review the exact dollar split before paying.</p></noscript>
+      <div class="pick-list">{targets.map(p => {
+        const count = values.picks.find(v => v.projectId === p.id)?.count || 0;
+        return <article class="pick-row" data-pick-row={p.id}>
+          <div class="pick-copy"><button type="button" class="pick-add" data-pick-add aria-label={`Add a pick to ${p.title}`} hidden>{p.title} <span aria-hidden="true">+</span></button><h3 data-pick-fallback>{p.title}</h3>
+            {p.summary && <p>{p.summary}</p>}
+            <div class="pick-details">{p.libcard?.url && <a href={p.libcard.url} rel="noopener noreferrer">Visit {p.libcard.kind === 'social' ? 'profile' : 'link'} ↗</a>}{p.target > 0 && <span>{money(p.target)} aspiration</span>}</div>
+          </div>
+          <div class="pick-count"><label data-pick-input-label for={`pick-${p.id}`}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input/>
+            <button type="button" class="pick-mark" data-pick-remove aria-label={`Remove one pick from ${p.title}`} hidden>{count === 1 ? '✓' : count > 1 ? `×${count}` : ''}</button>
+            <output data-pick-share>{total && count ? `${Math.round(count / total * 1000) / 10}%` : ''}</output>
+          </div>
+        </article>;
+      })}</div>
+      {untippable.length > 0 && <nav class="pick-links" aria-label="More links"><h3>More from {snapshot.document.profile.name.split(/\s+/)[0]}</h3>{untippable.map(i => <a href={i.url} rel="noopener noreferrer">{i.label} ↗</a>)}</nav>}
+    </section>
+    <aside class="pick-payment panel">
+      <h2 class="section-title">Your gift</h2><p class="muted pick-intro">One amount. The things you care about.</p>
+      <div class="pick-presets">{cfg.tipAmounts.map(amount => <button type="submit" name="intent" value={`amount-${amount}`} formaction="/checkout" data-pick-amount={amount} aria-pressed={values.amount === amount}>{money(amount)}</button>)}</div>
+      <label class="field">Amount (USD)<input type="number" name="amount" min="1" max="1000" step="0.01" required value={(values.amount / 100).toFixed(2)} data-pick-total/></label>
+      <fieldset class="pick-frequency"><legend>How often?</legend>{(['once', 'monthly', 'yearly'] as const).map((frequency, index) => <label><input type="radio" name="frequency" value={frequency} checked={values.frequency === frequency}/><span>{['One-time', 'Monthly', 'Yearly'][index]}</span></label>)}</fieldset>
+      <p class="pick-fine">Recurring gifts repeat this amount, split, and visibility. Cancel anytime.{cfg.demo && ' Demo only; nothing is charged.'}</p>
+      <label class="field">Visibility<select name="visibility"><option value="anonymous" selected={values.visibility === 'anonymous'}>Anonymous</option><option value="private" selected={values.visibility === 'private'}>Private — identified to the creator</option><option value="public" selected={values.visibility === 'public'}>Public — identity, amount, and picks</option></select></label>
+      <p class="pick-fine">Private and public gifts require sign-in before payment. Only public gifts contribute to public pick totals.</p>
+      <label class="pick-checkbox"><input type="checkbox" name="announceAnonymously" value="yes" checked={values.announceAnonymously}/> Show an anonymous thank-you on the timeline (no amount).</label>
+      <label class="field">A private note <span class="muted">(optional)</span><textarea name="note" rows="3" maxlength="500">{values.note}</textarea></label>
+      <p class="pick-status" data-pick-status role="status" aria-live="polite">{total ? `${total} ${total === 1 ? 'pick' : 'picks'}. Ready to review.` : 'Choose at least one thing to begin.'}</p>
+      <button class="button pick-submit" type="submit" name="intent" value="review" data-pick-submit>Give this to {snapshot.document.profile.name}.</button>
+      <p class="pick-fine">They get all of it. Where you placed it is a suggestion.</p><p class="pick-fine">Review your gift here, then continue to Stripe.</p>
+    </aside>
+  </form>
+</>}
+<script>
+  document.querySelectorAll<HTMLFormElement>('[data-pick-visit]').forEach(form => {
+    const rows = [...form.querySelectorAll<HTMLElement>('[data-pick-row]')];
+    const inputs = rows.map(row => row.querySelector<HTMLInputElement>('[data-pick-input]')!);
+    const amount = form.querySelector<HTMLInputElement>('[data-pick-total]')!;
+    const status = form.querySelector<HTMLElement>('[data-pick-status]')!;
+    const update = () => {
+      const total = inputs.reduce((n, input) => n + Number(input.value), 0);
+      rows.forEach((row, i) => {
+        const count = Number(inputs[i].value), remove = row.querySelector<HTMLButtonElement>('[data-pick-remove]')!;
+        remove.textContent = count === 1 ? '✓' : count > 1 ? `×${count}` : '';
+        remove.hidden = count === 0;
+        row.querySelector<HTMLButtonElement>('[data-pick-add]')!.disabled = count >= 9;
+        row.querySelector<HTMLOutputElement>('[data-pick-share]')!.textContent = count && total ? `${Math.round(count / total * 1000) / 10}%` : '';
+        row.dataset.selected = String(count > 0);
+      });
+      status.textContent = total ? `${total} ${total === 1 ? 'pick' : 'picks'}. Ready to review.` : 'Choose at least one thing to begin.';
+      form.querySelector<HTMLButtonElement>('[data-pick-submit]')!.disabled = total === 0;
+      form.querySelectorAll<HTMLButtonElement>('[data-pick-amount]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.pickAmount) === Math.round(Number(amount.value) * 100))));
+    };
+    rows.forEach((row, i) => {
+      row.querySelector<HTMLElement>('[data-pick-fallback]')!.hidden = true;
+      row.querySelector<HTMLElement>('[data-pick-input-label]')!.hidden = true;
+      inputs[i].hidden = true;
+      const add = row.querySelector<HTMLButtonElement>('[data-pick-add]')!;
+      add.hidden = false;
+      add.addEventListener('click', () => { inputs[i].value = String(Math.min(9, Number(inputs[i].value) + 1)); update(); });
+      row.querySelector('[data-pick-remove]')!.addEventListener('click', () => { inputs[i].value = String(Math.max(0, Number(inputs[i].value) - 1)); update(); if (!Number(inputs[i].value)) add.focus(); });
+    });
+    form.querySelectorAll<HTMLButtonElement>('[data-pick-shortcut]').forEach(button => button.addEventListener('click', event => {
+      event.preventDefault(); inputs.forEach((input, i) => input.value = String(button.dataset.pickShortcut === 'all' || rows[i].dataset.pickRow === 'creator' ? 1 : 0)); update();
+    }));
+    form.querySelectorAll<HTMLButtonElement>('[data-pick-amount]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); amount.value = (Number(button.dataset.pickAmount) / 100).toFixed(2); update(); }));
+    amount.addEventListener('input', update); update();
+  });
+</script>
+<style>
+  .pick-visit { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:32px; align-items:start; margin-top:24px; }
+  .pick-about { max-width:720px; margin-block:20px; }
+  .pick-intro { font-size:14px; line-height:1.6; margin-top:8px; }
+  .pick-shortcuts { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin:24px 0; }
+  .pick-quiet { color:var(--color-primary); min-height:44px; font-size:14px; }
+  .pick-list { border:1px solid var(--color-border); border-radius:14px; overflow:hidden; }
+  .pick-row { padding:20px; display:flex; align-items:center; gap:16px; background:white; border-bottom:1px solid var(--color-border); }
+  .pick-row:last-child { border-bottom:0; } .pick-row[data-selected='true'] { background:#f7faff; }
+  .pick-copy { flex:1; min-width:0; } h3,.pick-add { font-size:16px; font-weight:600; overflow-wrap:anywhere; }
+  .pick-add { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; text-align:left; min-height:44px; }
+  .pick-add span { color:var(--color-primary); font-size:20px; } .pick-add:disabled span { visibility:hidden; }
+  .pick-copy > p { color:var(--color-muted); font-size:13px; line-height:1.6; margin-top:4px; }
+  .pick-details { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--color-muted); margin-top:8px; }
+  .pick-details a { color:var(--color-primary); display:inline-flex; align-items:center; min-height:32px; }
+  .pick-count { flex:0 0 65px; text-align:center; } .pick-count label { font-size:12px; } .pick-count input { width:65px; min-height:44px; }
+  .pick-mark { border:1px solid #bfd4f6; color:var(--color-primary); border-radius:50%; width:44px; height:44px; background:white; font-size:16px; font-weight:600; }
+  output { display:block; font-size:12px; color:var(--color-muted); margin-top:5px; min-height:18px; }
+  .pick-payment { position:sticky; top:24px; } .pick-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-block:20px; }
+  .pick-presets button { border:1px solid var(--color-border); border-radius:7px; min-height:44px; font-size:14px; }
+  .pick-presets button[aria-pressed='true'] { color:var(--color-primary); border-color:var(--color-primary); background:#f5f9ff; }
+  .pick-frequency { display:flex; gap:5px; padding:0; border:0; margin-bottom:12px; } legend { font-size:13px; margin-bottom:8px; }
+  .pick-frequency label { flex:1; cursor:pointer; } .pick-frequency input { margin-right:5px; } .pick-frequency span { font-size:12px; }
+  .pick-fine { font-size:12px; line-height:1.6; color:var(--color-muted); margin:8px 0 16px; } .pick-checkbox { display:flex; align-items:start; gap:8px; font-size:12px; line-height:1.6; margin-bottom:20px; }
+  .pick-status { font-size:13px; color:var(--color-muted); margin-block:16px; } .pick-submit { width:100%; text-align:center; }
+  .pick-links { display:flex; flex-wrap:wrap; gap:4px 20px; margin-top:24px; font-size:13px; } .pick-links h3 { flex-basis:100%; font-size:14px; margin-bottom:8px; } .pick-links a { min-height:44px; display:inline-flex; align-items:center; color:var(--color-primary); }
+  button:focus-visible, a:focus-visible { outline:3px solid #0866ff70; outline-offset:3px; } [hidden] { display:none!important; }
+  @media(max-width:850px) { .pick-visit { grid-template-columns:1fr; gap:24px; } .pick-payment { position:static; } }
+  @media(max-width:450px) { .pick-row { padding:16px; gap:8px; } .pick-shortcuts { gap:12px; } }
+</style>

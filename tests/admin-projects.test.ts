@@ -53,7 +53,7 @@ describe('admin project lifecycle and private reports', () => {
   it('rejects unauthenticated and non-admin mutations and exports even when called without middleware', async () => {
     for (const user of [undefined, { did: 'did:plc:cccccccccccccccccccccccc' }]) {
       state.user = user;
-      expect((await POST(context({ action: 'project', ...draft, target: '100' }))).status).toBe(403);
+      expect((await POST(context({ action: 'project', id: draft.id, title: draft.title, target: '100' }))).status).toBe(403);
       expect((await exportPayments(context({}, '/api/admin/export'))).status).toBe(403);
     }
     expect(projects(true)).toEqual([]); expect(pendingWrites(state.db!)).toEqual([]);

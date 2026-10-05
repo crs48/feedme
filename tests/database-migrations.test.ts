@@ -28,7 +28,7 @@ describe('database release compatibility', () => {
     old.exec("INSERT INTO events VALUES ('evt_paid',123)");
     old.close();
     const next = openDatabase(path);
-    expect(readDatabaseVersion(next)).toBe(1);
+    expect(readDatabaseVersion(next)).toBe(2);
     expect(readRecord(next, 'support', support.id)).toEqual(support);
     expect(pendingWrites(next)[0]).toMatchObject({ attempts: 3, value: support });
     expect(next.prepare('SELECT * FROM events').all()).toEqual([{ id: 'evt_paid', created: 123 }]);
