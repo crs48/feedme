@@ -37,6 +37,17 @@ describe('form and service request boundaries', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(response.headers.get('x-frame-options')).toBe('DENY');
   });
+  it('permits brief caching only for successful public LibCard GET/HEAD responses', async () => {
+    for (const method of ['GET', 'HEAD']) {
+      const c = context('/api/public/libcard'); c.request = new Request('https://feedme.example/api/public/libcard', { method });
+      const response = await runMiddleware(c, async () => Response.json({ targets: [] }));
+      expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+      const unavailable = await runMiddleware(c, async () => new Response('Unavailable', { status: 503 }));
+      expect(unavailable.headers.get('cache-control')).toBe('private, no-store');
+    }
+    const c = context('/checkout/review'); c.request = new Request('https://feedme.example/checkout/review');
+    expect((await runMiddleware(c, async () => new Response('PRIVATE'))).headers.get('cache-control')).toBe('private, no-store');
+  });
   it('protects every dashboard, mutation, and export endpoint from non-admin sessions', async () => {
     for (const path of ['/studio', '/studio/projects/new', '/studio/settings', '/api/studio', '/api/admin/export', '/studio/data', '/api/admin/data']) {
       auth.did = 'supporter';

@@ -86,6 +86,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {
         redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.etag ? { 'If-None-Match': saved.etag } : {},
       });
+      if (getKv(db, 'recovery', 'paused')) return;
       if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
       else {
         if (!response.ok || !response.body) throw new Error(`GitHub returned HTTP ${response.status}.`);

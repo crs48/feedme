@@ -83,3 +83,7 @@ Published projects cannot become private drafts: public records may already have
 Admin pages, mutations, and exports require the configured session DID. Responses are private and not cacheable; POST actions require the same origin. No private report is published to AT Protocol. Local admin activity records acting DID, action, target, and timestamp; it is an operational history, not a tamper-proof compliance log. Payments, OAuth credentials, admin identity pins, drafts, and activity history remain part of the persistent encrypted local backup.
 
 Refund issuance, disputes, bank payouts, subscription cancellation, granular roles, and analytics reconstruction from a lost database are not dashboard mutation features. Use Stripe for financial operations and keep backups of the instance data directory.
+
+## LibCard source management
+
+With `LIBCARD_REPO` configured, **Projects → From LibCard** shows the last fetch, last successful check, content hash/ETag, and live/archived targets. Refresh manually, hide a target locally, or override its aspiration in whole dollars (blank inherits; zero removes). Source labels, destinations and blurbs remain read-only. Native edit/publish/duplicate actions reject these managed projects. The creator target cannot be hidden. See [LibCard](libcard.md) for import failures and compatibility with the separate LibCard repository.

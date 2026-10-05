@@ -41,6 +41,24 @@ describe('database release compatibility', () => {
     reopened.close();
   });
 
+  it('upgrades existing version-one triggers and backfills the portable LibCard snapshot', () => {
+    const db = openDatabase(':memory:');
+    db.exec('PRAGMA user_version=1; DELETE FROM recovery_dirty');
+    for (const action of ['insert','update','delete']) {
+      db.exec(`DROP TRIGGER recovery_kv_${action}`);
+      const ref = action === 'delete' ? 'OLD' : 'NEW';
+      db.exec(`CREATE TRIGGER recovery_kv_${action} AFTER ${action} ON kv WHEN ${ref}.namespace='app' BEGIN INSERT OR IGNORE INTO recovery_dirty VALUES ('kv',${ref}.namespace,${ref}.key); END`);
+    }
+    db.prepare('INSERT INTO kv VALUES (?,?,?,NULL)').run('libcard','snapshot',seal({ fixture: true }));
+    expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([]);
+    migrateDatabase(db);
+    expect(readDatabaseVersion(db)).toBe(2);
+    expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([{ source: 'kv', kind: 'libcard', key: 'snapshot' }]);
+    db.exec('DELETE FROM recovery_dirty');
+    db.prepare('UPDATE kv SET value=? WHERE namespace=?').run(seal({ fixture: false }),'libcard');
+    expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([{ source: 'kv', kind: 'libcard', key: 'snapshot' }]);
+    db.close();
+  });
   it('rolls back every migration in the batch when a later migration fails', () => {
     const db = new DatabaseSync(':memory:');
     expect(() => migrateDatabase(db, [

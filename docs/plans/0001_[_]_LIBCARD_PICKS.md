@@ -49,12 +49,12 @@ Public count is unique eligible payments containing a target. Share is accumulat
 ## Verification and implementation checklist
 
 - [x] Configuration, normalized YAML parser, offline fixture, bounded refresh, atomic import, last-good behavior (unit tests).
-- [ ] Persistence, full private recovery round trip, numbered tracking migration, publishing guards.
-- [ ] Pick allocation, prefill, plain forms, review/edit/sign-in, idempotency, recurring propagation.
-- [ ] Accessible visit, read-only Studio source panel, local overrides, quiet receipts/share cards.
+- [x] Persistence, full private recovery round trip, numbered tracking migration, publishing guards.
+- [x] Pick allocation, prefill, plain forms, review/edit/sign-in, idempotency, recurring propagation.
+- [x] Accessible visit, read-only Studio source panel, local overrides, quiet receipts/share cards.
 - [x] Public payment-level aggregation, contract/default amount and endpoint status tests.
-- [ ] Documentation: `.env.example`, README, ingest/public contract, split support, admin, recovery.
-- [ ] Final validation: `pnpm check`, `pnpm test`, `pnpm build`; no-JS/mobile/browser checks and legacy static demo regression.
+- [x] Documentation: `.env.example`, README, ingest/public contract, split support, admin, recovery.
+- [x] Final validation: `pnpm check`, `pnpm test`, `pnpm build`; no-JS/mobile/browser checks and legacy static demo regression.
 - [ ] LibCard follow-on after endpoint release: strict schema + generated JSON schema, opt-in build fetch/public marks/links, docs, failure tests. **Outside this Feedme change.**
 
 ### Test coverage to complete
@@ -66,3 +66,14 @@ Parser limits, IDs, unsafe links/avatar paths, ignored theme data, source remova
 In `crs48/LIBCard`, later, add `feedme: { enabled: true, origin: https://creator-feedme.example }` and accept nested target opt-ins in the strict link/social schemas before creators add them. Fetch `/api/public/libcard` at build time using the existing daily workflow. Failure omits numbers but keeps local opted-in links working; omit amount to let Feedme supply its default. Disabled means no UI/request/script.
 
 Build links with `new URL('/checkout', origin)` and `URLSearchParams`: “More of this” sets `amount=(defaultAmountCents/100).toFixed(2)` when known and `{id}=1`; “Give to {name}” has no query. Show public marks only for endpoint-returned targets. Optional later client-side picking navigates with the same counts; no-JS stays ordinary anchors. Never collect card details or embed Checkout. Target publishing to AT Protocol remains a further follow-on.
+
+## Verification result
+
+- `pnpm check`: no errors, warnings, or hints.
+- `pnpm test`: 293 tests passed across 42 files.
+- `pnpm build` and `pnpm build:site`: passed; static verification checked 50 HTML pages and 2,138 local links/assets with LibCard disabled.
+- `pnpm check:libcard`: passed against the built app using isolated data, outbound fetch disabled, and ordinary HTTP forms (no browser JavaScript).
+- Desktop/browser interaction and a 390px mobile viewport checked; no horizontal overflow. Verified 1:3 picks, changing the amount, public monthly review, sign-in return, simulated receipt, and quiet aspiration share image.
+- `node scripts/build-deployment.mjs --check`: passed. No deployment or live payment was performed.
+
+See [the operator guide and exact public contract](../libcard.md) for setup and the separate LibCard follow-on. Provider tests use fixtures; real Stripe test-account and Habitat acceptance remain an operator deployment check.

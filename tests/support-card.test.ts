@@ -28,6 +28,13 @@ describe('public allocation cards', () => {
   it.each<Partial<Support>>([{ visibility: 'private' }, { visibility: 'anonymous', announceAnonymously: true }, { status: 'pending' }, { status: 'failed' }, { status: 'refunded' }, { status: 'disputed' }, { disputed: true }, { refundedAmount: 10000 }, { supporterDid: undefined }])('never produces a card for ineligible support %j', (patch) => {
     expect(card({ ...receipt, ...patch })).toBeUndefined();
   });
+  it('keeps raw pick shares after partial refunds and shows quiet aspirations without bars', () => {
+    const result = card({ ...receipt, refundedAmount: 6000, picks: [{ projectId: 'backyard-sauna', count: 1 }, { projectId: 'open-source', count: 3 }] })!;
+    expect(result.pickMode).toBe(true);
+    expect(result.projects.map(p => [p.id, p.percentage])).toEqual([['open-source',75],['backyard-sauna',25]]);
+    expect(result.projects.every(p => p.progress === undefined)).toBe(true);
+    const svg = supportCardSvg(result); expect(svg).toContain('$2,500 aspiration'); expect(svg).not.toContain('height="8"'); expect(svg).not.toContain('url(#rainbow)');
+  });
   it('recalculates allocation percentages after partial refunds', () => {
     const result = card({ ...receipt, refundedAmount: 6000 })!;
     expect(result.projects.map(({ id, percentage }) => [id, percentage])).toEqual([['open-source', 50], ['field-notes', 50]]);

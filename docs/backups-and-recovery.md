@@ -152,3 +152,9 @@ After restoring to a new address, open **Settings**, review the current PDS anno
 - [ ] Real Habitat sign-in, space permissions, checkpoint download and clean-server restore.
 - [ ] Real S3-compatible provider upload/readback, scoped permissions, retention and recovery-key drill.
 - [ ] Stripe test-mode recovery after lost webhook delivery and multiple missed renewals.
+
+## LibCard data
+
+LibCard managed project metadata, local hiding/aspiration overrides, original payment picks, and the normalized last-good source snapshot are part of private recovery checkpoints and SQLite backups. Restore can serve that snapshot without reaching GitHub. Payment reference validation includes picked targets even when their cents rounded to zero. Ephemeral browser-bound review drafts and fetch-error status are not portable.
+
+Migration 2 adds tracking for the portable LibCard snapshot. Restore using this or a compatible newer version; older binaries refuse the newer database schema. Resuming recovery does not publish imported targets or their target-referencing acknowledgments to the public PDS. Existing native project publication and private receipt synchronization continue. See [LibCard recovery and contracts](libcard.md).

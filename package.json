@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "astro preview",
-    "data": "node --env-file-if-exists=.env --import tsx scripts/data.ts"
+    "data": "node --env-file-if-exists=.env --import tsx scripts/data.ts",
+    "check:libcard": "node scripts/check-libcard.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
