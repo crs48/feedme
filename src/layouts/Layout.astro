@@ -28,7 +28,7 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
-    {cfg.demo && <div class="demo-strip"><span class="demo-label">Demo</span> Explore Feedme. No real payments.</div>}
+    {cfg.demo && <div class="demo-strip"><span class="demo-label">Demo</span> {cfg.libcardRemoteDemo ? 'Real LibCard profile. Simulated tips. No real payments.' : 'Explore Feedme. No real payments.'}</div>}
     <header class="site-header shell">
       <a href="/" class="brand" aria-label="Feedme home"><BrandIcon/>feedme</a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">

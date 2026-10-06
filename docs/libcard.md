@@ -19,7 +19,17 @@ Try the built-in offline fixture without any credentials:
 FEEDME_MODE=demo LIBCARD_REPO=example/libcard pnpm dev
 ```
 
-With demo mode and a repository configured, Feedme uses its checked-in fictional fixture regardless of the repository name. It never fetches GitHub or charges Stripe. Without the setting, `pnpm dev` and the isolated GitHub Pages demo keep their existing behavior.
+By default, demo mode uses its checked-in fictional fixture regardless of the repository name. It never fetches GitHub or charges Stripe. Without the setting, `pnpm dev` and the isolated GitHub Pages demo keep their existing behavior.
+
+To preview a real public LibCard with simulated payments, opt into GitHub as the demo source:
+
+```sh
+FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_HANDLE=crs.land pnpm dev
+```
+
+This reads the real name, avatar, bio, links, socials, and first text block from `libcard.config.yaml`. Set `BLUESKY_HANDLE` to the matching creator for the demo’s displayed handle. Authentication remains fictional, and Stripe, Habitat, and AT Protocol writes remain simulated. The banner explicitly labels simulated tips. Links without `feedme` opt-ins are ordinary links; the creator is still selectable. Nothing is inferred from link destinations.
+
+The real-source demo uses `DATA_DIR/demo-libcard.sqlite`, separate from the offline fixture’s `demo.sqlite` and live `feedme.sqlite`. It starts with no fictional projects, supporters, updates, or recommendations. For a different creator, use a fresh `DATA_DIR` to keep simulated history separate. A homepage, checkout, public-API, or Studio visit checks for updates at most every 15 minutes, including under `pnpm dev`; `pnpm start` also refreshes in the background. Failed fetches keep the last-good snapshot, or show unavailable if no import has succeeded. `LIBCARD_DEMO_SOURCE=fixture` is the default; the isolated GitHub Pages export always retains its offline fixture regardless of this setting.
 
 In live mode, `pnpm start` checks for refresh work through the existing synchronization loop. The initial check runs within about 30 seconds, then the LibCard importer checks at most every 15 minutes. You can also use **Dashboard → Projects → From LibCard → Refresh LibCard**. When running a live development server without `pnpm start`, use the manual refresh or your authenticated `/api/sync` scheduler.
 

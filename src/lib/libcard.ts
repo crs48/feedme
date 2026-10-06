@@ -42,11 +42,17 @@ export const libcardSnapshot = () => {
   const cfg = config(); if (!cfg.libcard) return;
   const db = getDb();
   let snapshot = storedLibcard(db, cfg.libcard);
-  if (cfg.demo && !snapshot && !getKv(db, 'recovery', 'paused')) {
+  if (cfg.demo && !cfg.libcardRemoteDemo && !snapshot && !getKv(db, 'recovery', 'paused')) {
     snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString() };
     importLibcard(db, snapshot);
   }
   return snapshot;
+};
+// Real-source demos also work under pnpm dev, which has no background sync worker.
+// The importer coalesces requests and checks GitHub at most every 15 minutes.
+export const loadLibcardSnapshot = async () => {
+  if (config().libcardRemoteDemo) await refreshLibcard();
+  return libcardSnapshot();
 };
 export const libcardTargets = (snapshot = libcardSnapshot()) => {
   if (!snapshot) return [];
@@ -56,10 +62,15 @@ export const libcardTargets = (snapshot = libcardSnapshot()) => {
     return p?.libcard && sourceKey(p.libcard.source) === sourceKey(snapshot.source) && p.libcard.present && !p.libcard.hidden && p.status === 'active' ? [p] : [];
   });
 };
-export const libcardProfile = (base: Profile, snapshot = libcardSnapshot()): Profile => snapshot ? {
-  ...base, name: snapshot.document.profile.name, bio: snapshot.document.profile.tagline,
-  location: snapshot.document.profile.location, avatar: snapshot.document.profile.avatar,
-} : base;
+export const libcardProfile = (base: Profile, snapshot = libcardSnapshot()): Profile => {
+  const cfg = config();
+  // This is presentation only. Demo authentication still uses a fictional DID.
+  const handle = cfg.libcardRemoteDemo ? (cfg.identities.owner.startsWith('did:') ? '' : cfg.identities.owner) : base.handle;
+  return snapshot ? {
+    ...base, handle, name: snapshot.document.profile.name, bio: snapshot.document.profile.tagline,
+    location: snapshot.document.profile.location, avatar: snapshot.document.profile.avatar,
+  } : base;
+};
 export const overrideLibcard = (db: DatabaseSync, id: string, hidden: boolean, aspiration?: number) => {
   const p = readRecord<Project>(db, 'project', id);
   if (!p?.libcard) throw new Error('Choose a LibCard target.');
@@ -80,7 +91,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   setKv(db, 'libcard-refresh', key, { attemptedAt });
   try {
     const saved = storedLibcard(db, cfg.libcard);
-    if (cfg.demo) {
+    if (cfg.demo && !cfg.libcardRemoteDemo) {
       importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt });
     } else {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {

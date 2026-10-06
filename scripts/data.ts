@@ -21,7 +21,7 @@ if (command === 'list') {
   console.log(JSON.stringify(await store.list(), null, 2));
 } else {
   const release = acquireDataLock(cfg.dataDir);
-  const filename = cfg.demo ? 'demo.sqlite' : 'feedme.sqlite';
+  const filename = cfg.libcardRemoteDemo ? 'demo-libcard.sqlite' : cfg.demo ? 'demo.sqlite' : 'feedme.sqlite';
   const livePath = join(cfg.dataDir, filename);
   try {
     if (command === 'backup') {

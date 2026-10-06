@@ -1,13 +1,13 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
-const state = vi.hoisted(() => ({ db: undefined as DatabaseSync | undefined, demo: false, enabled: true }));
+const state = vi.hoisted(() => ({ db: undefined as DatabaseSync | undefined, demo: false, enabled: true, remoteDemo: false }));
 const source = { repo: 'test/card', ref: 'main' };
-vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo, libcard: state.enabled ? { repo: 'test/card', ref: 'main' } : undefined, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', origin: 'https://feedme.example', defaultTipAmount: 4400 }) }));
+vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo, libcardRemoteDemo: state.remoteDemo, identities: { owner: 'crs.land' }, libcard: state.enabled ? { repo: 'test/card', ref: 'main' } : undefined, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', origin: 'https://feedme.example', defaultTipAmount: 4400 }) }));
 vi.mock('../src/lib/db', async original => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => state.db! }));
 import { openDatabase, getKv, listRecords, putRecord, readRecord, pendingWrites } from '../src/lib/db';
 import { avatarUrl, parseLibcard, sourceKey, type LibcardSnapshot } from '../src/lib/libcard-schema';
 import { libcardFixture } from '../src/lib/libcard-fixture';
-import { importLibcard, libcardSnapshot, libcardTargets, overrideLibcard, refreshLibcard } from '../src/lib/libcard';
+import { importLibcard, libcardSnapshot, libcardTargets, libcardProfile, loadLibcardSnapshot, overrideLibcard, refreshLibcard } from '../src/lib/libcard';
 import { publicLibcard } from '../src/lib/libcard-public';
 import { projectSchema, type Project, type Support } from '../src/lib/model';
 import { prepareRecovery } from '../src/lib/recovery-tracking';
@@ -18,8 +18,8 @@ import { GET } from '../src/pages/api/public/libcard';
 import type { APIContext } from 'astro';
 const snapshot = (): LibcardSnapshot => ({ source, document: parseLibcard(libcardFixture, source), hash: 'a'.repeat(64), checkedAt: new Date().toISOString() });
 const tip = (id: string, extra: Partial<Support> = {}): Support => ({ id, projectId: 'creator', amount: 2200, currency: 'usd', visibility: 'public', supporterDid: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', note: 'PRIVATE NOTE', status: 'paid', refundedAmount: 0, disputed: false, createdAt: new Date().toISOString(), picks: [{ projectId: 'creator', count: 1 }], ...extra });
-beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; state.demo = false; });
-afterEach(() => { state.db!.close(); vi.restoreAllMocks(); });
+beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; state.demo = false; state.remoteDemo = false; });
+afterEach(() => { state.db!.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('LibCard parser and managed import', () => {
   it('imports only explicitly opted-in links and socials, with a real creator project', () => {
@@ -64,6 +64,36 @@ describe('LibCard parser and managed import', () => {
 });
 
 describe('refresh and private recovery', () => {
+  it('can preview real source content without inferring opt-ins or changing the stored identity', async () => {
+    state.demo = true; state.remoteDemo = true;
+    expect(libcardSnapshot()).toBeUndefined();
+    const yaml = `profile: { name: Christopher Smothers, avatar: /avatar.jpg, tagline: Building xNet }
+links: [{label: Presence, url: 'https://crs.coach/'}]
+socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(yaml, { headers: { etag: '"real"' } }));
+    vi.stubGlobal('fetch', fetcher);
+    await loadLibcardSnapshot();
+    await loadLibcardSnapshot();
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]?.[0]).toBe('https://raw.githubusercontent.com/test/card/main/libcard.config.yaml');
+    expect(libcardTargets().map(p => [p.id, p.title])).toEqual([['creator', 'Just Christopher']]);
+    const base = { name: 'Native', handle: 'native.example', bio: '', location: '', website: '' };
+    expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: 'Building xNet', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
+    expect(base.name).toBe('Native');
+    state.remoteDemo = false;
+    expect(libcardProfile(base).handle).toBe('native.example');
+    state.remoteDemo = true;
+    await refreshLibcard(true, async () => { throw new Error('offline'); });
+    expect(libcardSnapshot()?.document.profile.name).toBe('Christopher Smothers');
+    expect(libcardSnapshot()?.document.items).toHaveLength(2);
+  });
+  it('never substitutes fictional content when the first real-source demo import fails', async () => {
+    state.demo = true; state.remoteDemo = true;
+    await refreshLibcard(true, async () => new Response('unavailable', { status: 503 }));
+    expect(libcardSnapshot()).toBeUndefined();
+    expect(listRecords(state.db!, 'project')).toEqual([]);
+    expect((await GET({} as APIContext)).status).toBe(503);
+  });
   it('uses offline fixture only when explicitly enabled in demo mode', async () => {
     state.demo = true; state.enabled = false;
     expect(libcardSnapshot()).toBeUndefined(); expect(listRecords(state.db!, 'project')).toEqual([]);

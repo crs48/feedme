@@ -49,6 +49,8 @@ Set `LIBCARD_REPO=your-name/your-libcard` (and optionally `LIBCARD_REF=main`) to
 
 Try the offline fixture with `FEEDME_MODE=demo LIBCARD_REPO=example/libcard pnpm dev`. Unset the repository to retain the existing percentage UI. Live mode still needs the normal Stripe, Habitat, and HTTPS setup. The GitHub Pages demo stays unchanged.
 
+To preview the real crs.land LibCard while keeping payments simulated: `FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_HANDLE=crs.land pnpm dev`. This imports the public profile and links, checks GitHub every 15 minutes while in use, and stores simulated activity in a separate `demo-libcard.sqlite`. Only explicitly opted-in links get pick controls.
+
 See [LibCard setup, ingestion, public contract, and recovery](docs/libcard.md). The matching LibCard schema/UI work is a separate follow-on; older LibCard versions reject nested opt-in fields.
 
 ## Your Bluesky account is your admin login

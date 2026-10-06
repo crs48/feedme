@@ -1,18 +1,18 @@
 ---
 import { config } from '../lib/config';
-import { libcardSnapshot, type RefreshStatus } from '../lib/libcard';
+import { loadLibcardSnapshot, type RefreshStatus } from '../lib/libcard';
 import { getDb, getKv } from '../lib/db';
 import { sourceKey } from '../lib/libcard-schema';
 import { projects } from '../lib/repository';
 import { money } from '../lib/model';
 const cfg = config();
-const snapshot = libcardSnapshot();
+const snapshot = await loadLibcardSnapshot();
 const status = cfg.libcard ? getKv<RefreshStatus>(getDb(), 'libcard-refresh', sourceKey(cfg.libcard)) : undefined;
 const managed = projects(true).filter(p => p.libcard);
 ---
 {cfg.libcard && <section class="admin-card mb-6" id="libcard">
   <div class="admin-card-heading"><div><p class="eyebrow mb-2">From LibCard</p><h2>{cfg.libcard.repo}</h2></div><form method="post" action="/api/studio"><input type="hidden" name="action" value="libcard-refresh"/><input type="hidden" name="returnTo" value="/studio/projects"/><button class="button secondary">Refresh LibCard</button></form></div>
-  <p class="admin-help">{cfg.demo ? 'Offline fixture · no GitHub requests' : `Ref: ${cfg.libcard.ref}`} · {managed.filter(p => p.status === 'active').length} live · {managed.filter(p => p.status === 'archived').length} archived</p>
+  <p class="admin-help">{cfg.demo && !cfg.libcardRemoteDemo ? 'Offline fixture · no GitHub requests' : `GitHub · ref: ${cfg.libcard.ref}`} · {managed.filter(p => p.status === 'active').length} live · {managed.filter(p => p.status === 'archived').length} archived</p>
   <p class="admin-help">Last fetch attempt: {status?.attemptedAt || snapshot?.checkedAt || 'Not yet'}<br/>Last good check: {snapshot?.checkedAt || 'Not yet'}</p>
   {snapshot && <p class="admin-help break-all">Content SHA-256: {snapshot.hash}{snapshot.etag && <><br/>ETag: {snapshot.etag}</>}</p>}
   {status?.error && <p class="admin-warning">{status.error}</p>}

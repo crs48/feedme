@@ -8,7 +8,7 @@ process.once('SIGINT', () => process.exit(130));
 process.env.SYNC_SECRET ||= randomBytes(32).toString('hex');
 await import('../dist/server/entry.mjs');
 const run = async () => {
-  if (process.env.FEEDME_MODE !== 'live') return;
+  if (process.env.FEEDME_MODE !== 'live' && !(process.env.LIBCARD_REPO && process.env.LIBCARD_DEMO_SOURCE === 'github')) return;
   try {
     const response = await fetch(`http://127.0.0.1:${process.env.PORT || 4321}/api/sync`, {
       method: 'POST', headers: { authorization: `Bearer ${process.env.SYNC_SECRET}` },

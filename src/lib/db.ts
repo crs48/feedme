@@ -23,11 +23,12 @@ export const getDb = () => {
   const cfg = config();
   mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
   acquireDataLock(cfg.dataDir);
-  const path = join(cfg.dataDir, cfg.demo ? 'demo.sqlite' : 'feedme.sqlite');
+  // A real profile must never inherit the fictional demo's catalog or payment history.
+  const path = join(cfg.dataDir, cfg.libcardRemoteDemo ? 'demo-libcard.sqlite' : cfg.demo ? 'demo.sqlite' : 'feedme.sqlite');
   database = openDatabase(path);
   chmodSync(path, 0o600);
   if (!database.prepare("SELECT 1 FROM kv WHERE namespace='app' AND key='initialized'").get()) {
-    const data = cfg.demo ? {
+    const data = cfg.demo && !cfg.libcardRemoteDemo ? {
       profile: [demoProfile], project: demoProjects, update: demoUpdates, friend: demoFriends, support: demoSupports,
     } : { profile: [{ name: 'Your corner of the internet', handle: '', bio: 'A home for the things I’m making and the people who make them possible.', location: '', website: '' }], project: [], update: [], friend: [], support: [] };
     transaction(database, () => {
