@@ -22,14 +22,19 @@ for pass in 1 2; do
     if [ "$attempt" -ge 30 ]; then docker logs "$container"; exit 1; fi
     sleep 1
   done
-  docker exec --user node "$container" node --input-type=module -e '
+  docker exec --user node "$container" node --import tsx --input-type=module -e '
     import { readFileSync } from "node:fs";
     import { strict as assert } from "node:assert";
+    import { DatabaseSync } from "node:sqlite";
+    import { databaseVersion, readDatabaseVersion } from "./src/lib/database-migrations.ts";
     const status = readFileSync("/proc/1/status", "utf8");
     assert.match(status, /Uid:\s+1000\s+1000\s+1000\s+1000/);
     const health = await (await fetch("http://127.0.0.1:4321/api/health")).json();
     assert.equal(health.version, JSON.parse(readFileSync("package.json", "utf8")).version);
-    assert.equal(health.databaseSchema, 1);
+    assert.equal(health.databaseSchema, databaseVersion);
+    const db = new DatabaseSync("/data/demo.sqlite", { readOnly: true });
+    try { assert.equal(readDatabaseVersion(db), databaseVersion); }
+    finally { db.close(); }
     const response = await fetch("http://127.0.0.1:4321/oauth-client-metadata.json");
     assert.equal(response.status, 200);
     assert.equal((await response.json()).client_id, "https://feedme.example.com/oauth-client-metadata.json");
