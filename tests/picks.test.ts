@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { allocatePicks, picksFromForm, prefillPicks, splitUnits } from '../src/lib/picks';
+import { centsFromInput } from '../src/lib/model';
 
 describe('integer pick allocation', () => {
+  it('accepts LibCard two-decimal dollar prefills throughout the supported cent range', () => {
+    for (let cents = 100; cents <= 100_000; cents++) expect(centsFromInput((cents / 100).toFixed(2))).toBe(cents);
+    for (const [input, amount] of [['22.00', 2200], ['5.05', 505], ['1000.00', 100000]] as const) {
+      expect(prefillPicks(new URLSearchParams(`amount=${input}&presence=1`), ['creator', 'presence'], 4400)).toEqual({ amount, picks: [{ projectId: 'presence', count: 1 }], removed: false });
+    }
+    expect(prefillPicks(new URLSearchParams('presence=1'), ['creator', 'presence'], 505)).toEqual({ amount: 505, picks: [{ projectId: 'presence', count: 1 }], removed: false });
+    expect(prefillPicks(new URLSearchParams(), ['creator', 'presence'], 505)).toEqual({ amount: 505, picks: [], removed: false });
+  });
   it('starts empty and gives a single selected target the whole amount', () => {
     expect(() => allocatePicks(2200, [])).toThrow();
     expect(allocatePicks(2200, [{ projectId: 'creator', count: 1 }])).toEqual([{ projectId: 'creator', amount: 2200 }]);

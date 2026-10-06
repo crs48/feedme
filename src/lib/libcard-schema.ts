@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { parseDocument } from 'yaml';
 
+// Only deliberately authored diagnostics may pass through to Studio. Never
+// surface arbitrary fetch errors, YAML snippets, or provider response bodies.
+export class LibcardImportError extends Error {}
+
 export const targetId = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
 export const libcardSourceSchema = z.object({
   repo: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9-]*\/[a-zA-Z0-9_.-]+$/).refine(v => !v.endsWith('/.') && !v.endsWith('/..')),
@@ -48,9 +52,9 @@ export const avatarUrl = (value: unknown, source: LibcardSource): string | undef
   } catch { return; }
 };
 export const parseLibcard = (text: string, source: LibcardSource): LibcardDocument => {
-  if (Buffer.byteLength(text) > 256 * 1024) throw new Error('LibCard config exceeds 256 KiB.');
+  if (Buffer.byteLength(text) > 256 * 1024) throw new LibcardImportError('LibCard config exceeds 256 KiB.');
   const parsed = parseDocument(text, { version: '1.2', uniqueKeys: true });
-  if (parsed.errors.length || parsed.warnings.length) throw new Error('LibCard YAML could not be parsed. Check syntax and duplicate mapping keys.');
+  if (parsed.errors.length || parsed.warnings.length) throw new LibcardImportError('LibCard YAML could not be parsed. Check syntax and duplicate mapping keys.');
   const raw = z.object({
     profile: z.object({ name: z.string(), tagline: z.string().optional(), location: z.string().optional(), avatar: z.unknown().optional() }),
     links: z.array(z.object({ label: z.string(), url: z.string(), feedme: optIn.optional(), ...presentation })).default([]),
@@ -62,6 +66,6 @@ export const parseLibcard = (text: string, source: LibcardSource): LibcardDocume
     about: raw.blocks.find(b => b.type === 'text' && b.markdown)?.markdown?.slice(0, 2000) || '',
     items: [...raw.links.map(i => ({ ...i, kind: 'link' })), ...raw.socials.map(i => ({ label: i.label || i.platform, icon: /^[a-zA-Z0-9-]{1,64}$/.test(i.platform) ? i.platform : 'link', url: i.url, feedme: i.feedme, kind: 'social' }))],
   });
-  if (Buffer.byteLength(JSON.stringify(result)) > 128 * 1024) throw new Error('Normalized LibCard config exceeds 128 KiB.');
+  if (Buffer.byteLength(JSON.stringify(result)) > 128 * 1024) throw new LibcardImportError('Normalized LibCard config exceeds 128 KiB.');
   return result;
 };

@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { ZodError } from 'zod';
 import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
 import { projectSchema, type Profile, type Project } from './model';
-import { libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource } from './libcard-schema';
+import { LibcardImportError, libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource } from './libcard-schema';
 import { libcardFixture } from './libcard-fixture';
 import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
@@ -23,7 +24,7 @@ export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot, previ
   ];
   for (const target of targets) {
     const previous = readRecord<Project>(db, 'project', target.id);
-    if (previous && !previous.libcard) throw new Error(`Target ID ${target.id} belongs to a native project. Choose a different LibCard ID.`);
+    if (previous && !previous.libcard) throw new LibcardImportError(`Target ID ${target.id} belongs to a native project. Choose a different LibCard ID.`);
     const hidden = target.id !== 'creator' && Boolean(previous?.libcard?.hidden);
     const aspirationOverride = previous?.libcard?.aspirationOverride;
     const p = projectSchema.parse({
@@ -102,10 +103,10 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
       if (getKv(db, 'recovery', 'paused')) return;
       if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
       else {
-        if (!response.ok || !response.body) throw new Error(`GitHub returned HTTP ${response.status}.`);
+        if (!response.ok || !response.body) throw new LibcardImportError(`GitHub returned HTTP ${response.status}. Check the public repository and ref, or retry later.`);
         const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
         try {
-          while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > 256 * 1024) throw new Error('LibCard config exceeds 256 KiB.'); chunks.push(chunk.value); }
+          while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > 256 * 1024) throw new LibcardImportError('LibCard config exceeds 256 KiB.'); chunks.push(chunk.value); }
         } finally { await reader.cancel(); }
         const text = Buffer.concat(chunks).toString('utf8');
         const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 2 });
@@ -117,8 +118,11 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
       if (current) await refreshGithubStars(db, current.document.items, fetcher);
     }
     return { attemptedAt };
-  } catch {
-    const status = { attemptedAt, catalogVersion: 2 as const, error: 'LibCard refresh failed. Check GitHub availability, YAML, unique target IDs, allowed URLs, and import limits. The last good snapshot is unchanged.' };
+  } catch (error) {
+    const detail = error instanceof LibcardImportError ? error.message : error instanceof ZodError
+      ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. Check field types, unique target IDs, allowed URLs, and import limits.`
+      : 'Check GitHub availability, YAML without aliases, unique target IDs, allowed URLs, and import limits.';
+    const status = { attemptedAt, catalogVersion: 2 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
     setKv(db, 'libcard-refresh', key, status); return status;
   }
 };

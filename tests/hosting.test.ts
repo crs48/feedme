@@ -17,4 +17,8 @@ describe('deployment origins', () => {
     expect(publicOrigin({ HOST: '0.0.0.0', PORT: '10000', HTTP_HOST: 'attacker.example' })).toBe('http://127.0.0.1:4321');
     expect(() => publicOrigin({ PUBLIC_URL: 'invalid', RENDER_EXTERNAL_URL: 'https://valid.onrender.com' })).toThrow();
   });
+
+  it('normalizes the planned crs.tips origin and keeps it canonical over provider domains', () => {
+    expect(publicOrigin({ PUBLIC_URL: 'https://crs.tips/', RAILWAY_PUBLIC_DOMAIN: 'generated.up.railway.app', HTTP_HOST: 'attacker.example' })).toBe('https://crs.tips');
+  });
 });

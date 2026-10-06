@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "preview": "astro preview",
     "data": "node --env-file-if-exists=.env --import tsx scripts/data.ts",
-    "check:libcard": "node scripts/check-libcard.mjs"
+    "check:libcard": "node scripts/check-libcard.mjs && node scripts/check-libcard-contract.mjs",
+    "check:libcard-origin": "node scripts/check-libcard-origin.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",

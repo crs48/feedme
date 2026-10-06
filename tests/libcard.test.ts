@@ -1,5 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
+import { parse, stringify } from 'yaml';
+import { assertLibcardResponse } from '../scripts/libcard-contract.mjs';
 const state = vi.hoisted(() => ({ db: undefined as DatabaseSync | undefined, demo: false, enabled: true, remoteDemo: false }));
 const source = { repo: 'test/card', ref: 'main' };
 vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo, libcardRemoteDemo: state.remoteDemo, identities: { owner: 'crs.land' }, libcard: state.enabled ? { repo: 'test/card', ref: 'main' } : undefined, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', origin: 'https://feedme.example', defaultTipAmount: 4400 }) }));
@@ -18,11 +21,32 @@ import { saveProject, projects } from '../src/lib/repository';
 import { GET } from '../src/pages/api/public/libcard';
 import type { APIContext } from 'astro';
 const snapshot = (): LibcardSnapshot => ({ source, document: parseLibcard(libcardFixture, source), hash: 'a'.repeat(64), checkedAt: new Date().toISOString() });
+const consumerYaml = readFileSync(new URL('./fixtures/libcard/enabled.config.yaml', import.meta.url), 'utf8');
 const tip = (id: string, extra: Partial<Support> = {}): Support => ({ id, projectId: 'creator', amount: 2200, currency: 'usd', visibility: 'public', supporterDid: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', note: 'PRIVATE NOTE', status: 'paid', refundedAmount: 0, disputed: false, createdAt: new Date().toISOString(), picks: [{ projectId: 'creator', count: 1 }], ...extra });
 beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; state.demo = false; state.remoteDemo = false; });
 afterEach(() => { state.db!.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('LibCard parser and managed import', () => {
+  it('imports the committed LibCard consumer fixture and ignores presentation-only configuration', async () => {
+    const yaml = stringify({ ...parse(consumerYaml), feedme: { enabled: false, origin: 'https://a-different-card.example' },
+      theme: 'default', statuses: { ready: 'Ready' }, cardMode: { enabled: true }, analytics: { enabled: false },
+      footer: { text: 'Footer' }, seo: { title: 'SEO title' }, meta: { test: true }, contact: { email: 'test@example.com' },
+    });
+    const doc = parseLibcard(yaml, source);
+    importLibcard(state.db!, { ...snapshot(), document: doc });
+    expect(libcardTargets().map(p => [p.id, p.libcard?.kind])).toEqual([
+      ['creator', 'creator'], ['presence', 'link'], ['open-source', 'link'], ['retired', 'link'], ['x', 'social'],
+    ]);
+    expect(doc.items[0]).toMatchObject({ icon: 'heart', feedme: { id: 'presence', aspiration: 3000, blurb: 'More hours in the room with people.' } });
+    expect(doc.items[0]).not.toHaveProperty('status'); expect(doc).not.toHaveProperty('feedme'); expect(doc).not.toHaveProperty('site');
+    expect(readRecord<Project>(state.db!, 'project', 'presence')).toMatchObject({ target: 300000, summary: 'More hours in the room with people.', libcard: { sourceAspiration: 300000 } });
+    expect(readRecord<Project>(state.db!, 'project', 'x')).toMatchObject({ title: 'My writing on X', summary: 'More of this voice.' });
+    expect(readRecord<Project>(state.db!, 'project', 'retired')?.summary).toBe('');
+    overrideLibcard(state.db!, 'retired', true);
+    const body = await (await GET({} as APIContext)).json();
+    assertLibcardResponse(body, 'https://feedme.example');
+    expect(body.targets.map((t: { id: string }) => t.id)).toEqual(['creator', 'presence', 'open-source', 'x']);
+  });
   it('imports only explicitly opted-in links and socials, with a real creator project', () => {
     const doc = snapshot(); importLibcard(state.db!, doc);
     expect(libcardTargets().map(p => p.id)).toEqual(['creator','presence','nervous-system','pirate-age','xnet','x']);
@@ -65,6 +89,27 @@ describe('LibCard parser and managed import', () => {
 });
 
 describe('refresh and private recovery', () => {
+  it('surfaces native collisions in Studio status without changing the last-good import', async () => {
+    importLibcard(state.db!, snapshot());
+    putRecord(state.db!, 'project', 'open-source', { id: 'open-source', title: 'Native private title' });
+    const saved = getKv(state.db!, 'libcard', 'snapshot');
+    const result = await refreshLibcard(true, async () => new Response(consumerYaml));
+    expect(result?.error).toContain('Target ID open-source belongs to a native project. Choose a different LibCard ID.');
+    expect(result?.error).toContain('The last good snapshot is unchanged.');
+    expect(result?.error).not.toContain('Native private title');
+    expect(getKv(state.db!, 'libcard-refresh', sourceKey(source))).toEqual(result);
+    expect(getKv(state.db!, 'libcard', 'snapshot')).toEqual(saved);
+    expect(readRecord<Project>(state.db!, 'project', 'creator')?.title).toBe('Just Alex');
+  });
+  it('reports safe import diagnostics without reflecting source or provider error contents', async () => {
+    const yamlFailure = await refreshLibcard(true, async () => new Response('secret-source: ['));
+    expect(yamlFailure?.error).toContain('Check syntax and duplicate mapping keys.');
+    expect(yamlFailure?.error).not.toContain('secret-source');
+    const fieldFailure = await refreshLibcard(true, async () => new Response(consumerYaml.replace('aspiration: 3000', 'aspiration: secret-value')));
+    expect(fieldFailure?.error).toContain('links.0.feedme.aspiration'); expect(fieldFailure?.error).not.toContain('secret-value');
+    const providerFailure = await refreshLibcard(true, async () => { throw new Error('secret-provider-response'); });
+    expect(providerFailure?.error).not.toContain('secret-provider-response'); expect(providerFailure?.error).toContain('No catalog has been imported yet.');
+  });
   it('previews every real source item without changing source opt-ins or the stored identity', async () => {
     state.demo = true; state.remoteDemo = true;
     expect(libcardSnapshot()).toBeUndefined();
