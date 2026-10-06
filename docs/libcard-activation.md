@@ -4,14 +4,14 @@ Status: **2026-10-06**. Christopher’s intended personal Feedme origin is **`ht
 
 ## Compatible implementations
 
-Feedme’s feature is on `codex/libcard-picks`. LibCard’s implementation originated on `claude/libcard-feedme-integration-13bddf`, through `fed406d`, and is now merged into its `main`:
+Feedme’s feature is merged into `main` through [PR #2](https://github.com/crs48/feedme/pull/2), merge commit `1402b85`. LibCard’s implementation originated on `claude/libcard-feedme-integration-13bddf`, through `fed406d`, and is also merged into its `main`:
 
 - `a4bd17b`: alternate-config builds via `LIBCARD_CONFIG`.
 - `1748230`: optional Feedme schemas, tip actions, public-signal captions, and bounded build-time fetch.
 - `fed406d`: [LibCard integration documentation](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md).
 - `f20e1fd`: merge of [LibCard PR #67](https://github.com/crs48/LIBCard/pull/67) into `main`.
 
-GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s feature has not been published to its remote branch at this verification. Do not equate merged code, a local preview, or a passing build with deployment. Neither repository’s creator configuration was changed during this verification.
+GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s PR passed GitHub checks, including the static export, deployment bundle, and container persistence checks, before merging. Neither repository’s creator configuration was changed during verification. The personal `crs.tips` server remains undeployed.
 
 ```mermaid
 flowchart LR
@@ -59,7 +59,7 @@ The fixtures are vendored with provenance in [tests/fixtures/libcard](../tests/f
 Activation steps:
 
 - [x] Merge the compatible LibCard implementation into `main` (PR #67).
-- [ ] Publish/merge the compatible Feedme implementation through its normal workflow.
+- [x] Publish/merge the compatible Feedme implementation (PR #2; all GitHub checks passed).
 - [ ] Choose a server host, deploy one persistent Feedme instance, and configure DNS/TLS for `crs.tips`.
 - [ ] Configure live identity, encryption, persistent storage, Stripe Connect/webhook secrets, and private Habitat storage as described in [hosting](hosting.md). Complete provider acceptance with test credentials before enabling real payments.
 - [ ] Add these public settings alongside that live configuration:
