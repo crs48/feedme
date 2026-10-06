@@ -64,7 +64,7 @@ socials:
     feedme: { id: x, blurb: More of this voice. }
 ```
 
-**LibCard compatibility:** its existing strict link/social schemas must first be updated to accept nested `feedme` fields. That separate-repository follow-on is not implemented by this Feedme change. Do not add these fields to an older LibCard installation that rejects them. Feedme can consume the configuration and provides an offline fixture for testing the contract now.
+**LibCard compatibility:** the matching schema, tip links, and build-time public-statistics integration were implemented through `fed406d` and merged into LibCard’s `main` in [PR #67](https://github.com/crs48/LIBCard/pull/67) (`f20e1fd`). See its [integration guide](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md). Upgrade to a version containing that work before adding nested `feedme` fields; older strict link/social schemas reject them. Code availability does not establish that the personal Feedme backend is deployed. See the [contract verification and crs.tips activation checklist](libcard-activation.md).
 
 IDs are permanent lowercase slugs (letters, digits, hyphens, at most 64 characters; start with a letter or digit). One namespace covers links and socials; `creator` and `amount` are reserved. At most 99 opted-in source items are supported. Feedme synthesizes the hundredth possible target, `creator`, labeled “Just {first name},” with no destination URL. Renaming an ID creates a new target and archives the old one; historical tips retain their original IDs.
 
@@ -96,6 +96,8 @@ The catalog importer fetches raw GitHub YAML, without authentication or cloning.
 GitHub failures keep serving the last good snapshot. Before the first successful import, the visit and API report unavailable rather than substituting a different target list. Missing source IDs are archived, never deleted. Reappearing IDs retain their creation date and local settings.
 
 Studio’s **From LibCard** panel shows source/ref, fetch status, revision, and live/archived targets. Labels, destinations and blurbs are read-only. You may hide targets locally or override their aspirations: blank inherits, zero removes, a whole-dollar value overrides. The creator cannot be hidden. Hiding also removes the item from Feedme’s public target list; it never edits the LibCard repository. Existing recurring gifts retain their original picks until canceled.
+
+Failed imports show a safe diagnostic in that panel. A native project collision names the conflicting target ID and asks you to choose another LibCard ID. Invalid consumed fields report their paths; malformed YAML and response-size failures have specific messages. Provider error bodies, source snippets, and native project titles are never included. The transaction retains the previous catalog and its checkout targets.
 
 Managed projects, original payment picks, overrides, and the last-good snapshot are covered by private Habitat checkpoints and encrypted SQLite backups. Restore preserves them even when GitHub is unavailable. Draft forms/review tokens and fetch-error status are temporary operational state, not portable data. Migration 2 adds snapshot recovery tracking; restore with this or a compatible newer Feedme release, not a pre-feature binary.
 
@@ -144,11 +146,11 @@ Prefill uses dollars and integer counts:
 
 Unknown, hidden, archived, repeated, noninteger, and out-of-range pick parameters are dropped. Invalid/repeated amounts use the configured default. If nothing valid remains, no target is implicitly selected. Posted forms instead reject invalid fields before review. When disabled, `/checkout` redirects to the normal homepage.
 
-## LibCard follow-on (separate repository)
+## LibCard integration (separate repository)
 
-Use the [LibCard AI implementation prompt](libcard-ai-prompt.md) for a self-contained handoff covering schemas, tip links, build-time public statistics, compatibility, and verification.
+The LibCard half is merged into its `main` branch, including schemas, ordinary tip links, public signal captions, bounded build-time fetching, and failure handling. Feedme checks the committed `fed406d` consumer fixture in its own tests. The [original AI implementation prompt](libcard-ai-prompt.md) records the handoff; the [activation checklist](libcard-activation.md) records current verification and deployment prerequisites.
 
-After the Feedme endpoint ships, update LibCard’s source schema and generated JSON schema to accept the opt-ins above and this global block:
+After installing both compatible versions and deploying the personal Feedme server, enable LibCard with the opt-ins above and this global block:
 
 ```yaml
 feedme:
@@ -157,6 +159,8 @@ feedme:
 ```
 
 Absent/disabled means no request, tip UI, or extra script. Enabled builds fetch `/api/public/libcard`; the existing daily workflow refreshes it. Show public marks only for returned IDs. On failure, hide numbers and keep ordinary links from locally opted-in IDs, omitting the amount to use Feedme’s default.
+
+Feedme deliberately ignores this top-level block when importing the catalog: it controls LibCard’s outbound links, not Feedme identity or availability. Link `status` and unrelated theme, site, analytics, contact, and card configuration are also ignored. A successful API response omitting a target suppresses that target’s tip action in LibCard while preserving its ordinary destination. The general creator link remains available. Match `PUBLIC_URL` to LibCard’s configured HTTPS origin; different domains make the consumer reject the response.
 
 ```ts
 const tipUrl = (origin: string, id: string, defaultAmountCents?: number) => {
@@ -170,8 +174,12 @@ const tipUrl = (origin: string, id: string, defaultAmountCents?: number) => {
 
 “More of this” uses that builder. “Give to {name}” links to `/checkout` without a query. An optional future browser enhancement may accumulate counts and navigate with them; no-JS remains ordinary anchors. LibCard must never collect card details or embed Checkout.
 
+LibCard currently shows **public pick shares, not funding bars**. This endpoint exposes neither effective aspirations nor funded dollar totals. A future extension needs a separate public contract and privacy review; never interpret pick-share percentages as progress toward a monetary goal.
+
 ## Verification
 
-Run `pnpm check`, `pnpm test`, `pnpm build`, then `pnpm check:libcard`. The HTTP smoke test starts an isolated built demo with outbound fetch disabled, exercises ordinary forms without JavaScript, then removes its temporary data. It covers review/edit/sign-in, exact amounts, duplicate submissions, privacy, public totals, share PNGs and Studio overrides. CI also runs the existing isolated GitHub Pages export with the feature unset.
+Run `pnpm check`, `pnpm test`, `pnpm build`, then `pnpm check:libcard`. The HTTP checks start isolated built demos with outbound fetch disabled, exercise ordinary forms without JavaScript, then remove their temporary data. They cover review/edit/sign-in, exact amounts, duplicate submissions, privacy, public totals, share PNGs and Studio overrides. The consumer-contract check imports LibCard’s committed fixture and verifies its exact credential-free request, GET/HEAD without redirects, canonical origin, cache isolation, 404/503 responses, prefills, and Studio collision diagnostics. CI also runs the existing isolated GitHub Pages export with the feature unset.
+
+After deployment, run `pnpm check:libcard-origin https://your-personal-feedme-origin` to check the real public endpoint without credentials or writes. It verifies compatibility and routing; it does not prove payment or Habitat readiness.
 
 Real Stripe test-account and Habitat-provider acceptance is still required before treating a deployment as production-tested; automated checks use provider fixtures and the local demo.

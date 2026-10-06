@@ -2,6 +2,8 @@
 
 Use this document as the implementation prompt for the AI working in the **LibCard repository**. It is self-contained; no previous conversation is required.
 
+**Handoff completed:** LibCard has since implemented this prompt through `fed406d`. For current status, verified behavior, and the intended `https://crs.tips` deployment, use the [contract and activation checklist](libcard-activation.md). The deployment notes below describe the original handoff.
+
 ## Objective
 
 Add an optional Feedme integration to LibCard. A creator can mark individual links and socials as things they would like support for. Visitors can open those destinations as usual, or choose **“More of this”** to open the creator’s Feedme checkout with that target selected. LibCard can also display aggregate public pick statistics fetched during its static build.
