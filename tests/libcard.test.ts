@@ -9,6 +9,7 @@ import { avatarUrl, parseLibcard, sourceKey, type LibcardSnapshot } from '../src
 import { libcardFixture } from '../src/lib/libcard-fixture';
 import { importLibcard, libcardSnapshot, libcardTargets, libcardProfile, loadLibcardSnapshot, overrideLibcard, refreshLibcard } from '../src/lib/libcard';
 import { publicLibcard } from '../src/lib/libcard-public';
+import { libcardCatalog } from '../src/lib/libcard-catalog';
 import { projectSchema, type Project, type Support } from '../src/lib/model';
 import { prepareRecovery } from '../src/lib/recovery-tracking';
 import { parsePortableValue, recoveryEnvelope, supportRecoverySchema } from '../src/lib/recovery-model';
@@ -64,7 +65,7 @@ describe('LibCard parser and managed import', () => {
 });
 
 describe('refresh and private recovery', () => {
-  it('can preview real source content without inferring opt-ins or changing the stored identity', async () => {
+  it('previews every real source item without changing source opt-ins or the stored identity', async () => {
     state.demo = true; state.remoteDemo = true;
     expect(libcardSnapshot()).toBeUndefined();
     const yaml = `profile: { name: Christopher Smothers, avatar: /avatar.jpg, tagline: Building xNet }
@@ -76,16 +77,42 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     await loadLibcardSnapshot();
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]?.[0]).toBe('https://raw.githubusercontent.com/test/card/main/libcard.config.yaml');
-    expect(libcardTargets().map(p => [p.id, p.title])).toEqual([['creator', 'Just Christopher']]);
+    expect(libcardTargets().map(p => p.title)).toEqual(['Just Christopher', 'Presence', 'bluesky']);
+    expect(libcardSnapshot()?.document.items.every(i => !i.feedme)).toBe(true);
+    expect(libcardTargets().slice(1).every(p => p.libcard?.demoOnly)).toBe(true);
     const base = { name: 'Native', handle: 'native.example', bio: '', location: '', website: '' };
     expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: 'Building xNet', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
     expect(base.name).toBe('Native');
     state.remoteDemo = false;
     expect(libcardProfile(base).handle).toBe('native.example');
+    expect(libcardTargets().map(p => p.id)).toEqual(['creator']);
     state.remoteDemo = true;
     await refreshLibcard(true, async () => { throw new Error('offline'); });
     expect(libcardSnapshot()?.document.profile.name).toBe('Christopher Smothers');
     expect(libcardSnapshot()?.document.items).toHaveLength(2);
+  });
+  it('upgrades old snapshots without sending a stale ETag that would discard icons', async () => {
+    const old = { ...snapshot(), etag: '"old"' }; importLibcard(state.db!, old);
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart')));
+    await refreshLibcard(true, fetcher);
+    expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
+    expect(libcardSnapshot()?.document.items[0].icon).toBe('heart');
+    expect(libcardSnapshot()?.catalogVersion).toBe(2);
+  });
+  it('preserves demo target overrides through removal and stops accepting them outside the preview', () => {
+    state.demo = true; state.remoteDemo = true;
+    const initial = snapshot(); importLibcard(state.db!, initial, true);
+    const id = libcardCatalog(initial, true).find(i => i.label === 'Résumé')!.targetId!;
+    overrideLibcard(state.db!, id, true, 770000);
+    importLibcard(state.db!, { ...initial, document: { ...initial.document, items: initial.document.items.filter(i => i.label !== 'Résumé') } }, true);
+    expect(readRecord<Project>(state.db!, 'project', id)?.libcard?.present).toBe(false);
+    importLibcard(state.db!, initial, true);
+    expect(readRecord<Project>(state.db!, 'project', id)).toMatchObject({ status: 'archived', target: 770000, libcard: { hidden: true, demoOnly: true, present: true } });
+    overrideLibcard(state.db!, id, false, 770000);
+    expect(libcardTargets().some(p => p.id === id)).toBe(true);
+    state.demo = false; state.remoteDemo = false;
+    expect(libcardTargets().some(p => p.id === id)).toBe(false);
+    expect(listRecords(state.db!, 'support')).toEqual([]);
   });
   it('never substitutes fictional content when the first real-source demo import fails', async () => {
     state.demo = true; state.remoteDemo = true;

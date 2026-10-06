@@ -1,0 +1,26 @@
+---
+import { config } from '../lib/config';
+import { money, type Project } from '../lib/model';
+import { sampleLibcardGoal } from '../lib/libcard-catalog';
+import { aspirationProgress } from '../lib/aspiration';
+interface Props { project: Project; publicAmount?: number; }
+const { project, publicAmount = 0 } = Astro.props;
+const goal = config().libcardRemoteDemo ? sampleLibcardGoal(project) : project.target ? { goal: project.target, amount: publicAmount, sample: false } : undefined;
+const progress = goal && aspirationProgress(goal.amount, goal.goal);
+---
+{goal && progress && <div class="libcard-goal" data-sample-goal={goal.sample ? 'true' : undefined}>
+  <div class="goal-caption"><span><strong>{money(goal.amount)}</strong> of {money(goal.goal)} aspiration</span><span class="goal-percent">{progress.percentage}%{goal.sample && <span class="sample-tag">Sample</span>}</span></div>
+  <div class:list={['goal-track', { exceeded: progress.exceeded }]} role="meter" aria-label={`${goal.sample ? 'Sample support' : 'Public support'} for ${project.title}`} aria-valuemin="0" aria-valuemax={goal.goal} aria-valuenow={Math.min(goal.amount, goal.goal)} aria-valuetext={`${money(goal.amount)} of ${money(goal.goal)}, ${progress.percentage}%${goal.sample ? ', illustrative demo data' : ''}`}>
+    <span class="goal-fill" style={`width:${progress.fill}%`}></span>
+    {progress.exceeded && <span class="goal-surplus" style={`width:${progress.surplusFill}%`}></span>}
+  </div>
+  {progress.exceeded && <p class="goal-extra">{money(goal.amount - goal.goal)} beyond the aspiration ✨</p>}
+</div>}
+<style>
+  .libcard-goal { margin-top:14px; } .goal-caption { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px 12px; color:var(--color-muted); font-size:12px; line-height:1.5; }
+  .goal-caption strong { color:var(--color-ink); font-weight:600; } .goal-percent { display:flex; align-items:center; gap:7px; }
+  .sample-tag { font-size:10px; padding:1px 5px; border-radius:4px; background:#f0f3f7; color:#64748b; }
+  .goal-track { position:relative; height:6px; background:#eef1f6; border-radius:10px; overflow:hidden; margin-top:8px; } .goal-fill,.goal-surplus { position:absolute; left:0; top:0; bottom:0; border-radius:10px; background:#7aabf8; }
+  .goal-track.exceeded .goal-fill { background:#d8d5fc; } .goal-surplus { background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6,#fbbf24,#5ddab5); }
+  .goal-extra { font-size:11px; color:#7660aa; margin-top:6px; }
+</style>

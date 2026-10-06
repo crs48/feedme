@@ -5,19 +5,21 @@ import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } 
 import { projectSchema, type Profile, type Project } from './model';
 import { libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource } from './libcard-schema';
 import { libcardFixture } from './libcard-fixture';
+import { libcardCatalog } from './libcard-catalog';
+import { refreshGithubStars } from './libcard-github';
 
-export type RefreshStatus = { attemptedAt: string; error?: string };
+export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 export const storedLibcard = (db: DatabaseSync, source: LibcardSource) => {
   const snapshot = getKv<LibcardSnapshot>(db, 'libcard', 'snapshot');
   return snapshot && sourceKey(snapshot.source) === sourceKey(source) ? snapshot : undefined;
 };
-export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot) => transaction(db, () => {
+export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot, previewAll = false) => transaction(db, () => {
   const validated = libcardSnapshotSchema.parse(snapshot);
   const { document: doc, source } = validated;
   const targets = [
-    { id: 'creator', label: `Just ${doc.profile.name.split(/\s+/)[0]}`, blurb: '', url: null, kind: 'creator' as const, aspiration: 0 },
-    ...doc.items.flatMap(i => i.feedme ? [{ id: i.feedme.id, label: i.label, blurb: i.feedme.blurb, url: i.url, kind: i.kind, aspiration: (i.feedme.aspiration || 0) * 100 }] : []),
+    { id: 'creator', label: `Just ${doc.profile.name.split(/\s+/)[0]}`, blurb: '', url: null, kind: 'creator' as const, aspiration: 0, demoOnly: false },
+    ...libcardCatalog(validated, previewAll).flatMap(i => i.targetId ? [{ id: i.targetId, label: i.label, blurb: i.feedme?.blurb || '', url: i.url, kind: i.kind, aspiration: (i.feedme?.aspiration || 0) * 100, demoOnly: Boolean(i.demoOnly) }] : []),
   ];
   for (const target of targets) {
     const previous = readRecord<Project>(db, 'project', target.id);
@@ -29,7 +31,7 @@ export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot) => tr
       category: 'Community', kind: 'ongoing', status: hidden ? 'archived' : 'active', color: 'blue',
       target: aspirationOverride ?? target.aspiration, image: '', link: target.url?.startsWith('https://') ? target.url : '',
       createdAt: previous?.createdAt || new Date().toISOString(),
-      libcard: { source, kind: target.kind, url: target.url, present: true, hidden, sourceAspiration: target.aspiration, aspirationOverride },
+      libcard: { source, kind: target.kind, url: target.url, present: true, hidden, sourceAspiration: target.aspiration, aspirationOverride, demoOnly: target.demoOnly },
     });
     if (JSON.stringify(previous) !== JSON.stringify(p)) putRecord(db, 'project', p.id, p);
   }
@@ -43,7 +45,7 @@ export const libcardSnapshot = () => {
   const db = getDb();
   let snapshot = storedLibcard(db, cfg.libcard);
   if (cfg.demo && !cfg.libcardRemoteDemo && !snapshot && !getKv(db, 'recovery', 'paused')) {
-    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString() };
+    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 2 };
     importLibcard(db, snapshot);
   }
   return snapshot;
@@ -56,10 +58,10 @@ export const loadLibcardSnapshot = async () => {
 };
 export const libcardTargets = (snapshot = libcardSnapshot()) => {
   if (!snapshot) return [];
-  const ids = ['creator', ...snapshot.document.items.flatMap(i => i.feedme ? [i.feedme.id] : [])];
+  const ids = ['creator', ...libcardCatalog(snapshot, config().libcardRemoteDemo).flatMap(i => i.targetId ? [i.targetId] : [])];
   return ids.flatMap(id => {
     const p = readRecord<Project>(getDb(), 'project', id);
-    return p?.libcard && sourceKey(p.libcard.source) === sourceKey(snapshot.source) && p.libcard.present && !p.libcard.hidden && p.status === 'active' ? [p] : [];
+    return p?.libcard && (!p.libcard.demoOnly || config().libcardRemoteDemo) && sourceKey(p.libcard.source) === sourceKey(snapshot.source) && p.libcard.present && !p.libcard.hidden && p.status === 'active' ? [p] : [];
   });
 };
 export const libcardProfile = (base: Profile, snapshot = libcardSnapshot()): Profile => {
@@ -85,17 +87,17 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   const cfg = config(); if (!cfg.libcard) return;
   const db = getDb(); if (getKv(db, 'recovery', 'paused')) return;
   const key = sourceKey(cfg.libcard);
+  const saved = storedLibcard(db, cfg.libcard);
   const previous = getKv<RefreshStatus>(db, 'libcard-refresh', key);
-  if (!force && previous && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
+  if (!force && previous && (!saved || saved.catalogVersion === 2 || previous.catalogVersion === 2) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
   const attemptedAt = new Date().toISOString();
-  setKv(db, 'libcard-refresh', key, { attemptedAt });
+  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 2 });
   try {
-    const saved = storedLibcard(db, cfg.libcard);
     if (cfg.demo && !cfg.libcardRemoteDemo) {
-      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt });
+      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 2 });
     } else {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {
-        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.etag ? { 'If-None-Match': saved.etag } : {},
+        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 2 && saved.etag ? { 'If-None-Match': saved.etag } : {},
       });
       if (getKv(db, 'recovery', 'paused')) return;
       if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
@@ -106,15 +108,17 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
           while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > 256 * 1024) throw new Error('LibCard config exceeds 256 KiB.'); chunks.push(chunk.value); }
         } finally { await reader.cancel(); }
         const text = Buffer.concat(chunks).toString('utf8');
-        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt });
+        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 2 });
         // A restore pause may have happened while GitHub was responding.
         if (getKv(db, 'recovery', 'paused')) return;
-        importLibcard(db, snapshot);
+        importLibcard(db, snapshot, cfg.libcardRemoteDemo);
       }
+      const current = storedLibcard(db, cfg.libcard);
+      if (current) await refreshGithubStars(db, current.document.items, fetcher);
     }
     return { attemptedAt };
   } catch {
-    const status = { attemptedAt, error: 'LibCard refresh failed. Check GitHub availability, YAML, unique target IDs, allowed URLs, and import limits. The last good snapshot is unchanged.' };
+    const status = { attemptedAt, catalogVersion: 2 as const, error: 'LibCard refresh failed. Check GitHub availability, YAML, unique target IDs, allowed URLs, and import limits. The last good snapshot is unchanged.' };
     setKv(db, 'libcard-refresh', key, status); return status;
   }
 };

@@ -5,6 +5,7 @@ import { getDb, getKv } from '../lib/db';
 import { sourceKey } from '../lib/libcard-schema';
 import { projects } from '../lib/repository';
 import { money } from '../lib/model';
+import { sampleLibcardGoal } from '../lib/libcard-catalog';
 const cfg = config();
 const snapshot = await loadLibcardSnapshot();
 const status = cfg.libcard ? getKv<RefreshStatus>(getDb(), 'libcard-refresh', sourceKey(cfg.libcard)) : undefined;
@@ -17,10 +18,11 @@ const managed = projects(true).filter(p => p.libcard);
   {snapshot && <p class="admin-help break-all">Content SHA-256: {snapshot.hash}{snapshot.etag && <><br/>ETag: {snapshot.etag}</>}</p>}
   {status?.error && <p class="admin-warning">{status.error}</p>}
   <p class="admin-help mt-4">Labels, links, and descriptions come from your repository. Local changes below never write back to LibCard. Hiding a target stops new picks; existing recurring gifts keep their original allocation until canceled.</p>
+  {cfg.libcardRemoteDemo && <p class="notice">Demo preview: all source links and socials can receive simulated picks. Goals without a source value use stable sample amounts, and displayed progress is illustrative. Set an aspiration below to preview your own goal; 0 hides it. No sample support is added to the payment ledger.</p>}
   {managed.map(p => <article class="libcard-admin-row"><div><h3>{p.title}</h3><p class="admin-help">{p.summary}</p><p class="admin-help break-all">{p.id} · {p.libcard!.kind} · {p.status}{!p.libcard!.present && ' · removed from source'}{p.libcard!.url && <> · <a href={p.libcard!.url} rel="noopener noreferrer">{p.libcard!.url}</a></>}</p><p class="admin-help">Source aspiration: {p.libcard!.sourceAspiration ? money(p.libcard!.sourceAspiration) : 'None'}</p></div>
     <form method="post" action="/api/studio"><input type="hidden" name="action" value="libcard-override"/><input type="hidden" name="id" value={p.id}/><input type="hidden" name="returnTo" value="/studio/projects"/>
       {p.id !== 'creator' && <label class="admin-help"><input type="checkbox" name="hidden" value="yes" checked={p.libcard!.hidden}/> Hide on Feedme</label>}
-      <label class="field mt-3">Aspiration override (USD)<input type="number" name="aspiration" min="0" max="1000000" step="1" value={p.libcard!.aspirationOverride === undefined ? '' : p.libcard!.aspirationOverride / 100} placeholder="Use source value"/><span class="admin-help">Blank inherits; 0 removes the aspiration.</span></label><button class="button secondary">Save local settings</button>
+      <label class="field mt-3">Aspiration override (USD)<input type="number" name="aspiration" min="0" max="1000000" step="1" value={p.libcard!.aspirationOverride === undefined ? '' : p.libcard!.aspirationOverride / 100} placeholder="Use source value"/><span class="admin-help">Blank inherits; 0 removes the aspiration.{cfg.libcardRemoteDemo && sampleLibcardGoal(p) && ` Preview goal: ${money(sampleLibcardGoal(p)!.goal)}.`}</span></label><button class="button secondary">Save local settings</button>
     </form>
   </article>)}
 </section>}

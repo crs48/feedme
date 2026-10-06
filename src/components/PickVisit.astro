@@ -1,9 +1,14 @@
 ---
 import { config } from '../lib/config';
 import { libcardSnapshot, libcardTargets } from '../lib/libcard';
+import { libcardCatalog } from '../lib/libcard-catalog';
+import { supports } from '../lib/repository';
 import { createPickForm, type PickValues } from '../lib/pick-checkout';
-import { money } from '../lib/model';
+import { money, netSupport } from '../lib/model';
 import Markdown from './Markdown.astro';
+import LibcardIcon from './LibcardIcon.astro';
+import LibcardGithub from './LibcardGithub.astro';
+import LibcardGoal from './LibcardGoal.astro';
 interface Props { values?: PickValues; notice?: string; }
 const cfg = config();
 const snapshot = libcardSnapshot();
@@ -11,7 +16,10 @@ const targets = libcardTargets(snapshot);
 const values = Astro.props.values || { amount: cfg.defaultTipAmount, picks: [], frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
 const requestId = snapshot ? createPickForm(Astro, targets.map(p => p.id)) : '';
 const total = values.picks.reduce((n, p) => n + p.count, 0);
-const untippable = snapshot?.document.items.filter(i => !i.feedme) || [];
+const catalog = snapshot ? libcardCatalog(snapshot, cfg.libcardRemoteDemo) : [];
+const itemsById = new Map(catalog.flatMap(i => i.targetId ? [[i.targetId, i] as const] : []));
+const untippable = catalog.filter(i => !i.targetId);
+const publicAmounts = cfg.libcardRemoteDemo ? new Map<string, number>() : supports().filter(s => s.visibility === 'public').reduce((amounts, s) => amounts.set(s.projectId, (amounts.get(s.projectId) || 0) + netSupport(s)), new Map<string, number>());
 ---
 {!snapshot ? <section class="panel"><h2 class="section-title">This page is getting ready.</h2><p class="muted mt-3">The creator’s LibCard is not available yet. Please try again shortly.</p></section> : <>
   {snapshot.document.about && <div class="pick-about"><Markdown content={snapshot.document.about}/></div>}
@@ -21,24 +29,29 @@ const untippable = snapshot?.document.items.filter(i => !i.feedme) || [];
     <section aria-labelledby="pick-heading">
       <p class="eyebrow">A little encouragement</p><h2 id="pick-heading" class="section-title mt-2">What would you love to see more of?</h2>
       <p class="muted pick-intro">Pick what speaks to you. Extra picks add emphasis.</p>
-      <div class="pick-shortcuts"><button class="button secondary" name="intent" value="all" formaction="/checkout" data-pick-shortcut="all">All of these, equally</button><button class="pick-quiet" name="intent" value="creator" formaction="/checkout" data-pick-shortcut="creator">Just them</button></div>
+      {cfg.libcardRemoteDemo && <p class="pick-demo-note">All {catalog.length} LibCard links and socials are here to try. Goals and support below are sample data; GitHub stars are real.</p>}
+      <div class="pick-shortcuts"><button class="button secondary" name="intent" value="all" formaction="/checkout" data-pick-shortcut="all">All of these, equally</button><button class="pick-quiet" name="intent" value="creator" formaction="/checkout" data-pick-shortcut="creator">Just them</button><a class="pick-jump" href="#libcard-gift">Your gift ↓</a></div>
       <noscript><p class="notice">Choose a whole count from 0 to 9 for each item. You’ll review the exact dollar split before paying.</p></noscript>
       <div class="pick-list">{targets.map(p => {
         const count = values.picks.find(v => v.projectId === p.id)?.count || 0;
+        const item = itemsById.get(p.id);
         return <article class="pick-row" data-pick-row={p.id}>
-          <div class="pick-copy"><button type="button" class="pick-add" data-pick-add aria-label={`Add a pick to ${p.title}`} hidden>{p.title} <span aria-hidden="true">+</span></button><h3 data-pick-fallback>{p.title}</h3>
+          <div class="pick-icon" aria-hidden="true"><LibcardIcon name={item?.icon || (p.id === 'creator' ? 'heart' : 'link')} size={22}/></div>
+          <div class="pick-copy"><h3>{p.libcard?.url ? <a class="pick-title" href={p.libcard.url} rel="noopener noreferrer">{p.title}<span aria-hidden="true"> ↗</span></a> : p.title}</h3>
             {p.summary && <p>{p.summary}</p>}
-            <div class="pick-details">{p.libcard?.url && <a href={p.libcard.url} rel="noopener noreferrer">Visit {p.libcard.kind === 'social' ? 'profile' : 'link'} ↗</a>}{p.target > 0 && <span>{money(p.target)} aspiration</span>}</div>
+            {item && <div class="pick-details"><span class="pick-destination">{item.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span><LibcardGithub item={item}/></div>}
+            <LibcardGoal project={p} publicAmount={publicAmounts.get(p.id) || 0}/>
           </div>
           <div class="pick-count"><label data-pick-input-label for={`pick-${p.id}`}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input/>
             <button type="button" class="pick-mark" data-pick-remove aria-label={`Remove one pick from ${p.title}`} hidden>{count === 1 ? '✓' : count > 1 ? `×${count}` : ''}</button>
+            <button type="button" class="pick-add" data-pick-add aria-label={`Add a pick to ${p.title}`} hidden><span aria-hidden="true">+</span></button>
             <output data-pick-share>{total && count ? `${Math.round(count / total * 1000) / 10}%` : ''}</output>
           </div>
         </article>;
       })}</div>
-      {untippable.length > 0 && <nav class="pick-links" aria-label="More links"><h3>More from {snapshot.document.profile.name.split(/\s+/)[0]}</h3>{untippable.map(i => <a href={i.url} rel="noopener noreferrer">{i.label} ↗</a>)}</nav>}
+      {untippable.length > 0 && <section class="pick-links" aria-label="More links"><h3>More from {snapshot.document.profile.name.split(/\s+/)[0]}</h3><div class="pick-list">{untippable.map(i => <article class="pick-row"><div class="pick-icon" aria-hidden="true"><LibcardIcon name={i.icon || 'link'} size={22}/></div><div class="pick-copy"><h3><a class="pick-title" href={i.url} rel="noopener noreferrer">{i.label} ↗</a></h3><div class="pick-details"><span class="pick-destination">{i.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span><LibcardGithub item={i}/></div></div></article>)}</div></section>}
     </section>
-    <aside class="pick-payment panel">
+    <aside class="pick-payment panel" id="libcard-gift">
       <h2 class="section-title">Your gift</h2><p class="muted pick-intro">One amount. The things you care about.</p>
       <div class="pick-presets">{cfg.tipAmounts.map(amount => <button type="submit" name="intent" value={`amount-${amount}`} formaction="/checkout" data-pick-amount={amount} aria-pressed={values.amount === amount}>{money(amount)}</button>)}</div>
       <label class="field">Amount (USD)<input type="number" name="amount" min="1" max="1000" step="0.01" required value={(values.amount / 100).toFixed(2)} data-pick-total/></label>
@@ -75,7 +88,6 @@ const untippable = snapshot?.document.items.filter(i => !i.feedme) || [];
       form.querySelectorAll<HTMLButtonElement>('[data-pick-amount]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.pickAmount) === Math.round(Number(amount.value) * 100))));
     };
     rows.forEach((row, i) => {
-      row.querySelector<HTMLElement>('[data-pick-fallback]')!.hidden = true;
       row.querySelector<HTMLElement>('[data-pick-input-label]')!.hidden = true;
       inputs[i].hidden = true;
       const add = row.querySelector<HTMLButtonElement>('[data-pick-add]')!;
@@ -94,29 +106,33 @@ const untippable = snapshot?.document.items.filter(i => !i.feedme) || [];
   .pick-visit { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:32px; align-items:start; margin-top:24px; }
   .pick-about { max-width:720px; margin-block:20px; }
   .pick-intro { font-size:14px; line-height:1.6; margin-top:8px; }
+  .pick-demo-note { color:#64748b; font-size:12px; line-height:1.6; margin-top:10px; max-width:560px; }
   .pick-shortcuts { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin:24px 0; }
   .pick-quiet { color:var(--color-primary); min-height:44px; font-size:14px; }
+  .pick-jump { display:none; color:var(--color-primary); font-size:13px; min-height:44px; align-items:center; }
   .pick-list { border:1px solid var(--color-border); border-radius:14px; overflow:hidden; }
-  .pick-row { padding:20px; display:flex; align-items:center; gap:16px; background:white; border-bottom:1px solid var(--color-border); }
+  .pick-row { padding:24px 20px; display:flex; align-items:flex-start; gap:14px; background:white; border-bottom:1px solid var(--color-border); }
   .pick-row:last-child { border-bottom:0; } .pick-row[data-selected='true'] { background:#f7faff; }
-  .pick-copy { flex:1; min-width:0; } h3,.pick-add { font-size:16px; font-weight:600; overflow-wrap:anywhere; }
-  .pick-add { display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; text-align:left; min-height:44px; }
-  .pick-add span { color:var(--color-primary); font-size:20px; } .pick-add:disabled span { visibility:hidden; }
+  .pick-copy { flex:1; min-width:0; } h3 { font-size:15px; font-weight:600; overflow-wrap:anywhere; line-height:1.5; }
+  .pick-icon { width:36px; height:36px; flex-shrink:0; display:grid; place-items:center; background:#f3f7fd; color:#647eaa; border-radius:10px; }
+  .pick-title { display:inline-block; padding-block:2px; } .pick-title:hover { color:var(--color-primary); } .pick-title > span { color:#94a3b8; font-size:12px; }
+  .pick-add { display:inline-grid; place-items:center; width:44px; height:44px; border:1px solid #d9e3f2; border-radius:50%; color:var(--color-primary); background:white; font-size:22px; }
+  .pick-add:hover { background:#edf5ff; border-color:#7baaf2; } .pick-add:disabled { opacity:.35; cursor:default; }
   .pick-copy > p { color:var(--color-muted); font-size:13px; line-height:1.6; margin-top:4px; }
-  .pick-details { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--color-muted); margin-top:8px; }
-  .pick-details a { color:var(--color-primary); display:inline-flex; align-items:center; min-height:32px; }
-  .pick-count { flex:0 0 65px; text-align:center; } .pick-count label { font-size:12px; } .pick-count input { width:65px; min-height:44px; }
-  .pick-mark { border:1px solid #bfd4f6; color:var(--color-primary); border-radius:50%; width:44px; height:44px; background:white; font-size:16px; font-weight:600; }
+  .pick-details { display:flex; gap:6px 12px; flex-wrap:wrap; align-items:center; font-size:11px; color:var(--color-muted); margin-top:5px; }
+  .pick-destination { overflow-wrap:anywhere; min-width:0; }
+  .pick-count { flex:0 0 48px; text-align:center; } .pick-count label { font-size:12px; } .pick-count input { width:48px; min-height:44px; }
+  .pick-mark { border:1px solid #bfd4f6; color:var(--color-primary); border-radius:50%; width:44px; height:44px; background:#edf5ff; font-size:16px; font-weight:600; margin-bottom:6px; }
   output { display:block; font-size:12px; color:var(--color-muted); margin-top:5px; min-height:18px; }
-  .pick-payment { position:sticky; top:24px; } .pick-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-block:20px; }
+  .pick-payment { position:sticky; top:24px; max-height:calc(100svh - 48px); overflow-y:auto; scroll-margin-top:20px; } .pick-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-block:20px; }
   .pick-presets button { border:1px solid var(--color-border); border-radius:7px; min-height:44px; font-size:14px; }
   .pick-presets button[aria-pressed='true'] { color:var(--color-primary); border-color:var(--color-primary); background:#f5f9ff; }
   .pick-frequency { display:flex; gap:5px; padding:0; border:0; margin-bottom:12px; } legend { font-size:13px; margin-bottom:8px; }
   .pick-frequency label { flex:1; cursor:pointer; } .pick-frequency input { margin-right:5px; } .pick-frequency span { font-size:12px; }
   .pick-fine { font-size:12px; line-height:1.6; color:var(--color-muted); margin:8px 0 16px; } .pick-checkbox { display:flex; align-items:start; gap:8px; font-size:12px; line-height:1.6; margin-bottom:20px; }
   .pick-status { font-size:13px; color:var(--color-muted); margin-block:16px; } .pick-submit { width:100%; text-align:center; }
-  .pick-links { display:flex; flex-wrap:wrap; gap:4px 20px; margin-top:24px; font-size:13px; } .pick-links h3 { flex-basis:100%; font-size:14px; margin-bottom:8px; } .pick-links a { min-height:44px; display:inline-flex; align-items:center; color:var(--color-primary); }
+  .pick-links { margin-top:24px; } .pick-links > h3 { font-size:14px; margin-bottom:12px; }
   button:focus-visible, a:focus-visible { outline:3px solid #0866ff70; outline-offset:3px; } [hidden] { display:none!important; }
-  @media(max-width:850px) { .pick-visit { grid-template-columns:1fr; gap:24px; } .pick-payment { position:static; } }
-  @media(max-width:450px) { .pick-row { padding:16px; gap:8px; } .pick-shortcuts { gap:12px; } }
+  @media(max-width:850px) { .pick-visit { grid-template-columns:1fr; gap:24px; } .pick-payment { position:static; max-height:none; overflow:visible; } .pick-jump { display:inline-flex; } }
+  @media(max-width:450px) { .pick-row { padding:18px 12px; gap:10px; } .pick-icon { width:28px; height:32px; background:none; } .pick-shortcuts { gap:12px; } h3 { font-size:14px; } }
 </style>
