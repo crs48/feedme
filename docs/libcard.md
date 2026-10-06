@@ -146,6 +146,8 @@ Unknown, hidden, archived, repeated, noninteger, and out-of-range pick parameter
 
 ## LibCard follow-on (separate repository)
 
+Use the [LibCard AI implementation prompt](libcard-ai-prompt.md) for a self-contained handoff covering schemas, tip links, build-time public statistics, compatibility, and verification.
+
 After the Feedme endpoint ships, update LibCard’s source schema and generated JSON schema to accept the opt-ins above and this global block:
 
 ```yaml
