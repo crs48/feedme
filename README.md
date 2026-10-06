@@ -43,6 +43,16 @@ TIP_AMOUNTS=11,22,44,88
 
 The second amount is the starting amount on both the homepage and project pages. Use four distinct values between $1 and $1,000, with up to two decimal places. Supporters can always enter a custom amount. The suggestions apply to one-time, monthly, and yearly tips; existing recurring payments keep their saved amounts.
 
+## Optional LibCard picks
+
+Set `LIBCARD_REPO=your-name/your-libcard` (and optionally `LIBCARD_REF=main`) to use a public LibCard config as your profile and offer its explicitly opted-in links/socials as places to direct a tip. Supporters use integer picks, review the exact split, and check out once. Public pick totals are available at `/api/public/libcard` for the separate LibCard integration.
+
+Try the offline fixture with `FEEDME_MODE=demo LIBCARD_REPO=example/libcard pnpm dev`. Unset the repository to retain the existing percentage UI. Live mode still needs the normal Stripe, Habitat, and HTTPS setup. The GitHub Pages demo stays unchanged.
+
+To preview the real crs.land LibCard while keeping payments simulated: `FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_HANDLE=crs.land pnpm dev`. This imports the public profile and full link rows with icons and real GitHub star counts, checks the source every 15 minutes while in use, and stores simulated activity in a separate `demo-libcard.sqlite`. All links and socials can be tried with picks in this preview, alongside labeled sample goals and support. Live payments still require explicit source opt-ins. Goals can come from LibCard or a local override under **Dashboard → Projects → From LibCard**.
+
+See [LibCard setup, ingestion, public contract, and recovery](docs/libcard.md) and the [contract verification and activation checklist](docs/libcard-activation.md). The matching LibCard schema/UI is merged into its `main` branch; install compatible versions of both apps before enabling it. Older LibCard versions reject nested opt-in fields.
+
 ## Your Bluesky account is your admin login
 
 Copy the template, then change this one identity setting in `.env` or your host’s environment:

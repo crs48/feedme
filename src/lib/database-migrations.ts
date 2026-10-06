@@ -11,6 +11,10 @@ export const migrations: readonly Migration[] = [{ version: 1, apply: db => {
     CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, created INTEGER NOT NULL);
   `);
   installRecoveryTracking(db);
+} }, { version: 2, apply: db => {
+  for (const action of ['insert', 'update', 'delete']) db.exec(`DROP TRIGGER IF EXISTS recovery_kv_${action}`);
+  installRecoveryTracking(db);
+  db.exec("INSERT OR IGNORE INTO recovery_dirty SELECT 'kv',namespace,key FROM kv WHERE namespace='libcard' AND key='snapshot'");
 } }];
 export const databaseVersion = migrations.at(-1)!.version;
 export const readDatabaseVersion = (db: DatabaseSync) => Number((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version);

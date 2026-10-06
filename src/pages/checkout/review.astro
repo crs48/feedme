@@ -1,0 +1,36 @@
+---
+import type { APIContext } from 'astro';
+import Layout from '../../layouts/Layout.astro';
+import { identifyPickReview, type PickReview } from '../../lib/pick-checkout';
+import { allocatePicks } from '../../lib/picks';
+import { project } from '../../lib/repository';
+import { libcardTargets } from '../../lib/libcard';
+import { money } from '../../lib/model';
+import { frequencyLabel } from '../../lib/billing-frequency';
+import { errorMessage } from '../../lib/http';
+const token = Astro.url.searchParams.get('token') || '';
+let review: PickReview | undefined;
+let error = '';
+try { review = identifyPickReview(Astro as APIContext, token); } catch (e) { error = errorMessage(e); Astro.response.status = 400; }
+const parts = review ? allocatePicks(review.amount, review.picks) : [];
+const ids = new Set(libcardTargets().map(p => p.id));
+const changed = review?.picks.some(p => !ids.has(p.projectId));
+const needsLogin = review && review.visibility !== 'anonymous' && (!review.supporterDid || review.supporterDid !== Astro.locals.user?.did);
+const total = review?.picks.reduce((n, p) => n + p.count, 0) || 0;
+---
+<Layout title="Review your gift" noindex>
+  <section class="shell py-12"><div class="panel max-w-xl mx-auto">
+    <p class="eyebrow">One more look</p><h1 class="section-title text-2xl my-4">Review your gift</h1>
+    {error ? <><p class="notice">{error}</p><a class="button" href="/checkout">Choose your gift again</a></> : review && <>
+      <p class="text-lg font-semibold">{money(review.amount)} to {review.creatorName}</p><p class="muted text-sm mt-2">{frequencyLabel(review.frequency)} · {review.visibility}</p>
+      <ul class="my-6">{parts.map(part => { const p = project(part.projectId); const count = review!.picks.find(pick => pick.projectId === part.projectId)!.count; return <li class="border-b border-border py-4 text-sm"><div class="flex justify-between gap-4"><strong>{p?.title || part.projectId}</strong><span>{money(part.amount)}</span></div><p class="muted mt-2">{count} {count === 1 ? 'pick' : 'picks'} · {Math.round(count / total * 1000) / 10}%{p && p.target > 0 && ` · ${money(p.target)} aspiration`}</p></li>; })}</ul>
+      {review.note && <div class="mb-5"><p class="text-sm font-semibold">Your private note</p><p class="text-sm whitespace-pre-wrap mt-2">{review.note}</p></div>}
+      <p class="muted text-sm mb-4">{review.visibility === 'public' ? 'Your identity, amount, and picks will be public. Your note stays private.' : review.visibility === 'private' ? 'Your identity and note are shared with the creator, not the public.' : review.announceAnonymously ? 'An anonymous thank-you may appear, without your amount. Your picks do not enter public totals.' : 'Your gift does not appear in public totals or the timeline.'}</p>
+      {review.frequency !== 'once' && <p class="notice">{money(review.amount)} repeats {review.frequency}, with these picks and this visibility, until canceled.</p>}
+      {changed ? <p class="notice">A selected target is no longer available. Edit and review your gift again.</p> : needsLogin ? <a class="button" href={`/login?returnTo=${encodeURIComponent(`/checkout/review?token=${token}`)}`}>Sign in to continue</a> : <form method="post" action="/api/checkout"><input type="hidden" name="reviewId" value={token}/><button class="button w-full">Give this to {review.creatorName}.</button></form>}
+      <p class="muted text-xs mt-3">They get all of it. Where you placed it is a suggestion.</p>
+      <p class="muted text-xs mt-2">Continue to Stripe to complete payment.</p>
+      <form method="post" action="/checkout" class="mt-5"><input type="hidden" name="editReview" value={token}/><button class="button secondary">Edit your gift</button></form>
+    </>}
+  </div></section>
+</Layout>

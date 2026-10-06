@@ -19,6 +19,7 @@ import { config } from '../../lib/config';
 import { cookieOptions, digest, randomToken } from '../../lib/auth';
 import { getDb, setKv } from '../../lib/db';
 const p = project(Astro.params.id || '');
+if (p?.libcard) return Astro.redirect(config().libcard ? `/checkout?${encodeURIComponent(p.id)}=1` : '/');
 if (!p || !['active', 'complete'].includes(p.status)) return Astro.redirect('/404');
 const creator = profile();
 const t = totals(p.id);

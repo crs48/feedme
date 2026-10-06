@@ -1,3 +1,8 @@
+import * as stripeRecovery from '../src/lib/recovery-stripe';
+import { importLibcard } from '../src/lib/libcard';
+import { parseLibcard } from '../src/lib/libcard-schema';
+import { libcardFixture } from '../src/lib/libcard-fixture';
+import { overrideLibcard } from '../src/lib/libcard';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 const transport = vi.hoisted(() => vi.fn());
@@ -54,6 +59,27 @@ describe('complete private recovery checkpoints', () => {
     try { importRecovery(target, result.checkpoint, result.entries); expect(readRecord(target, 'support', tip.id)).toEqual(tip); expect(readRecord(target, 'project', 'draft')).toMatchObject({ status: 'draft' }); expect(getKv(target, 'support-share-payment', 'abcdefghijklmnopqrstuvwx')).toBe(tip.id); expect(getKv(target, 'oauth-session', owner)).toBeUndefined(); expect(getKv(target, 'recovery', 'paused')).toBe(true); } finally { target.close(); }
     expect(JSON.stringify([...remote])).not.toContain('never-export-this');
     await expect(protectCheckoutIntent()).resolves.toBeUndefined();
+  });
+  it('restores LibCard source, overrides and original picks without republishing managed targets', async () => {
+    seed();
+    const source = { repo: 'test/card', ref: 'main' };
+    importLibcard(db, { source, document: parseLibcard(libcardFixture, source), hash: 'a'.repeat(64), checkedAt: '2026-10-05T12:00:00Z' });
+    overrideLibcard(db, 'presence', true, 4200);
+    const tip: Support = { id: 'picks', projectId: 'creator', amount: 2200, currency: 'usd', visibility: 'public', supporterDid: owner, note: 'Private pick note', status: 'paid', refundedAmount: 0, disputed: false, createdAt: '2026-10-05T12:00:00Z', accountId: 'acct_picks', picks: [{ projectId: 'creator', count: 1 }, { projectId: 'presence', count: 3 }], allocations: [{ projectId: 'creator', amount: 550, activityId: 'creator-part' }, { projectId: 'presence', amount: 1650, activityId: 'presence-part' }] };
+    putRecord(db, 'support', tip.id, tip); setKv(db, 'app', 'stripe-account', 'acct_picks');
+    expect((await drainOutbox()).failed).toBe(0);
+    const result = await downloadRecovery(space); const target = openDatabase(':memory:');
+    try {
+      importRecovery(target, result.checkpoint, result.entries);
+      expect(getKv(target, 'libcard', 'snapshot')).toEqual(getKv(db, 'libcard', 'snapshot'));
+      expect(readRecord(target, 'project', 'presence')).toMatchObject({ status: 'archived', target: 4200, libcard: { hidden: true, aspirationOverride: 4200 } });
+      expect(readRecord(target, 'support', tip.id)).toEqual(tip);
+    } finally { target.close(); }
+    setKv(db, 'recovery', 'paused', true);
+    const reconcile = vi.spyOn(stripeRecovery, 'reconcileStripe').mockResolvedValue('Verified provider fixture.');
+    try { await resumeRecovery(); } finally { reconcile.mockRestore(); }
+    const publicWrites = db.prepare("SELECT collection,rkey FROM outbox WHERE destination='public'").all();
+    expect(publicWrites).toEqual([{ collection: 'fund.feedme.project', rkey: demoProjects[0].id }]);
   });
   it('retains the last complete checkpoint while a newer write is interrupted', async () => {
     seed(); await drainOutbox(); const prior = remote.get(`${CHECKPOINT}/self`);

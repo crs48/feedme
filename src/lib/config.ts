@@ -1,3 +1,4 @@
+import { libcardSourceSchema } from './libcard-schema';
 import { resolve } from 'node:path';
 import { centsFromInput } from './model';
 import { identitySettings, resolvedDid } from './identity-settings';
@@ -25,6 +26,8 @@ const tipAmountsFromEnv = () => {
 export const config = () => {
   const tipAmounts = tipAmountsFromEnv();
   const demo = process.env.FEEDME_MODE !== 'live';
+  const libcardDemoSource = process.env.LIBCARD_DEMO_SOURCE || 'fixture';
+  if (!['fixture', 'github'].includes(libcardDemoSource)) throw new Error('LIBCARD_DEMO_SOURCE must be fixture or github.');
   const origin = publicOrigin();
   const identities = identitySettings();
   const dataDir = resolve(process.env.DATA_DIR || '.data');
@@ -36,7 +39,9 @@ export const config = () => {
       throw new Error('Live mode requires a 32-byte DATA_ENCRYPTION_KEY encoded as hex.');
   }
   return {
-    demo, origin, ownerDid, adminDids, identities, tipAmounts, defaultTipAmount: tipAmounts[1], dataDir,
+    demo, origin, ownerDid, adminDids, identities, tipAmounts,
+    libcardRemoteDemo: demo && Boolean(process.env.LIBCARD_REPO) && libcardDemoSource === 'github',
+    libcard: process.env.LIBCARD_REPO ? libcardSourceSchema.parse({ repo: process.env.LIBCARD_REPO, ref: process.env.LIBCARD_REF || 'main' }) : undefined, defaultTipAmount: tipAmounts[1], dataDir,
     discoveryRelay: process.env.DISCOVERY_RELAY_URL || 'https://relay1.us-east.bsky.network',
     directoryUrl: process.env.DIRECTORY_URL === 'off' ? '' : process.env.DIRECTORY_URL || 'https://feedme.fund/directory/v1.json',
     habitatUrl: process.env.HABITAT_URL || 'https://pear.habitat.network',

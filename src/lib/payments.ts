@@ -61,7 +61,9 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
     ...(interval ? { subscription_data: { metadata: { feedme_support_id: intent.id } } } : { payment_intent_data: { metadata: { feedme_support_id: intent.id } } }),
     line_items: items.map(({ title, amount }) => ({ quantity: 1, price_data: { currency: 'usd', unit_amount: amount, ...(interval ? { recurring: { interval } } : {}), product_data: { name: `Support: ${title}` } } })),
     success_url: `${config().origin}/thanks?id=${intent.id}`,
-    cancel_url: `${config().origin}${intent.allocations ? '/' : `/support/${intent.projectId}`}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
+    cancel_url: intent.picks
+      ? `${config().origin}/checkout/review?token=${encodeURIComponent(intent.id)}&notice=Checkout%20canceled.%20Review%20your%20gift%20to%20continue.`
+      : `${config().origin}${intent.allocations ? '/' : `/support/${intent.projectId}`}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
   }, { stripeAccount: account, idempotencyKey: `feedme-checkout-${intent.id}` });
   // A webhook may arrive before this API call returns. Preserve its newer status.
   const latest = readRecord<Support>(getDb(), 'support', intent.id) || current;

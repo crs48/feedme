@@ -1,3 +1,4 @@
+import { libcardProfile } from './libcard';
 import { randomBytes } from 'node:crypto';
 import { getDb, getKv, setKv, transaction } from './db';
 import { profile, projects, support, supports } from './repository';
@@ -25,5 +26,5 @@ export const supportShare = (id: string | undefined) => {
   const publicAmounts = new Map<string, number>();
   for (const part of supports()) if (part.visibility === 'public')
     publicAmounts.set(part.projectId, (publicAmounts.get(part.projectId) || 0) + netSupport(part));
-  return publicSupportCard(payment, profile(), projects(true), publicAmounts);
+  return publicSupportCard(payment, payment.picks ? libcardProfile(profile()) : profile(), projects(true), publicAmounts);
 };

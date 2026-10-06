@@ -45,6 +45,16 @@ describe('split Stripe Checkout contract', () => {
     expect(mock.portal.mock.calls[0][1].stripeAccount).toBe('acct_creator');
     expect(readRecord<Support>(db, 'support', intent.id)?.status).toBe('pending');
   });
+  it('charges one creator item for 100 recurring picks and returns cancellations to review', async () => {
+    const picks = Array.from({ length: 100 }, (_, i) => ({ projectId: `target-${i}`, count: 1 }));
+    const gift = { ...intent, frequency: 'monthly' as const, picks, allocations: picks.map(p => ({ projectId: p.projectId, amount: 10, activityId: p.projectId })) };
+    await checkout(gift, [{ title: 'A tip for Alex', amount: gift.amount }]);
+    const params = mock.create.mock.calls[0][0];
+    expect(params.line_items).toHaveLength(1); expect(params.line_items[0].price_data.unit_amount).toBe(1000);
+    expect(params.cancel_url).toContain('/checkout/review?token=tip-1&notice=');
+    expect(readRecord<Support>(db, 'support', gift.id)?.picks).toEqual(picks);
+    expect(mock.protect).toHaveBeenCalledOnce();
+  });
   it('reuses a customer only with a matching server-side browser capability', async () => {
     putRecord(db, 'support', 'older', { ...intent, id: 'older', accountId: 'acct_creator', frequency: 'monthly', subscriptionId: 'sub_old' });
     putRecord(db, 'subscription', 'older', { customerId: 'cus_old' });

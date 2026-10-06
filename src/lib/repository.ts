@@ -3,7 +3,7 @@ import { enqueue, getDb, deleteKv, listRecords, putRecord, readRecord, setKv, tr
 import { NS, netSupport, supportParts, projectSchema, profileSchema, updateSchema, friendSchema, type Friend, type Profile, type Project, type Support, type Update } from './model';
 
 export const profile = () => readRecord<Profile>(getDb(), 'profile', 'self')!;
-export const projects = (includePrivate = false) => listRecords<Project>(getDb(), 'project').filter((p) => includePrivate || ['active', 'complete'].includes(p.status)).reverse();
+export const projects = (includePrivate = false) => listRecords<Project>(getDb(), 'project').filter((p) => includePrivate || (!p.libcard && ['active', 'complete'].includes(p.status))).reverse();
 export const project = (id: string) => readRecord<Project>(getDb(), 'project', id);
 export const updates = () => listRecords<Update>(getDb(), 'update').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 export const friends = () => listRecords<Friend>(getDb(), 'friend');
@@ -26,6 +26,7 @@ const publicProfile = (value: unknown) => {
 export const saveProject = (value: unknown) => {
   const p = projectSchema.parse(value);
   const previous = project(p.id);
+  if (p.libcard || previous?.libcard) throw new Error('Manage this target in From LibCard. Source fields are read-only.');
   if ((!previous || previous.status === 'draft') && !['draft', 'active'].includes(p.status)) throw new Error('Publish a draft before completing or archiving it.');
   if (p.status === 'draft') {
     if (previous && previous.status !== 'draft') throw new Error('Published projects cannot become private drafts. Archive the project instead.');
@@ -45,7 +46,7 @@ export const saveProfile = (value: unknown, expectedCid: string | null) => trans
 export const saveUpdate = (value: unknown) => {
   const u = updateSchema.parse(value);
   const p = project(u.projectId);
-  if (!p || !['active', 'complete'].includes(p.status)) throw new Error('Choose a published project.');
+  if (!p || p.libcard || !['active', 'complete'].includes(p.status)) throw new Error('Choose a published project.');
   savePublic('update', u.id, u);
   return u;
 };

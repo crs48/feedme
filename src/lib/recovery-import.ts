@@ -57,7 +57,7 @@ export const validateRecoveryRelations = (db: DatabaseSync) => {
   const supports = listRecords<Support>(db, 'support'); const payments = new Map(supports.map(s => [s.id, s]));
   const account = getKv<string>(db, 'app', 'stripe-account');
   for (const s of supports) {
-    if (![s.projectId, ...(s.allocations || []).map(a => a.projectId)].every(p => projects.has(p))) throw new Error('A recovered payment refers to a missing project.');
+    if (![s.projectId, ...(s.allocations || []).map(a => a.projectId), ...(s.picks || []).map(p => p.projectId)].every(p => projects.has(p))) throw new Error('A recovered payment refers to a missing project.');
     if (s.recurringRootId && !payments.has(s.recurringRootId)) throw new Error('A renewal has no original allocation intent.');
     if (s.accountId && account !== s.accountId) throw new Error('A recovered payment belongs to a different Stripe account.');
     if (!s.accountId && ['paid', 'refunded', 'disputed'].includes(s.status)) throw new Error('A settled payment has no Stripe account binding.');

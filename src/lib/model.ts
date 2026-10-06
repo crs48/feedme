@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { libcardMetadataSchema } from './libcard-schema';
 import type { BillingFrequency } from './billing-frequency';
 
 // Schema authority: feedme.fund. Keep legacy reads during the prototype migration.
@@ -8,9 +9,9 @@ export const didSchema = z.string().regex(/^did:(plc:[a-z2-7]{24}|web:[a-zA-Z0-9
 export const httpsUrl = z.union([z.literal(''), z.url().refine((v) => new URL(v).protocol === 'https:', 'Use an HTTPS URL')]);
 export const projectSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
-  title: z.string().trim().min(3).max(100),
-  summary: z.string().trim().min(10).max(240),
-  description: z.string().trim().min(10).max(30000),
+  title: z.string().trim().min(1).max(100),
+  summary: z.string().trim().max(240),
+  description: z.string().trim().max(30000),
   category: z.enum(['Making', 'Writing', 'Open source', 'Community', 'Life']),
   kind: z.enum(['project', 'ongoing']),
   status: z.enum(['draft', 'active', 'complete', 'archived']),
@@ -19,6 +20,12 @@ export const projectSchema = z.object({
   image: httpsUrl.default(''),
   link: httpsUrl.default(''),
   createdAt: z.iso.datetime(),
+  libcard: libcardMetadataSchema.optional(),
+}).superRefine((p, ctx) => {
+  if (!p.libcard) for (const [key, minimum] of [['title', 3], ['summary', 10], ['description', 10]] as const)
+    if (p[key].length < minimum) ctx.addIssue({ code: 'custom', path: [key], message: `Use at least ${minimum} characters.` });
+  if (p.libcard && ((p.id === 'creator') !== (p.libcard.kind === 'creator') || (p.id === 'creator' && (p.libcard.url !== null || p.libcard.hidden))))
+    ctx.addIssue({ code: 'custom', message: 'Invalid creator target.' });
 });
 export type Project = z.infer<typeof projectSchema>;
 export const profileSchema = z.object({
@@ -54,6 +61,7 @@ export type Support = {
   checkoutId?: string; paymentIntentId?: string; accountId?: string;
   frequency?: BillingFrequency; subscriptionId?: string; invoiceId?: string; recurringRootId?: string;
   announceAnonymously?: boolean; activityId?: string;
+  picks?: { projectId: string; count: number }[];
   allocations?: { projectId: string; amount: number; activityId: string }[];
 };
 

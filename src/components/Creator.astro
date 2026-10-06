@@ -1,4 +1,5 @@
 ---
+import { libcardProfile } from '../lib/libcard';
 import Icon from './Icon.astro';
 import FollowButton from './FollowButton.astro';
 import Avatar from './Avatar.astro';
@@ -6,13 +7,13 @@ import { demoPerson } from '../lib/demo-media';
 import { isAdmin } from '../lib/auth';
 import { profile } from '../lib/repository';
 import { config } from '../lib/config';
-const p = profile();
+const p = libcardProfile(profile());
 const current = Astro.url.pathname;
 ---
 <section class="creator shell">
   <div class="creator-cover" aria-hidden="true"></div>
   <div class="creator-info">
-    <div class="creator-avatar"><Avatar name={p.name} src={config().demo ? demoPerson(config().ownerDid)?.avatar : p.avatar} size={80}/></div>
+    <div class="creator-avatar"><Avatar name={p.name} src={config().demo && !config().libcardRemoteDemo ? demoPerson(config().ownerDid)?.avatar : p.avatar} size={80}/></div>
     <div class="min-w-0"><h1 class="display creator-name">{p.name}</h1><div class="handle">{p.handle ? `@${p.handle}` : 'Independent creator'}</div></div>
   </div>
   <div class="creator-bio"><p>{p.bio}</p><div class="creator-meta">{p.location && <span><Icon name="location" size={14}/>{p.location}</span>}{p.website && <a href={p.website} rel="noopener noreferrer">Website ↗</a>}</div></div>

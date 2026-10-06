@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { libcardSnapshotSchema } from './libcard-schema';
+import { picksSchema } from './picks';
 import { z } from 'zod';
 import { didSchema, friendSchema, NS, profileSchema, projectSchema, updateSchema } from './model';
 
@@ -15,6 +17,7 @@ export const supportRecoverySchema = z.object({
   checkoutId: id.optional(), paymentIntentId: id.optional(), accountId: id.optional(),
   frequency: z.enum(['once', 'monthly', 'yearly']).optional(), subscriptionId: id.optional(), invoiceId: id.optional(), recurringRootId: id.optional(),
   announceAnonymously: z.boolean().optional(), activityId: id.optional(),
+  picks: picksSchema.optional(),
   allocations: z.array(z.object({ projectId: id, amount: cents, activityId: id })).min(1).max(100).optional(),
 }).superRefine((s, ctx) => {
   if (s.refundedAmount > s.amount || (s.allocations && (s.allocations.reduce((n, p) => n + p.amount, 0) !== s.amount || new Set(s.allocations.map(p => p.projectId)).size !== s.allocations.length)))
@@ -25,7 +28,7 @@ const subscription = z.object({ id, accountId: id, subscriptionId: id, customerI
 const audit = z.object({ id, actor: didSchema, action: id, target: z.string().max(2048), createdAt: z.iso.datetime() });
 export const recordSchemas = { profile: profileSchema, project: projectSchema, update: updateSchema, friend: friendSchema, support: supportRecoverySchema, subscription, 'admin-event': audit };
 // These are logical application data, never OAuth credentials, cookies, API keys or cached profiles.
-export const portableKv = (namespace: string, key: string) => ['support-share-id', 'support-share-payment', 'payment-order'].includes(namespace) || (namespace === 'app' && ['stripe-account', 'legacy-payment-projections'].includes(key));
+export const portableKv = (namespace: string, key: string) => (namespace === 'libcard' && key === 'snapshot') || ['support-share-id', 'support-share-payment', 'payment-order'].includes(namespace) || (namespace === 'app' && ['stripe-account', 'legacy-payment-projections'].includes(key));
 export type RecoveryLocation = { table: 'records' | 'kv'; kind: string; key: string };
 export const portableLocation = ({ table, kind, key }: RecoveryLocation) => table === 'records' ? Object.hasOwn(recordSchemas, kind) : portableKv(kind, key);
 export const parsePortableValue = (location: RecoveryLocation, value: unknown): unknown => {
@@ -35,6 +38,7 @@ export const parsePortableValue = (location: RecoveryLocation, value: unknown): 
     if (('id' in parsed && parsed.id !== location.key) || (location.kind === 'profile' && location.key !== 'self')) throw new Error('Recovery record key mismatch.');
     return parsed;
   }
+  if (location.kind === 'libcard') return libcardSnapshotSchema.parse(value);
   if (location.kind === 'payment-order') return z.object({ created: z.number().int().nonnegative(), closed: z.boolean() }).parse(value);
   if (location.key === 'legacy-payment-projections') return z.boolean().parse(value);
   if (location.kind === 'support-share-id') return z.string().regex(/^[A-Za-z0-9_-]{24}$/).parse(value);

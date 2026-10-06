@@ -1,9 +1,10 @@
 ---
+import LibcardStudio from '../../../components/LibcardStudio.astro';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { projects, payments } from '../../../lib/repository';
 import { projectPerformance } from '../../../lib/analytics';
 import { money } from '../../../lib/model';
-const all = projects(true);
+const all = projects(true).filter(p => !p.libcard);
 const status = Astro.url.searchParams.get('status') || '';
 const q = (Astro.url.searchParams.get('q') || '').slice(0,100);
 const list = all.filter((p) => (!status || p.status === status) && `${p.title} ${p.summary}`.toLowerCase().includes(q.toLowerCase()));
@@ -11,6 +12,7 @@ const performance = projectPerformance(payments(), all);
 ---
 <AdminLayout title="Projects" description="Give each idea a home. Save a draft, publish it, and keep people in the loop.">
   <a slot="actions" href="/studio/projects/new" class="button">+ Create project</a>
+  <LibcardStudio/>
   <form method="get" class="admin-filters"><div class="admin-filter-row"><label class="field">Find a project<input type="search" name="q" value={q} placeholder="Search projects" maxlength="100"/></label><label class="field">Status<select name="status"><option value="">All projects ({all.length})</option>{['draft','active','complete','archived'].map((s) => <option value={s} selected={status === s}>{s} ({all.filter((p) => p.status === s).length})</option>)}</select></label><button class="button secondary">Apply filters</button></div></form>
   <div class="admin-card">{list.map((p) => { const stats = performance.find((s) => s.id === p.id)!; return <article class="admin-project-row"><div><span class="status-pill" data-status={p.status}>{p.status === 'active' ? 'published' : p.status}</span><h2 class="mt-3"><a href={`/studio/projects/${p.id}`}>{p.title}</a></h2><p>{p.summary}</p><div class="admin-actions"><a class="button secondary" href={`/studio/projects/${p.id}`}>Edit{p.status === 'draft' ? ' & preview' : ''}</a>{['active','complete'].includes(p.status) && <a class="button secondary" href={`/support/${p.id}`}>View page ↗</a>}<form method="post" action="/api/studio"><input type="hidden" name="action" value="project-status"/><input type="hidden" name="id" value={p.id}/><input type="hidden" name="returnTo" value="/studio/projects"/><input type="hidden" name="status" value={p.status === 'active' ? 'archived' : 'active'}/><button class="button secondary">{p.status === 'draft' ? 'Publish' : p.status === 'active' ? 'Archive' : 'Reopen'}</button></form><form method="post" action="/api/studio"><input type="hidden" name="action" value="project-duplicate"/><input type="hidden" name="id" value={p.id}/><input type="hidden" name="returnTo" value="/studio/projects"/><button class="button secondary">Duplicate</button></form></div></div><div class="admin-project-meta"><strong>{money(stats.net)}</strong><p>{stats.count} contributions · all time</p>{p.target > 0 && <p>{money(p.target)} aspiration</p>}</div></article>; })}{!list.length && <p class="admin-empty">No projects here yet. <a class="admin-link" href="/studio/projects/new">Start with a private draft →</a></p>}</div>
   <p class="admin-help">Archiving removes a project from your site and stops new tips. Existing recurring subscriptions continue until supporters cancel in Manage support or you manage them in Stripe. Previously published AT Protocol records may remain on the network.</p>

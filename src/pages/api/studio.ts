@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { refreshLibcard, overrideLibcard } from '../../lib/libcard';
 import { randomUUID } from 'node:crypto';
 import { requireAdmin } from '../../lib/auth';
 import { refreshCreatorCircle } from '../../lib/creator-circle';
@@ -28,6 +29,21 @@ export const POST: APIRoute = async (context) => {
     const form = await formObject(context.request);
     returnTo = adminReturnPath(form.returnTo);
     switch (form.action) {
+      case 'libcard-refresh': {
+        if (!config().libcard) throw new Error('LibCard is disabled.');
+        const result = await refreshLibcard(true);
+        if (result?.error) throw new Error(result.error);
+        auditAdmin(user.did, 'libcard.refresh', config().libcard!.repo);
+        return redirectNotice('/studio/projects', 'LibCard refreshed.');
+      }
+      case 'libcard-override': {
+        if (!config().libcard) throw new Error('LibCard is disabled.');
+        const raw = String(form.aspiration || '').trim();
+        if (raw && (!/^\d+$/.test(raw) || Number(raw) > 1_000_000)) throw new Error('Use a whole-dollar aspiration between 0 and 1,000,000, or leave it blank.');
+        overrideLibcard(getDb(), String(form.id), form.hidden === 'yes', raw ? Number(raw) * 100 : undefined);
+        auditAdmin(user.did, 'libcard.override', String(form.id));
+        return redirectNotice('/studio/projects', 'Local LibCard settings saved.');
+      }
       case 'project': {
         const id = form.id ? String(form.id) : `${String(form.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 45)}-${randomUUID().slice(0, 8)}`;
         const existing = project(id);
@@ -40,6 +56,7 @@ export const POST: APIRoute = async (context) => {
       case 'project-status': {
         const p = project(String(form.id));
         if (!p) throw new Error('Project not found.');
+        if (p.libcard) throw new Error('Manage this target in From LibCard.');
         const status = z.enum(['active', 'complete', 'archived']).parse(form.status);
         saveProject({ ...p, status });
         auditAdmin(user.did, `project.${status}`, p.id);
@@ -48,6 +65,7 @@ export const POST: APIRoute = async (context) => {
       case 'project-duplicate': {
         const p = project(String(form.id));
         if (!p) throw new Error('Project not found.');
+        if (p.libcard) throw new Error('Manage this target in From LibCard.');
         const id = `${p.id.slice(0, 45)}-${randomUUID().slice(0, 8)}`;
         saveProject({ ...p, id, title: `${p.title.slice(0, 90)} (copy)`, status: 'draft', createdAt: new Date().toISOString() });
         auditAdmin(user.did, 'project.duplicate', id);
@@ -65,7 +83,7 @@ export const POST: APIRoute = async (context) => {
       case 'friend': saveFriend({ ...form, id: randomUUID() }); auditAdmin(user.did, 'circle.add', String(form.name)); break;
       case 'post-update': {
         const p = project(String(form.projectId));
-        if (!p || !['active', 'complete'].includes(p.status)) throw new Error('Choose an available project.');
+        if (!p || p.libcard || !['active', 'complete'].includes(p.status)) throw new Error('Choose an available project.');
         const id = z.uuid().parse(form.requestId);
         const text = publicPostText(form.text);
         const createdAt = new Date().toISOString();
@@ -79,7 +97,7 @@ export const POST: APIRoute = async (context) => {
       case 'link-post': {
         if (config().demo) throw new Error('Linking real Bluesky posts is available after connecting a live creator account.');
         const p = project(String(form.projectId));
-        if (!p || !['active', 'complete'].includes(p.status)) throw new Error('Choose an available project.');
+        if (!p || p.libcard || !['active', 'complete'].includes(p.status)) throw new Error('Choose an available project.');
         const post = await loadOwnPost(String(form.postUrl || ''));
         if (!updates().some((u) => u.projectId === p.id && u.postUri === post.uri)) saveUpdate({ id: randomUUID(), projectId: p.id, text: post.text.length >= 3 ? post.text.slice(0, 2000) : 'Media update', createdAt: new Date(post.createdAt).toISOString(), postUri: post.uri });
         auditAdmin(user.did, 'update.link', p.id);

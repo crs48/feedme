@@ -1,5 +1,7 @@
 # Split support
 
+This page describes native projects when `LIBCARD_REPO` is unset. Optional [LibCard mode](libcard.md) uses integer picks, direct count-to-cents allocation, and a separate Feedme review. Its Stripe Checkout has one creator line item, with the detailed allocation and original picks retained in Feedme. The 20 recurring project-line-item limit below applies to native percentage mode.
+
 A supporter chooses one USD total ($1–$1,000) and explicit project percentages on the homepage. Every selected project belongs to the same creator and connected Stripe account. The allocations express where the supporter wants that creator to spend their energy; they do not create multiple payouts.
 
 ```mermaid

@@ -8,7 +8,7 @@ export const installRecoveryTracking = (db: DatabaseSync) => {
     CREATE TABLE IF NOT EXISTS recovery_inventory (rkey TEXT PRIMARY KEY, digest TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sync_receipts (destination TEXT NOT NULL, collection TEXT NOT NULL, rkey TEXT NOT NULL, digest TEXT NOT NULL, cid TEXT, verified_at TEXT NOT NULL, PRIMARY KEY(destination,collection,rkey));`);
   for (const [table, kind, key] of [['records', 'kind', 'id'], ['kv', 'namespace', 'key']]) {
-    const condition = table === 'records' ? "KIND IN ('profile','project','update','friend','support','subscription','admin-event')" : "(NAMESPACE IN ('support-share-id','support-share-payment','payment-order') OR (NAMESPACE='app' AND KEY IN ('stripe-account','legacy-payment-projections')))";
+    const condition = table === 'records' ? "KIND IN ('profile','project','update','friend','support','subscription','admin-event')" : "((NAMESPACE='libcard' AND KEY='snapshot') OR NAMESPACE IN ('support-share-id','support-share-payment','payment-order') OR (NAMESPACE='app' AND KEY IN ('stripe-account','legacy-payment-projections')))";
     for (const action of ['INSERT', 'UPDATE', 'DELETE']) {
       const ref = action === 'DELETE' ? 'OLD' : 'NEW';
       const when = condition.replace(/\b(KIND|NAMESPACE|KEY)\b/g, `${ref}.$1`);
