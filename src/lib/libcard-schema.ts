@@ -37,7 +37,9 @@ export const libcardDocumentSchema = z.object({
   const ids = doc.items.flatMap(i => i.feedme ? [i.feedme.id] : []);
   if (ids.length > 99 || new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', message: 'Use at most 99 unique opted-in target IDs across links and socials.' });
 });
-export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.literal(2).optional() });
+export const libcardTargetModeSchema = z.enum(['all', 'explicit', 'preview']);
+export type LibcardTargetMode = z.infer<typeof libcardTargetModeSchema>;
+export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.literal(2).optional(), targetMode: libcardTargetModeSchema.optional() });
 export type LibcardDocument = z.infer<typeof libcardDocumentSchema>;
 export type LibcardItem = LibcardDocument['items'][number];
 export type LibcardSnapshot = z.infer<typeof libcardSnapshotSchema>;

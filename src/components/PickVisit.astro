@@ -16,7 +16,7 @@ const targets = libcardTargets(snapshot);
 const values = Astro.props.values || { amount: cfg.defaultTipAmount, picks: [], frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
 const requestId = snapshot ? createPickForm(Astro, targets.map(p => p.id)) : '';
 const total = values.picks.reduce((n, p) => n + p.count, 0);
-const catalog = snapshot ? libcardCatalog(snapshot, cfg.libcardRemoteDemo) : [];
+const catalog = snapshot ? libcardCatalog(snapshot, snapshot.targetMode || (cfg.libcardRemoteDemo ? 'preview' : 'explicit')) : [];
 const itemsById = new Map(catalog.flatMap(i => i.targetId ? [[i.targetId, i] as const] : []));
 const untippable = catalog.filter(i => !i.targetId);
 const publicAmounts = cfg.libcardRemoteDemo ? new Map<string, number>() : supports().filter(s => s.visibility === 'public').reduce((amounts, s) => amounts.set(s.projectId, (amounts.get(s.projectId) || 0) + netSupport(s)), new Map<string, number>());

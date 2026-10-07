@@ -14,6 +14,7 @@ const managed = projects(true).filter(p => p.libcard);
 {cfg.libcard && <section class="admin-card mb-6" id="libcard">
   <div class="admin-card-heading"><div><p class="eyebrow mb-2">From LibCard</p><h2>{cfg.libcard.repo}</h2></div><form method="post" action="/api/studio"><input type="hidden" name="action" value="libcard-refresh"/><input type="hidden" name="returnTo" value="/studio/projects"/><button class="button secondary">Refresh LibCard</button></form></div>
   <p class="admin-help">{cfg.demo && !cfg.libcardRemoteDemo ? 'Offline fixture · no GitHub requests' : `GitHub · ref: ${cfg.libcard.ref}`} · {managed.filter(p => p.status === 'active').length} live · {managed.filter(p => p.status === 'archived').length} archived</p>
+  <p class="admin-help">{cfg.libcardDefaultSupport === 'explicit' ? 'Only links with a feedme.id in LibCard accept picks.' : 'All links and socials accept picks by default, up to 99 plus you. Hide any target below to exclude it.'} Custom LibCard IDs and aspirations are optional.</p>
   <p class="admin-help">Last fetch attempt: {status?.attemptedAt || snapshot?.checkedAt || 'Not yet'}<br/>Last good check: {snapshot?.checkedAt || 'Not yet'}</p>
   {snapshot && <p class="admin-help break-all">Content SHA-256: {snapshot.hash}{snapshot.etag && <><br/>ETag: {snapshot.etag}</>}</p>}
   {status?.error && <p class="admin-warning">{status.error}</p>}

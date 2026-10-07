@@ -8,6 +8,14 @@ import { isolatedEnvironment } from '../scripts/static-demo.mjs';
 
 afterEach(() => vi.unstubAllEnvs());
 describe('real-source LibCard demo configuration', () => {
+  it('enables all links by default and validates the explicit-only escape hatch', () => {
+    vi.stubEnv('LIBCARD_DEFAULT_SUPPORT', '');
+    expect(config().libcardDefaultSupport).toBe('all');
+    vi.stubEnv('LIBCARD_DEFAULT_SUPPORT', 'explicit');
+    expect(config().libcardDefaultSupport).toBe('explicit');
+    vi.stubEnv('LIBCARD_DEFAULT_SUPPORT', 'typo');
+    expect(() => config()).toThrow('LIBCARD_DEFAULT_SUPPORT');
+  });
   it('requires an explicit opt-in while retaining simulated payment and admin identity mode', () => {
     vi.stubEnv('FEEDME_MODE', 'demo'); vi.stubEnv('LIBCARD_REPO', 'crs48/LIBCard'); vi.stubEnv('LIBCARD_DEMO_SOURCE', '');
     expect(config()).toMatchObject({ demo: true, libcardRemoteDemo: false });

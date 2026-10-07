@@ -28,6 +28,8 @@ export const config = () => {
   const demo = process.env.FEEDME_MODE !== 'live';
   const libcardDemoSource = process.env.LIBCARD_DEMO_SOURCE || 'fixture';
   if (!['fixture', 'github'].includes(libcardDemoSource)) throw new Error('LIBCARD_DEMO_SOURCE must be fixture or github.');
+  const libcardDefaultSupport = process.env.LIBCARD_DEFAULT_SUPPORT || 'all';
+  if (!['all', 'explicit'].includes(libcardDefaultSupport)) throw new Error('LIBCARD_DEFAULT_SUPPORT must be all or explicit.');
   const origin = publicOrigin();
   const identities = identitySettings();
   const dataDir = resolve(process.env.DATA_DIR || '.data');
@@ -40,6 +42,7 @@ export const config = () => {
   }
   return {
     demo, origin, ownerDid, adminDids, identities, tipAmounts,
+    libcardDefaultSupport: libcardDefaultSupport as 'all' | 'explicit',
     libcardRemoteDemo: demo && Boolean(process.env.LIBCARD_REPO) && libcardDemoSource === 'github',
     libcard: process.env.LIBCARD_REPO ? libcardSourceSchema.parse({ repo: process.env.LIBCARD_REPO, ref: process.env.LIBCARD_REF || 'main' }) : undefined, defaultTipAmount: tipAmounts[1], dataDir,
     discoveryRelay: process.env.DISCOVERY_RELAY_URL || 'https://relay1.us-east.bsky.network',

@@ -13,6 +13,8 @@ LIBCARD_REF=main
 
 `LIBCARD_REF` is optional. Leave `LIBCARD_REPO` unset to keep the existing percentage-based project page. Disabling the feature retains imported records and historical payments; managed targets do not enter the native percentage selector.
 
+**All links and socials are selectable by default.** You do not need to edit each link in LibCard. To exclude an item, use **Dashboard → Projects → From LibCard → Hide on Feedme**. To keep the older behavior where only explicit `feedme.id` entries are selectable, set `LIBCARD_DEFAULT_SUPPORT=explicit` and restart. The default is `all`.
+
 Try the built-in offline fixture without any credentials:
 
 ```sh
@@ -29,7 +31,7 @@ FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_H
 
 This reads the real name, avatar, bio, links, socials, icons, GitHub companion repositories, and first text block from `libcard.config.yaml`. Set `BLUESKY_HANDLE` to the matching creator for the demo’s displayed handle. Authentication remains fictional, and Stripe, Habitat, and AT Protocol writes remain simulated. The banner explicitly labels simulated tips.
 
-The real-source demo makes every link and social available to try with simulated picks (up to 99 plus the creator; additional links still appear as full rows). Stable `preview-…` IDs and `demoOnly` metadata distinguish these sample targets from explicit source opt-ins. The original snapshot is unchanged. Live mode accepts only explicit source opt-ins, never these generated demo targets.
+The real-source demo makes every link and social available to try with simulated picks (up to 99 plus the creator; additional links still appear as full rows). Stable `preview-…` IDs and `demoOnly` metadata distinguish these sample targets from live automatic `auto-…` IDs. The original source document is unchanged. Live mode never accepts demo-only targets.
 
 Every row displays its full source title and bundled icon, with a separate destination link and pick button. GitHub companion links and `star`/`stars` settings retain their meaning. `build` and `badge` counts are both fetched server-side from the public GitHub API and cached for six hours; Feedme does not load third-party badge images or transmit visitor data. Failed requests keep the last known count or show “—” when no count is available. Zero is a real count, never a fallback. Requests are deduplicated, limited to four concurrent workers and 99 repositories, with a four-second request timeout, eight-second batch deadline, and 64 KiB response cap. The checked timestamp appears in the badge tooltip. Icons are bundled from LibCard under its [MIT license](../licenses/LIBCard.txt).
 
@@ -39,9 +41,9 @@ The real-source demo uses `DATA_DIR/demo-libcard.sqlite`, separate from the offl
 
 In live mode, `pnpm start` checks for refresh work through the existing synchronization loop. The initial check runs within about 30 seconds, then the LibCard importer checks at most every 15 minutes. You can also use **Dashboard → Projects → From LibCard → Refresh LibCard**. When running a live development server without `pnpm start`, use the manual refresh or your authenticated `/api/sync` scheduler.
 
-## Opt links and socials into tipping
+## Optional custom IDs and aspirations
 
-Only an explicit nested `feedme` object makes an item tippable:
+Links already accept picks on Feedme. Add a nested `feedme` object when you want a custom ID, short explanation, or aspiration. The current LibCard client also uses these explicit IDs for its own “More of this” actions; automatic selection in Feedme does not change the separate LibCard client.
 
 ```yaml
 profile:
@@ -66,9 +68,11 @@ socials:
 
 **LibCard compatibility:** the matching schema, tip links, and build-time public-statistics integration were implemented through `fed406d` and merged into LibCard’s `main` in [PR #67](https://github.com/crs48/LIBCard/pull/67) (`f20e1fd`). See its [integration guide](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md). Upgrade to a version containing that work before adding nested `feedme` fields; older strict link/social schemas reject them. Code availability does not establish that the personal Feedme backend is deployed. See the [contract verification and crs.tips activation checklist](libcard-activation.md).
 
-IDs are permanent lowercase slugs (letters, digits, hyphens, at most 64 characters; start with a letter or digit). One namespace covers links and socials; `creator` and `amount` are reserved. At most 99 opted-in source items are supported. Feedme synthesizes the hundredth possible target, `creator`, labeled “Just {first name},” with no destination URL. Renaming an ID creates a new target and archives the old one; historical tips retain their original IDs.
+Custom IDs are permanent lowercase slugs (letters, digits, hyphens, at most 64 characters; start with a letter or digit). One namespace covers links and socials; `creator` and `amount` are reserved. Up to 99 source targets are selectable. Explicit IDs take priority; remaining slots include other items in source order. Additional links remain visible without pick controls. Feedme adds the hundredth possible target, `creator`, labeled “Just {first name},” with no destination URL.
 
-In live mode and the offline fixture, unopted links remain visible without pick controls. This includes résumé, phone, email, and social links unless explicitly opted in. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account.
+Automatic IDs are derived from the item kind and destination URL. Renaming or reordering a unique destination preserves its ID; changing the destination creates a new target and archives the old one. Repeated destinations receive distinct suffixes in source order. For long-lived references across destination changes or repeated entries, copy the existing ID shown in Studio into that item's `feedme.id` before editing it. Adding a different custom ID also creates a new target; historical tips always retain their original IDs.
+
+Résumé, phone, email, and social links are included in the default. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. In `explicit` mode, links without `feedme.id` stay visible without pick controls. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account, never to the destination of a link.
 
 Avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped. Feedme reads profile name/tagline/location and the first text block as a short sanitized Markdown note. It does not scrape the website or import themes.
 
@@ -94,6 +98,8 @@ flowchart LR
 The catalog importer fetches raw GitHub YAML, without authentication or cloning. Requests have a five-second timeout and 256 KiB body limit; normalized data is capped at 128 KiB. Duplicate YAML keys, aliases, duplicate target IDs, invalid opt-ins, and native project ID collisions fail the whole import. A transaction applies the new snapshot and target changes together. ETags are used when available; older snapshots without icon/repository fields get an unconditional refresh when upgrading. Studio labels the content SHA-256 accurately, not as a Git commit SHA. Optional GitHub star counts are a separate disposable cache; a metadata outage never rejects a valid catalog.
 
 GitHub failures keep serving the last good snapshot. Before the first successful import, the visit and API report unavailable rather than substituting a different target list. Missing source IDs are archived, never deleted. Reappearing IDs retain their creation date and local settings.
+
+An upgrade or a change to `LIBCARD_DEFAULT_SUPPORT` reapplies the stored source atomically, without waiting for a GitHub change. This also works after restore or during an outage. Hidden state, aspirations, creation dates, explicit IDs, and payment references are preserved. Recovery pauses prevent catalog changes. If a new ID collides with a native project, the previous catalog stays available with a Studio diagnostic.
 
 Studio’s **From LibCard** panel shows source/ref, fetch status, revision, and live/archived targets. Labels, destinations and blurbs are read-only. You may hide targets locally or override their aspirations: blank inherits, zero removes, a whole-dollar value overrides. The creator cannot be hidden. Hiding also removes the item from Feedme’s public target list; it never edits the LibCard repository. Existing recurring gifts retain their original picks until canceled.
 

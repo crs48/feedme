@@ -1,5 +1,7 @@
 # LibCard-backed picks on Feedme
 
+> Update (2026-10-07): Feedme now makes all LibCard links and socials selectable by default; `LIBCARD_DEFAULT_SUPPORT=explicit` preserves the original policy below. See [current LibCard documentation](../libcard.md). The separate LibCard client still uses explicit IDs for its card-side actions.
+
 Implement the approved optional LibCard mode. The public LibCard repository supplies profile presentation and explicitly opted-in links/socials; Feedme owns checkout, payment accounting, and private recovery. Native percentage-based support remains available when `LIBCARD_REPO` is unset. The separate LibCard implementation is a later pass, blocked on shipping the Feedme endpoint.
 
 ## Approved architecture

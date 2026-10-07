@@ -1,5 +1,7 @@
 # Implement optional Feedme integration in LibCard
 
+> Update (2026-10-07): Feedme now makes all LibCard links and socials selectable by default; `LIBCARD_DEFAULT_SUPPORT=explicit` preserves the original policy below. See [current LibCard documentation](libcard.md). The separate LibCard client still uses explicit IDs for its card-side actions.
+
 Use this document as the implementation prompt for the AI working in the **LibCard repository**. It is self-contained; no previous conversation is required.
 
 **Handoff completed:** LibCard has since implemented this prompt through `fed406d`. For current status, verified behavior, and the intended `https://crs.tips` deployment, use the [contract and activation checklist](libcard-activation.md). The deployment notes below describe the original handoff.
