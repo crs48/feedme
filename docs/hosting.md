@@ -143,6 +143,8 @@ Official references: [deploy button/private repositories](https://render.com/doc
 
 The README's Railway button opens this guided workflow. `railway.json` configures a service's build and deployment; it does **not** create a volume or domain on its own. See [Railway volumes](https://docs.railway.com/volumes) and [config as code](https://docs.railway.com/config-as-code).
 
+Christopher’s [personal crs.tips deployment](crs-tips.md) uses this host with a persistent volume and main-branch autodeploy gated by GitHub checks. Its [DNS guide](crs-tips-dns.md) records the Vercel DNS setup. This is a separately provisioned instance, not an automatic deployment for template users.
+
 ### Railway template recipe
 
 A saved Feedme Railway template has not been created or published. To create one without making the GitHub repo public, open [Workspace → Templates](https://railway.com/workspace/templates) → **New Template**, add one GitHub service pointing to your Feedme repository, and configure:
@@ -230,4 +232,4 @@ These require your provider accounts and were not executed as part of the local 
 
 ## Validation performed locally
 
-Type checks, production build, deterministic payment/privacy/storage tests, lexicon contract validation, and browser flow checks run locally. The Render Blueprint validates against its official JSON Schema, and the Fly configuration parses with matching port/mount settings. GitHub Actions builds the Docker image and verifies health, non-root execution, generated-origin OAuth metadata, and SQLite persistence across container replacement. The local Docker daemon is unavailable. Deployments on the named hosting providers and real service interoperability remain unverified; see the checklist above and the [verification report](verification.md#deployment-setup).
+Type checks, production build, deterministic payment/privacy/storage tests, lexicon contract validation, and browser flow checks run locally. The Render Blueprint validates against its official JSON Schema, and the Fly configuration parses with matching port/mount settings. GitHub Actions builds the Docker image and verifies health, non-root execution, generated-origin OAuth metadata, and SQLite persistence across container replacement. The local Docker daemon is unavailable. Railway deployment, health, real LibCard import, and unauthenticated Studio protection have been verified for [crs.tips](crs-tips.md). Other named providers and live payment/Habitat interoperability remain unverified; see the checklist above and the [verification report](verification.md#deployment-setup).

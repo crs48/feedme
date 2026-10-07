@@ -1,6 +1,6 @@
 # LibCard contract verification and activation
 
-Status: **2026-10-06**. Christopher’s intended personal Feedme origin is **`https://crs.tips`**. The server has not been deployed yet. The static `feedme.fund` site and the local real-catalog preview are demos, not that backend.
+Status: **2026-10-07**. Christopher’s personal Feedme backend is deployed on Railway with canonical origin **`https://crs.tips`**. Custom-domain DNS/TLS are configured; payment activation is pending. Some local resolvers may still cache the previous Vercel addresses. See [the deployment notes](crs-tips.md) and [quick DNS guide](crs-tips-dns.md). The static `feedme.fund` site remains a separate demo.
 
 ## Compatible implementations
 
@@ -11,7 +11,7 @@ Feedme’s feature is merged into `main` through [PR #2](https://github.com/crs4
 - `fed406d`: [LibCard integration documentation](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md).
 - `f20e1fd`: merge of [LibCard PR #67](https://github.com/crs48/LIBCard/pull/67) into `main`.
 
-GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s PR passed GitHub checks, including the static export, deployment bundle, and container persistence checks, before merging. Neither repository’s creator configuration was changed during verification. The personal `crs.tips` server remains undeployed.
+GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s PR passed GitHub checks, including the static export, deployment bundle, and container persistence checks, before merging. Neither repository’s creator configuration was changed during contract verification. The personal backend has since been deployed; its source YAML still needs explicit tipping opt-ins.
 
 ```mermaid
 flowchart LR
@@ -54,15 +54,16 @@ The consumer’s JSON example has future/unknown fields and an API-only target t
 
 The fixtures are vendored with provenance in [tests/fixtures/libcard](../tests/fixtures/libcard/README.md). They do not depend on another local checkout, live GitHub, or provider credentials. The HTTP test uses a fresh temporary database and a canonical HTTPS fixture origin through a local test transport; it does not claim to verify TLS or an external reverse proxy.
 
-## Activate crs.tips when the backend is deployed
+## Activate crs.tips
 
 Activation steps:
 
 - [x] Merge the compatible LibCard implementation into `main` (PR #67).
 - [x] Publish/merge the compatible Feedme implementation (PR #2; all GitHub checks passed).
-- [ ] Choose a server host, deploy one persistent Feedme instance, and configure DNS/TLS for `crs.tips`.
+- [x] Deploy one persistent Feedme instance on Railway, with main-branch autodeploy waiting for GitHub CI.
+- [x] Configure DNS/TLS for `crs.tips`; Railway reports verified ownership and a valid certificate. [The quick DNS guide](crs-tips-dns.md) records the setup.
 - [ ] Configure live identity, encryption, persistent storage, Stripe Connect/webhook secrets, and private Habitat storage as described in [hosting](hosting.md). Complete provider acceptance with test credentials before enabling real payments.
-- [ ] Add these public settings alongside that live configuration:
+- [x] Add these public settings alongside the live server configuration:
 
 ```dotenv
 PUBLIC_URL=https://crs.tips
@@ -71,7 +72,8 @@ LIBCARD_REPO=crs48/LIBCard
 LIBCARD_REF=main
 ```
 
-- [ ] Confirm a successful initial import in **Dashboard → Projects → From LibCard**. Before source opt-ins exist, the live catalog can contain only the synthesized creator; this is valid but does not activate any target-specific buttons.
+- [x] Verify the initial import through the deployed homepage and public endpoint. It currently contains only the synthesized creator as a tippable target, because source opt-ins are absent; ordinary source links remain visible.
+- [ ] Review the source in **Dashboard → Projects → From LibCard** after signing in at the canonical origin.
 - [ ] From a checkout containing this change, run:
 
 ```sh
