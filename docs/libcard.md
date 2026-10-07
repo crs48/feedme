@@ -74,7 +74,7 @@ Automatic IDs are derived from the item kind and destination URL. Renaming or re
 
 Résumé, phone, email, and social links are included in the default. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. In `explicit` mode, links without `feedme.id` stay visible without pick controls. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account, never to the destination of a link.
 
-Avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped. Feedme reads profile name/tagline/location and the first text block as a short sanitized Markdown note. It does not scrape the website or import themes.
+Avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped. Feedme uses the profile name, tagline, and location in the creator header. The first text block remains in the cached snapshot for compatibility but is not displayed above the pick controls. It does not scrape the website or import themes.
 
 ## Refresh, local settings, and recovery
 
