@@ -157,7 +157,7 @@ try {
   }
   for (const path of publicRoutes) await render(path, map(path, '/'));
   await request('/auth/demo', {});
-  for (const path of ['/studio', '/studio/projects', '/studio/projects/new', ...rows('project').map((project) => `/studio/projects/${project.id}`), '/studio/payments', '/studio/supporters', '/studio/updates', '/studio/settings', '/studio/data']) {
+  for (const path of ['/studio', '/studio/projects', '/studio/projects/new', ...rows('project').map((project) => `/studio/projects/${project.id}`), '/studio/payments', '/studio/supporters', '/studio/updates', '/studio/settings', '/studio/stripe', '/studio/data']) {
     await render(path, map(path, '/'), true);
   }
   // Lexicons are checked-in schemas, never the public/private records described by them.

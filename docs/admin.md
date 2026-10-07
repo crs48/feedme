@@ -49,6 +49,8 @@ Server logs record `OAuth sign-in failed` with the stage, allowlisted provider e
 
 ## Dashboard pages
 
+**Settings → Set up Stripe** opens a guided payment setup checklist. It explains the two host credentials, provides the exact webhook URL and event list, opens Stripe-hosted onboarding, and retrieves the connected account's payment/payout flags. Secret values and bank details never appear in this page. See [Stripe setup](stripe-setup.md).
+
 | Page | Capabilities |
 | --- | --- |
 | Overview | Date/project filters, net and gross support, confirmed payment counts, named supporters, recurring run rate, weekly/monthly charts and tables, project performance, refunds, disputes, pending/failed payments, setup and sync health |

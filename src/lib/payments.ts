@@ -24,8 +24,8 @@ export const connectStripe = async () => {
     setKv(getDb(), 'app', 'stripe-account', account);
   }
   return stripe.accountLinks.create({ account, type: 'account_onboarding',
-    refresh_url: `${config().origin}/studio?notice=Restart%20Stripe%20onboarding%20to%20get%20a%20fresh%20link.`,
-    return_url: `${config().origin}/studio?notice=Stripe%20details%20saved.%20Checkout%20will%20verify%20payment%20readiness.`,
+    refresh_url: `${config().origin}/studio/stripe?notice=This%20Stripe%20link%20expired.%20Continue%20onboarding%20to%20get%20a%20fresh%20link.`,
+    return_url: `${config().origin}/studio/stripe?notice=Welcome%20back.%20Check%20your%20Stripe%20setup%20status%20below.`,
   });
 };
 export const checkout = async (intent: Support, items: { title: string; amount: number }[]) => {
@@ -34,6 +34,7 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
   const interval = billingInterval(intent.frequency);
   if (interval && items.length > 20) throw new Error('Recurring support can include up to 20 projects.');
   if (!privateSpace()) throw new Error('The creator needs to connect private storage before receiving support.');
+  if (!config().stripeWebhookSecret) throw new Error('The creator needs to configure Stripe payment notifications before receiving support.');
   const stripe = stripeClient();
   const account = connectedAccount();
   if (!account) throw new Error('The creator hasn’t connected Stripe yet.');

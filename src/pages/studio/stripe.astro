@@ -1,0 +1,59 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { stripeSetup, stripeWebhookEvents, stripeApiVersion } from '../../lib/stripe-setup';
+const setup = await stripeSetup();
+const readyToTest = !setup.demo && setup.storageConnected && setup.keyConfigured && setup.webhookConfigured && setup.chargesEnabled && setup.payoutsEnabled;
+---
+<AdminLayout title="Set up Stripe" description="Connect your payouts, protect payment confirmations, and check what remains.">
+  <a slot="actions" class="button secondary" href="/studio/stripe">Refresh status</a>
+  <section class="admin-card setup-intro">
+    <span class="status-pill" data-status={readyToTest ? 'active' : 'pending'}>{setup.demo ? 'Setup preview' : readyToTest ? 'Ready for a checkout test' : 'Setup in progress'}</span>
+    <h2 class="mt-3">A few steps, then Stripe handles the rest.</h2>
+    <p class="admin-help mt-3">Feedme uses Stripe Connect. Your server connects to a Stripe platform account, and the creator completes Stripe’s hosted onboarding for a connected account. Stripe collects business, identity, and bank details on its own pages.</p>
+    <p class="admin-help mt-3">For a self-hosted instance, you configure the platform too. Feedme does not provide a shared payment platform. Already have Stripe? Enable Connect on the account whose API key your server will use.</p>
+  </section>
+  <div class="admin-settings-grid"><div>
+    <section class="admin-card">
+      <div class="admin-card-heading"><h2>1. Add your server key</h2><span class="status-pill">{setup.keyConfigured ? 'Configured' : 'Needed'}</span></div>
+      <p class="admin-help">Open Stripe, enable Connect, and create an account-level restricted API key with the permissions described in the setup guide. Add it to your host’s environment variables, then redeploy.</p>
+      <label class="field">Environment variable<input value="STRIPE_SECRET_KEY" readonly aria-label="Stripe API key environment variable"/></label>
+      <p class="admin-help">Use a secret server key (<code>rk_…</code> or <code>sk_…</code>), never a publishable <code>pk_…</code> key. Save the value in your host’s secret settings (Railway → your service → Variables). The value never belongs in Git or a support message.</p>
+      <p class="admin-help mt-3">Key mode: <strong>{setup.demo ? 'Demo; no Stripe requests' : !setup.keyConfigured ? 'Not configured' : setup.mode === 'test' ? 'Test / sandbox' : setup.mode === 'live' ? 'Live' : 'Unrecognized — check your account-level key'}</strong>.</p>
+      <div class="setup-links"><a class="admin-link" href="https://dashboard.stripe.com/connect/accounts/overview" target="_blank" rel="noopener noreferrer">Open Stripe Connect ↗</a><a class="admin-link" href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">API keys ↗</a></div>
+    </section>
+    <section class="admin-card">
+      <div class="admin-card-heading"><h2>2. Complete Stripe onboarding</h2><span class="status-pill">{setup.chargesEnabled && setup.payoutsEnabled ? 'Enabled' : setup.accountConnected ? 'Linked; check readiness' : 'Not connected'}</span></div>
+      <p class="admin-help">Continue to Stripe to set up the creator’s connected account. Enter your business and payout details there. You can return here and continue later.</p>
+      <form method="post" action="/api/studio" class="mt-4"><input type="hidden" name="action" value="stripe"/><input type="hidden" name="returnTo" value="/studio/stripe"/><button class="button full" disabled={setup.demo || !setup.keyConfigured}>{setup.accountConnected ? 'Continue Stripe onboarding →' : 'Set up payouts with Stripe →'}</button></form>
+      {!setup.keyConfigured && <p class="admin-help mt-3">Add the server key in step 1 to enable this button.</p>}
+      {setup.accountCheck === 'unavailable' && <p class="admin-warning mt-4">Stripe could not verify the saved account. Check your key’s permissions and test/live mode, then refresh. Feedme keeps the existing account connection.</p>}
+      <dl class="mt-3"><div class="admin-stat-line"><dt>Account details submitted</dt><dd>{setup.accountCheck === 'verified' ? setup.detailsSubmitted ? 'Yes' : 'Not yet' : 'Not checked'}</dd></div><div class="admin-stat-line"><dt>Payments enabled</dt><dd>{setup.accountCheck === 'verified' ? setup.chargesEnabled ? 'Yes' : 'Not yet' : 'Not checked'}</dd></div><div class="admin-stat-line"><dt>Payouts enabled</dt><dd>{setup.accountCheck === 'verified' ? setup.payoutsEnabled ? 'Yes' : 'Not yet' : 'Not checked'}</dd></div></dl>
+      <p class="admin-help mt-3">Returning from Stripe does not prove setup is complete. These flags are checked with Stripe whenever this page loads.</p>
+    </section>
+  </div><div>
+    <section class="admin-card">
+      <div class="admin-card-heading"><h2>3. Connect payment notifications</h2><span class="status-pill">{setup.webhookConfigured ? 'Secret configured' : 'Needed'}</span></div>
+      <p class="admin-help">In Stripe Workbench, create a webhook event destination. Choose <strong>Connected accounts</strong> for “Events from,” with a snapshot payload and API version <code>{stripeApiVersion}</code>.</p>
+      <label class="field">Your webhook URL<input value={setup.demo ? 'https://your-feedme.example/api/stripe/webhook' : setup.webhookUrl} readonly aria-label="Your Stripe webhook URL"/></label>
+      <details class="mt-4"><summary class="admin-link">Events to select ({stripeWebhookEvents.length})</summary><ul class="setup-events">{stripeWebhookEvents.map(event => <li><code>{event}</code></li>)}</ul></details>
+      <p class="admin-help mt-3">Copy that destination’s signing secret (<code>whsec_…</code>) into the following host variable and redeploy. This is a different credential from your API key.</p>
+      <label class="field">Environment variable<input value="STRIPE_WEBHOOK_SECRET" readonly aria-label="Stripe webhook secret environment variable"/></label>
+      <a class="admin-link" href="https://dashboard.stripe.com/workbench/webhooks" target="_blank" rel="noopener noreferrer">Open Stripe webhooks ↗</a>
+      <p class="admin-help mt-3">“Secret configured” means a value is present. Confirm successful event deliveries in Stripe during your checkout test. Feedme marks payments paid only after verified events.</p>
+    </section>
+    <section class="admin-card">
+      <div class="admin-card-heading"><h2>4. Verify before accepting tips</h2><span class="status-pill">{setup.storageConnected ? 'Habitat connected' : 'Habitat needed'}</span></div>
+      {!setup.storageConnected && <p class="admin-help mb-3"><a class="admin-link" href="/studio/settings">Create private storage in Settings →</a></p>}
+      <p class="admin-help">Use Stripe’s sandbox on a separate Feedme deployment with its own data directory. Complete a test checkout, confirm the signed event reaches Feedme, and check the payment in your dashboard. Test monthly renewals and refunds as well.</p>
+      <p class="admin-help mt-3">Keep sandbox and live deployments separate. Replacing test keys with live keys in an existing data directory does not migrate its connected account or payment history.</p>
+      <div class="setup-links"><a class="admin-link" href="/studio/payments">View payments →</a><a class="admin-link" href="https://github.com/crs48/feedme/blob/main/docs/stripe-setup.md" target="_blank" rel="noopener noreferrer">Full setup guide ↗</a></div>
+    </section>
+  </div></div>
+</AdminLayout>
+<style>
+  .setup-intro { background:linear-gradient(120deg,#f4f8ff,#fff); }
+  .setup-links { display:flex; flex-wrap:wrap; gap:8px 20px; margin-top:12px; }
+  .setup-events { font-size:12px; line-height:2; overflow-wrap:anywhere; margin:8px 0; }
+  input[readonly] { width:100%; font-size:13px; background:#f8fafc; }
+  code { overflow-wrap:anywhere; }
+</style>
