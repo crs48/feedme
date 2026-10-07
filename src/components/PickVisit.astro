@@ -5,7 +5,6 @@ import { libcardCatalog } from '../lib/libcard-catalog';
 import { supports } from '../lib/repository';
 import { createPickForm, type PickValues } from '../lib/pick-checkout';
 import { money, netSupport } from '../lib/model';
-import Markdown from './Markdown.astro';
 import LibcardIcon from './LibcardIcon.astro';
 import LibcardGithub from './LibcardGithub.astro';
 import LibcardGoal from './LibcardGoal.astro';
@@ -22,7 +21,6 @@ const untippable = catalog.filter(i => !i.targetId);
 const publicAmounts = cfg.libcardRemoteDemo ? new Map<string, number>() : supports().filter(s => s.visibility === 'public').reduce((amounts, s) => amounts.set(s.projectId, (amounts.get(s.projectId) || 0) + netSupport(s)), new Map<string, number>());
 ---
 {!snapshot ? <section class="panel"><h2 class="section-title">This page is getting ready.</h2><p class="muted mt-3">The creator’s LibCard is not available yet. Please try again shortly.</p></section> : <>
-  {snapshot.document.about && <div class="pick-about"><Markdown content={snapshot.document.about}/></div>}
   {Astro.props.notice && <p class="notice" role="status">{Astro.props.notice}</p>}
   <form class="pick-visit" data-pick-visit action="/api/checkout/review" method="post">
     <input type="hidden" name="requestId" value={requestId}/>
@@ -104,7 +102,6 @@ const publicAmounts = cfg.libcardRemoteDemo ? new Map<string, number>() : suppor
 </script>
 <style>
   .pick-visit { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:32px; align-items:start; margin-top:24px; }
-  .pick-about { max-width:720px; margin-block:20px; }
   .pick-intro { font-size:14px; line-height:1.6; margin-top:8px; }
   .pick-demo-note { color:#64748b; font-size:12px; line-height:1.6; margin-top:10px; max-width:560px; }
   .pick-shortcuts { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin:24px 0; }
