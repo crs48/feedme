@@ -1,0 +1,28 @@
+---
+import Icon from '../../src/components/LibcardIcon.astro';
+const links = [
+  { icon: 'github', title: 'Small, useful tools', detail: 'A little more open source', picks: 3, share: 75, amount: '$16.50' },
+  { icon: 'leaf', title: 'Notes from the garden', detail: 'A little more writing', picks: 1, share: 25, amount: '$5.50' },
+];
+---
+<figure class="libcard-example" id="example" aria-labelledby="example-caption">
+  <div class="libcard-example-grid">
+    <div class="libcard-example-card">
+      <div class="libcard-example-label"><Icon name="contact" size={17}/><span>Your LibCard</span></div>
+      <div class="libcard-example-profile"><img src="/demo/avatars/12.jpg" alt="" width="48" height="48" loading="lazy"/><div><strong>Alex Rivers</strong><span>Making room for good things.</span></div></div>
+      <div class="libcard-example-links">
+        {links.map(link => <div class="libcard-example-link"><span class="libcard-example-icon"><Icon name={link.icon} size={20}/></span><div><strong>{link.title}</strong><span>{link.detail}</span></div><span class="libcard-example-tag">More of this <span aria-hidden="true">↗</span></span></div>)}
+        <div class="libcard-example-link"><span class="libcard-example-icon"><Icon name="contact" size={20}/></span><div><strong>My résumé</strong><span>An ordinary link, as always.</span></div><span aria-hidden="true">↗</span></div>
+      </div>
+      <p class="libcard-example-footnote">Choose which links can receive support.</p>
+    </div>
+    <span class="libcard-example-arrow" aria-hidden="true">→</span>
+    <div class="libcard-example-card libcard-example-gift">
+      <div class="libcard-example-label"><Icon name="heart" size={17}/><span>A tip on Feedme</span></div>
+      <div class="libcard-example-total"><span>Give this to Alex.</span><strong>$22<span>one time</span></strong></div>
+      <dl class="libcard-example-split">{links.map(link => <div><dt><span>{link.title}</span><small>{link.picks} {link.picks === 1 ? 'pick' : 'picks'}</small></dt><dd><strong>{link.amount}</strong><span>{link.share}% of this tip</span></dd></div>)}</dl>
+      <p class="libcard-example-freedom">They get all of it.<br/>Where you placed it is a suggestion.</p>
+    </div>
+  </div>
+  <figcaption id="example-caption">Illustration with a fictional creator and sample amounts. A visitor can adjust the picks and amount on Feedme before paying.</figcaption>
+</figure>
