@@ -2,6 +2,8 @@
 
 The official Pages site is **https://feedme.fund**. It introduces the product, links to setup instructions, and lets visitors browse the creator, project, social, billing, support-card, and studio screens. All identities, notes, and payment records under `/demo/` are fictional. `/creators/` is a separate real public directory, with a versioned export at `/directory/v1.json`. It requires no server on Pages.
 
+The [LibCard overview](https://feedme.fund/libcard/) explains opted-in links, picks, unconditional tips, and public statistics with a labeled fictional example. The [connection guide](https://feedme.fund/libcard/setup/) covers configuration in both repositories, aspirations, refreshes, and verification. Both are static, accessible from the homepage and mobile navigation, and ship no JavaScript or provider requests. They explain the integration without activating a live checkout on Pages. Technical details remain in [the LibCard reference](libcard.md).
+
 ## Build and preview
 
 Use Node 24 and pnpm 10.11.1:

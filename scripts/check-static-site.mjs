@@ -15,6 +15,15 @@ for (const file of files) assert(!/(?:\/server\/|\.sqlite|\.env(?:\.|$)|\.pem$|j
 for (const file of html) {
   const source = await readFile(file, 'utf8'), $ = load(source), relative = file.slice(root.length).replace(/index\.html$/, '');
   assert($('h1').length === 1, `Expected one main heading: ${relative}`);
+  if (/^\/libcard\//.test(relative)) {
+    assert($('title').text().includes('LibCard'), `Missing LibCard page title: ${relative}`);
+    assert($('meta[name=description]').attr('content')?.length > 50, `Missing guide description: ${relative}`);
+    assert.equal($('link[rel=canonical]').attr('href'), `https://feedme.fund${relative}`);
+    assert.equal($('script:not([type="application/json"]),form,iframe').length, 0, `Integration guides must remain static: ${relative}`);
+    assert($('nav[aria-label="Main navigation"] a.libcard-nav[href="/libcard/"]').length === 1, `Missing mobile LibCard navigation: ${relative}`);
+    const related = relative === '/libcard/' ? '/libcard/setup/' : '/libcard/';
+    assert($(`main a[href="${related}"]`).length > 0, `Missing related integration page: ${relative}`);
+  }
   const demo = $('body').is('[data-static-demo]');
   if (demo) {
     assert.equal($('meta[http-equiv="Content-Security-Policy"]').attr('content'), demoPolicy, `Missing offline CSP: ${relative}`);
@@ -43,7 +52,7 @@ for (const file of html) {
     assert(url.origin === 'https://feedme.fund' && exists(url), `Missing responsive image: ${url}`);
   }));
 }
-for (const route of ['', 'get-started/', 'demo/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
+for (const route of ['', 'get-started/', 'libcard/', 'libcard/setup/', 'demo/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
 const png = await readFile(join(root, 'demo/share/sample.png'));
 assert(all.has(join(root, 'creators/index.html')), 'Missing real creator directory.');
 const directorySource = await readFile(join(root, 'directory/v1.json'), 'utf8');
