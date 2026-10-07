@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { createSession, digest, oauthClient, isAdmin } from '../../lib/auth';
 import { deleteKv, getDb, getKv } from '../../lib/db';
 import { redirectNotice } from '../../lib/http';
+import { reportAuthError } from '../../lib/auth-errors';
 export const GET: APIRoute = async (context) => {
   try {
     const { session, state } = await (await oauthClient()).callback(context.url.searchParams);
@@ -12,5 +13,8 @@ export const GET: APIRoute = async (context) => {
     context.cookies.delete('feedme_oauth', { path: '/' });
     createSession(context, session.did);
     return context.redirect(binding.returnTo === '/' && isAdmin({ did: session.did }) ? '/studio' : binding.returnTo, 303);
-  } catch { return redirectNotice('/login', 'Sign-in could not be verified. Please start again in this browser.', true); }
+  } catch (error) {
+    reportAuthError('callback', error);
+    return redirectNotice('/login', 'Sign-in could not be verified. Please start again in this browser.', true);
+  }
 };

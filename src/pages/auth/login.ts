@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { cookieOptions, oauthClient, randomToken, digest } from '../../lib/auth';
 import { getDb, setKv } from '../../lib/db';
 import { formObject, redirectNotice, safeReturnPath } from '../../lib/http';
+import { reportAuthError } from '../../lib/auth-errors';
 export const POST: APIRoute = async (context) => {
   const form = await formObject(context.request);
   const handle = String(form.handle || '').trim().replace(/^@/, '');
@@ -13,7 +14,8 @@ export const POST: APIRoute = async (context) => {
     context.cookies.set('feedme_oauth', nonce, { ...cookieOptions(), maxAge: 600 });
     const url = await (await oauthClient()).authorize(handle, { state, scope: 'atproto transition:generic' });
     return context.redirect(url.toString(), 303);
-  } catch {
+  } catch (error) {
+    reportAuthError('authorize', error);
     return redirectNotice('/login', 'Could not start sign-in. Check your handle, PUBLIC_URL, and Habitat connection.', true);
   }
 };

@@ -41,6 +41,12 @@ If your own handle changes, configure the new handle or your original DID. The r
 
 Additional admins cannot supply their own OAuth grant in place of the creator’s. The creator must sign in at least once to authorize public writes and Habitat storage; sign in again if its grant is revoked. Additional admins are authorized through Feedme’s server; they are not automatically added to the Habitat space membership.
 
+### Troubleshoot sign-in
+
+OAuth uses the canonical HTTPS `PUBLIC_URL`: both `/oauth-client-metadata.json` and `/jwks.json` must be publicly reachable there. Feedme publishes its existing ES256 public key with `use: "sig"` and `key_ops: ["verify"]`, so Habitat can select it for confidential-client authentication. Do not rotate the stored OAuth key or delete the database to troubleshoot a metadata issue.
+
+Server logs record `OAuth sign-in failed` with the stage, allowlisted provider error codes, HTTP status, and fixed diagnostic topics. They omit provider messages, request bodies, account identifiers, and tokens. An `invalid_client` during `authorize` indicates an application authentication problem; it does not mean the supporter entered an incorrect handle. Browser binding, PKCE, signed client assertions, and callback verification remain required.
+
 ## Dashboard pages
 
 | Page | Capabilities |
