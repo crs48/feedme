@@ -11,11 +11,11 @@ Feedme’s feature is merged into `main` through [PR #2](https://github.com/crs4
 - `fed406d`: [LibCard integration documentation](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md).
 - `f20e1fd`: merge of [LibCard PR #67](https://github.com/crs48/LIBCard/pull/67) into `main`.
 
-GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s PR passed GitHub checks, including the static export, deployment bundle, and container persistence checks, before merging. Neither repository’s creator configuration was changed during contract verification. The personal backend has since been deployed; its source YAML still needs explicit tipping opt-ins.
+GitHub’s comparison confirms `fed406d` is contained in LibCard’s remote `main`. Feedme’s PR passed GitHub checks, including the static export, deployment bundle, and container persistence checks, before merging. Neither repository’s creator configuration was changed during contract verification. The personal backend has since been deployed; all source links are now selectable in Feedme by default. The separate LibCard client still needs explicit IDs for card-side tip actions.
 
 ```mermaid
 flowchart LR
-  Source[LibCard main: explicit target opt-ins] -->|15-minute refresh or Studio| Feedme[Personal Feedme at crs.tips]
+  Source[LibCard main: links and optional custom IDs] -->|15-minute refresh or Studio| Feedme[Personal Feedme at crs.tips]
   Feedme --> API[Public catalog and pick statistics]
   API -->|Existing daily static build| Card[LibCard at crs.land]
   Card -->|Target ID and optional amount| Checkout[crs.tips checkout and review]
@@ -27,7 +27,7 @@ flowchart LR
 
 | Boundary | Feedme behavior |
 | --- | --- |
-| Source opt-ins | Permanent unique slug IDs, at most 99 source targets plus creator, optional trimmed blurb, whole-dollar aspiration from 0 to 1,000,000. |
+| Custom source IDs | Permanent unique slug IDs, at most 99 source targets plus creator, optional trimmed blurb, whole-dollar aspiration from 0 to 1,000,000. |
 | Other source keys | `status`, `theme`, `site`, `statuses`, `cardMode`, `analytics`, `footer`, `seo`, `meta`, `contact`, and the top-level `feedme` settings do not break import or overwrite deployment settings. |
 | Managed records | Consumer fixture creates creator/link/social records; $3,000 source aspiration becomes 300,000 internal cents. Hidden and removed targets are omitted publicly. |
 | Endpoint | `/api/public/libcard`; GET/HEAD; explicit public field allowlist; successful `Cache-Control: public, max-age=60`; no redirect in the built application router. |
@@ -72,7 +72,7 @@ LIBCARD_REPO=crs48/LIBCard
 LIBCARD_REF=main
 ```
 
-- [x] Verify the initial import through the deployed homepage and public endpoint. It currently contains only the synthesized creator as a tippable target, because source opt-ins are absent; ordinary source links remain visible.
+- [x] Verify the initial import through the deployed homepage and public endpoint. The first deployment contained only the synthesized creator. Feedme now makes all source links and socials selectable by default without YAML edits.
 - [ ] Review the source in **Dashboard → Projects → From LibCard** after signing in at the canonical origin.
 - [ ] From a checkout containing this change, run:
 
@@ -82,7 +82,7 @@ pnpm check:libcard-origin https://crs.tips
 
 This read-only command sends LibCard’s `Accept: application/json` and `User-Agent: LibCard (+https://github.com/crs48/LIBCard)` headers, omits credentials, and uses manual redirect handling. It checks HEAD and GET return 200 directly, JSON content type, public caching, no session cookie, a bounded body, matching origin, and the public schema/allowlist. It exits nonzero for a redirect, 404/503, malformed response, or origin mismatch. A failed endpoint check does not create a payment or alter the catalog.
 
-- [ ] On the compatible LibCard version, choose permanent per-item `feedme.id` values and add the creator’s opt-ins plus:
+- [ ] On the compatible LibCard version, optionally add card-side tip actions by copying existing Feedme target IDs from Studio into per-item `feedme.id` values, then add:
 
 ```yaml
 feedme:

@@ -38,4 +38,4 @@ From the Feedme repository, the final integration check is:
 pnpm check:libcard-origin https://crs.tips
 ```
 
-This completes routing. Stripe onboarding, private Habitat storage, and LibCard tip opt-ins are separate setup steps; see [the deployment notes](crs-tips.md).
+This completes routing. Stripe onboarding, private Habitat storage, and optional card-side tip links are separate setup steps; see [the deployment notes](crs-tips.md).

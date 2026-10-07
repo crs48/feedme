@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
 import { projectSchema, type Profile, type Project } from './model';
-import { LibcardImportError, libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource } from './libcard-schema';
+import { LibcardImportError, libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource, type LibcardTargetMode } from './libcard-schema';
 import { libcardFixture } from './libcard-fixture';
 import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
@@ -15,12 +15,13 @@ export const storedLibcard = (db: DatabaseSync, source: LibcardSource) => {
   const snapshot = getKv<LibcardSnapshot>(db, 'libcard', 'snapshot');
   return snapshot && sourceKey(snapshot.source) === sourceKey(source) ? snapshot : undefined;
 };
-export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot, previewAll = false) => transaction(db, () => {
-  const validated = libcardSnapshotSchema.parse(snapshot);
+const targetMode = (): LibcardTargetMode => config().libcardRemoteDemo ? 'preview' : config().libcardDefaultSupport || 'all';
+export const importLibcard = (db: DatabaseSync, snapshot: LibcardSnapshot, mode = targetMode()) => transaction(db, () => {
+  const validated = libcardSnapshotSchema.parse({ ...snapshot, targetMode: mode });
   const { document: doc, source } = validated;
   const targets = [
     { id: 'creator', label: `Just ${doc.profile.name.split(/\s+/)[0]}`, blurb: '', url: null, kind: 'creator' as const, aspiration: 0, demoOnly: false },
-    ...libcardCatalog(validated, previewAll).flatMap(i => i.targetId ? [{ id: i.targetId, label: i.label, blurb: i.feedme?.blurb || '', url: i.url, kind: i.kind, aspiration: (i.feedme?.aspiration || 0) * 100, demoOnly: Boolean(i.demoOnly) }] : []),
+    ...libcardCatalog(validated, mode).flatMap(i => i.targetId ? [{ id: i.targetId, label: i.label, blurb: i.feedme?.blurb || '', url: i.url, kind: i.kind, aspiration: (i.feedme?.aspiration || 0) * 100, demoOnly: Boolean(i.demoOnly) }] : []),
   ];
   for (const target of targets) {
     const previous = readRecord<Project>(db, 'project', target.id);
@@ -48,6 +49,22 @@ export const libcardSnapshot = () => {
   if (cfg.demo && !cfg.libcardRemoteDemo && !snapshot && !getKv(db, 'recovery', 'paused')) {
     snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 2 };
     importLibcard(db, snapshot);
+    snapshot = storedLibcard(db, cfg.libcard);
+  }
+  // Reapply a changed default from the last-good source, including after a
+  // restore or during a GitHub outage. Never update halfway through recovery.
+  if (snapshot && snapshot.targetMode !== targetMode() && !getKv(db, 'recovery', 'paused')) {
+    const checkedAt = snapshot.checkedAt;
+    try {
+      importLibcard(db, snapshot);
+      snapshot = storedLibcard(db, cfg.libcard);
+    } catch (error) {
+      const status = getKv<RefreshStatus>(db, 'libcard-refresh', sourceKey(cfg.libcard));
+      setKv(db, 'libcard-refresh', sourceKey(cfg.libcard), {
+        ...status, attemptedAt: status?.attemptedAt || checkedAt,
+        error: `LibCard settings could not be applied. ${error instanceof LibcardImportError ? error.message : 'Check the catalog and import limits.'} The last good catalog is unchanged.`,
+      });
+    }
   }
   return snapshot;
 };
@@ -59,7 +76,7 @@ export const loadLibcardSnapshot = async () => {
 };
 export const libcardTargets = (snapshot = libcardSnapshot()) => {
   if (!snapshot) return [];
-  const ids = ['creator', ...libcardCatalog(snapshot, config().libcardRemoteDemo).flatMap(i => i.targetId ? [i.targetId] : [])];
+  const ids = ['creator', ...libcardCatalog(snapshot, snapshot.targetMode || (config().libcardRemoteDemo ? 'preview' : 'explicit')).flatMap(i => i.targetId ? [i.targetId] : [])];
   return ids.flatMap(id => {
     const p = readRecord<Project>(getDb(), 'project', id);
     return p?.libcard && (!p.libcard.demoOnly || config().libcardRemoteDemo) && sourceKey(p.libcard.source) === sourceKey(snapshot.source) && p.libcard.present && !p.libcard.hidden && p.status === 'active' ? [p] : [];
@@ -88,7 +105,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   const cfg = config(); if (!cfg.libcard) return;
   const db = getDb(); if (getKv(db, 'recovery', 'paused')) return;
   const key = sourceKey(cfg.libcard);
-  const saved = storedLibcard(db, cfg.libcard);
+  const saved = libcardSnapshot();
   const previous = getKv<RefreshStatus>(db, 'libcard-refresh', key);
   if (!force && previous && (!saved || saved.catalogVersion === 2 || previous.catalogVersion === 2) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
   const attemptedAt = new Date().toISOString();
@@ -112,7 +129,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
         const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 2 });
         // A restore pause may have happened while GitHub was responding.
         if (getKv(db, 'recovery', 'paused')) return;
-        importLibcard(db, snapshot, cfg.libcardRemoteDemo);
+        importLibcard(db, snapshot);
       }
       const current = storedLibcard(db, cfg.libcard);
       if (current) await refreshGithubStars(db, current.document.items, fetcher);

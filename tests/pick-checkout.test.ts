@@ -45,9 +45,20 @@ beforeEach(() => {
 afterEach(() => state.db!.close());
 
 describe('browser-bound pick checkout', () => {
+  it('reviews and charges an automatic target through the same frozen intent as explicit targets', async () => {
+    const target = libcardTargets().find(p => p.title === 'Résumé')!;
+    const id = await review({ 'pick:creator': '0', [`pick:${target.id}`]: '3' });
+    await checkoutPost(ctx({ reviewId: id }));
+    expect(readRecord<Support>(state.db!, 'support', id)).toMatchObject({ amount: 2200, picks: [{ projectId: target.id, count: 3 }], status: 'pending' });
+    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Morgan', amount: 2200 }]);
+    const next = await review({ 'pick:creator': '0', [`pick:${target.id}`]: '1' });
+    overrideLibcard(state.db!, target.id, true);
+    expect((await checkoutPost(ctx({ reviewId: next }))).headers.get('location')).toContain('no%20longer');
+    expect(state.checkout).toHaveBeenCalledTimes(1);
+  });
   it('uses ordinary form fields and server-side shortcuts without resetting amount or note', async () => {
     const all = pickFormValues(ctx(), await ctx(fields({ amount: '44', intent: 'all' })).request.formData());
-    expect(all.picks).toHaveLength(6); expect(all.picks.every(p => p.count === 1)).toBe(true); expect(all.amount).toBe(4400); expect(all.note).toBe('Private encouragement');
+    expect(all.picks).toHaveLength(9); expect(all.picks.every(p => p.count === 1)).toBe(true); expect(all.amount).toBe(4400); expect(all.note).toBe('Private encouragement');
     const creator = pickFormValues(ctx(), await ctx(fields({ intent: 'creator', 'pick:x': '9' })).request.formData());
     expect(creator.picks).toEqual([{ projectId: 'creator', count: 1 }]);
     const amount = pickFormValues(ctx(), await ctx(fields({ intent: 'amount-8800', 'pick:x': '3' })).request.formData());

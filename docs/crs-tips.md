@@ -72,6 +72,6 @@ Local encrypted backups are configured on the same persistent volume. They help 
 - [ ] Sign in as `crs.land`, create private Habitat storage, and verify recovery.
 - [ ] Configure Stripe Connect test credentials, complete onboarding/webhook setup, and run [payment acceptance](hosting.md#live-acceptance-checklist).
 - [ ] Back up the encryption keys separately; configure and test off-server backups.
-- [ ] Choose explicit LibCard target opt-ins and enable its `feedme` block pointing to `https://crs.tips`; refresh Feedme, then rebuild LibCard.
+- [ ] Optionally add card-side tip actions: use the existing target IDs shown in Feedme Studio as LibCard `feedme.id` values, enable its `feedme` block pointing to `https://crs.tips`, refresh Feedme, then rebuild LibCard.
 
-The source currently has no `feedme` opt-ins. All ordinary links remain visible; the public tip catalog initially contains only `creator`. No aspirations or support totals are invented. Stripe credentials and private Habitat storage are not configured, so the server cannot issue a charge-capable checkout yet. DNS activation does not by itself enable payments.
+Feedme now includes all LibCard links and socials as selectable targets by default, even without source `feedme` objects. Hide exceptions in Studio. `LIBCARD_DEFAULT_SUPPORT=explicit` restores the older behavior where this catalog initially contained only `creator`. No aspirations or support totals are invented. Stripe credentials and private Habitat storage are not configured, so the server cannot issue a charge-capable checkout yet. DNS activation does not by itself enable payments.

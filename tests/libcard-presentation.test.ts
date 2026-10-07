@@ -23,21 +23,26 @@ describe('LibCard catalog presentation', () => {
     expect(() => parseLibcard(text.replace('icon: network', 'icon: "<svg onload=alert(1)>"'), source)).toThrow();
     expect(() => parseLibcard(text.replace('https://github.com/crs48/xNet', 'https://attacker.test/crs48/xNet'), source)).toThrow();
   });
-  it('only makes unopted links selectable in the explicit all-items demo projection', () => {
+  it('makes every link selectable by default with stable IDs, while retaining explicit and isolated preview modes', () => {
     const data = snapshot();
-    expect(libcardCatalog(data).every(i => !i.targetId)).toBe(true);
-    const projected = libcardCatalog(data, true);
+    expect(libcardCatalog(data, 'explicit').every(i => !i.targetId)).toBe(true);
+    const live = libcardCatalog(data);
+    expect(live.every(i => i.targetId?.startsWith('auto-') && !i.demoOnly)).toBe(true);
+    const renamed = { ...data, document: { ...data.document, items: [...data.document.items].reverse().map(i => ({ ...i, label: `New ${i.label}` })) } };
+    expect(libcardCatalog(renamed).map(i => i.targetId).reverse()).toEqual(live.map(i => i.targetId));
+    const projected = libcardCatalog(data, 'preview');
     expect(projected.every(i => i.targetId && i.demoOnly)).toBe(true);
-    expect(libcardCatalog({ ...data, document: { ...data.document, items: [...data.document.items].reverse() } }, true).map(i => i.targetId).reverse()).toEqual(projected.map(i => i.targetId));
+    expect(projected.every(i => !live.some(l => l.targetId === i.targetId))).toBe(true);
+    expect(libcardCatalog(renamed, 'preview').map(i => i.targetId).reverse()).toEqual(projected.map(i => i.targetId));
     expect(data.document.items.every(i => !i.feedme)).toBe(true);
-    const repeated = libcardCatalog({ ...data, document: { ...data.document, items: [data.document.items[0], data.document.items[0]] } }, true);
+    const repeated = libcardCatalog({ ...data, document: { ...data.document, items: [data.document.items[0], data.document.items[0]] } });
     expect(new Set(repeated.map(i => i.targetId)).size).toBe(2);
   });
   it('keeps every link visible while limiting generated allocations to 99 and preserving explicit opt-ins', () => {
     const data = snapshot();
     data.document.items = Array.from({ length: 110 }, (_, n) => ({ label: `Link ${n}`, url: `https://example.test/${n}`, kind: 'link' }));
     data.document.items[109].feedme = { id: 'explicit', blurb: '' };
-    const catalog = libcardCatalog(data, true);
+    const catalog = libcardCatalog(data);
     expect(catalog).toHaveLength(110); expect(catalog.filter(i => i.targetId)).toHaveLength(99);
     expect(catalog[109].targetId).toBe('explicit'); expect(catalog[109].demoOnly).toBeUndefined();
   });

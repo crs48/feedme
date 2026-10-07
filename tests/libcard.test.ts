@@ -3,11 +3,11 @@ import type { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { parse, stringify } from 'yaml';
 import { assertLibcardResponse } from '../scripts/libcard-contract.mjs';
-const state = vi.hoisted(() => ({ db: undefined as DatabaseSync | undefined, demo: false, enabled: true, remoteDemo: false }));
+const state = vi.hoisted(() => ({ db: undefined as DatabaseSync | undefined, demo: false, enabled: true, remoteDemo: false, defaultSupport: 'explicit' as 'all' | 'explicit' }));
 const source = { repo: 'test/card', ref: 'main' };
-vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo, libcardRemoteDemo: state.remoteDemo, identities: { owner: 'crs.land' }, libcard: state.enabled ? { repo: 'test/card', ref: 'main' } : undefined, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', origin: 'https://feedme.example', defaultTipAmount: 4400 }) }));
+vi.mock('../src/lib/config', () => ({ config: () => ({ demo: state.demo, libcardRemoteDemo: state.remoteDemo, libcardDefaultSupport: state.defaultSupport, identities: { owner: 'crs.land' }, libcard: state.enabled ? { repo: 'test/card', ref: 'main' } : undefined, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', origin: 'https://feedme.example', defaultTipAmount: 4400 }) }));
 vi.mock('../src/lib/db', async original => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => state.db! }));
-import { openDatabase, getKv, listRecords, putRecord, readRecord, pendingWrites } from '../src/lib/db';
+import { openDatabase, getKv, setKv, listRecords, putRecord, readRecord, pendingWrites } from '../src/lib/db';
 import { avatarUrl, parseLibcard, sourceKey, type LibcardSnapshot } from '../src/lib/libcard-schema';
 import { libcardFixture } from '../src/lib/libcard-fixture';
 import { importLibcard, libcardSnapshot, libcardTargets, libcardProfile, loadLibcardSnapshot, overrideLibcard, refreshLibcard } from '../src/lib/libcard';
@@ -23,10 +23,39 @@ import type { APIContext } from 'astro';
 const snapshot = (): LibcardSnapshot => ({ source, document: parseLibcard(libcardFixture, source), hash: 'a'.repeat(64), checkedAt: new Date().toISOString() });
 const consumerYaml = readFileSync(new URL('./fixtures/libcard/enabled.config.yaml', import.meta.url), 'utf8');
 const tip = (id: string, extra: Partial<Support> = {}): Support => ({ id, projectId: 'creator', amount: 2200, currency: 'usd', visibility: 'public', supporterDid: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', note: 'PRIVATE NOTE', status: 'paid', refundedAmount: 0, disputed: false, createdAt: new Date().toISOString(), picks: [{ projectId: 'creator', count: 1 }], ...extra });
-beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; state.demo = false; state.remoteDemo = false; });
+beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; state.demo = false; state.remoteDemo = false; state.defaultSupport = 'explicit'; });
 afterEach(() => { state.db!.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('LibCard parser and managed import', () => {
+  it('imports all links and socials as real managed targets without editing the source', async () => {
+    state.defaultSupport = 'all';
+    const initial = snapshot(); importLibcard(state.db!, initial);
+    expect(libcardTargets().map(p => p.title)).toEqual(['Just Alex', ...initial.document.items.map(i => i.label)]);
+    expect(libcardTargets()).toHaveLength(9);
+    expect(libcardTargets().every(p => !p.libcard?.demoOnly)).toBe(true);
+    expect(libcardSnapshot()?.document).toEqual(initial.document);
+    const api = await (await GET({} as APIContext)).json();
+    assertLibcardResponse(api, 'https://feedme.example');
+    expect(api.targets.map((t: { id: string }) => t.id)).toEqual(libcardTargets().map(p => p.id));
+    expect(api.targets.every((t: { publicCount: number }) => t.publicCount === 0)).toBe(true);
+    expect(pendingWrites(state.db!)).toEqual([]);
+  });
+  it('keeps automatic IDs, hidden state, aspirations and payment references through edits and removal', () => {
+    state.defaultSupport = 'all';
+    const initial = snapshot(); importLibcard(state.db!, initial);
+    const target = libcardTargets().find(p => p.title === 'Résumé')!;
+    putRecord(state.db!, 'support', 'original', tip('original', { picks: [{ projectId: target.id, count: 3 }] }));
+    overrideLibcard(state.db!, target.id, true, 420000);
+    const renamed = { ...initial, document: { ...initial.document, items: [...initial.document.items].reverse().map(i => i.label === 'Résumé' ? { ...i, label: 'New résumé' } : i) } };
+    importLibcard(state.db!, renamed);
+    expect(readRecord<Project>(state.db!, 'project', target.id)).toMatchObject({ title: 'New résumé', createdAt: target.createdAt, target: 420000, libcard: { hidden: true } });
+    expect(libcardTargets().some(p => p.id === target.id)).toBe(false);
+    importLibcard(state.db!, { ...initial, document: { ...initial.document, items: initial.document.items.filter(i => i.url !== target.libcard!.url) } });
+    expect(readRecord<Project>(state.db!, 'project', target.id)?.libcard?.present).toBe(false);
+    importLibcard(state.db!, initial);
+    expect(readRecord<Project>(state.db!, 'project', target.id)).toMatchObject({ status: 'archived', target: 420000, libcard: { present: true, hidden: true } });
+    expect(readRecord<Support>(state.db!, 'support', 'original')?.picks).toEqual([{ projectId: target.id, count: 3 }]);
+  });
   it('imports the committed LibCard consumer fixture and ignores presentation-only configuration', async () => {
     const yaml = stringify({ ...parse(consumerYaml), feedme: { enabled: false, origin: 'https://a-different-card.example' },
       theme: 'default', statuses: { ready: 'Ready' }, cardMode: { enabled: true }, analytics: { enabled: false },
@@ -89,6 +118,48 @@ describe('LibCard parser and managed import', () => {
 });
 
 describe('refresh and private recovery', () => {
+  it('upgrades a restored legacy snapshot from cached data even if GitHub is unavailable', async () => {
+    importLibcard(state.db!, snapshot());
+    const saved = getKv<LibcardSnapshot>(state.db!, 'libcard', 'snapshot')!;
+    setKv(state.db!, 'libcard', 'snapshot', { ...saved, targetMode: undefined });
+    state.defaultSupport = 'all';
+    setKv(state.db!, 'recovery', 'paused', true);
+    expect(libcardTargets()).toHaveLength(6);
+    setKv(state.db!, 'recovery', 'paused', false);
+    await refreshLibcard(true, async () => { throw new Error('offline'); });
+    expect(libcardTargets()).toHaveLength(9);
+    expect(libcardSnapshot()).toMatchObject({ hash: saved.hash, checkedAt: saved.checkedAt, targetMode: 'all', document: saved.document });
+    const restored = libcardSnapshot()!;
+    const envelope = recoveryEnvelope('did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', '98d3c0e0-87f3-4d8e-82a2-91cf8b668a31', { table: 'kv', kind: 'libcard', key: 'snapshot' }, restored);
+    expect(parsePortableValue(envelope, JSON.parse(envelope.json))).toEqual(restored);
+  });
+  it('applies default changes before a conditional 304 and preserves overrides across explicit mode', async () => {
+    await refreshLibcard(true, async () => new Response(libcardFixture, { headers: { etag: '"same"' } }));
+    state.defaultSupport = 'all';
+    const unchanged = vi.fn<typeof fetch>(async () => new Response(null, { status: 304 }));
+    await refreshLibcard(true, unchanged);
+    expect(unchanged.mock.calls[0][1]?.headers).toEqual({ 'If-None-Match': '"same"' });
+    const id = libcardTargets().find(p => p.title === 'Résumé')!.id;
+    overrideLibcard(state.db!, id, true, 12300);
+    state.defaultSupport = 'explicit'; expect(libcardTargets()).toHaveLength(6);
+    state.defaultSupport = 'all'; expect(libcardTargets()).toHaveLength(8);
+    expect(readRecord<Project>(state.db!, 'project', id)).toMatchObject({ target: 12300, libcard: { hidden: true, present: true } });
+  });
+  it('keeps the last-good catalog on a generated ID collision without starving future source refreshes', async () => {
+    const initial = snapshot(); importLibcard(state.db!, initial);
+    const id = libcardCatalog(initial).find(i => i.label === 'Résumé')!.targetId!;
+    putRecord(state.db!, 'project', id, { id, title: 'Native' });
+    state.defaultSupport = 'all';
+    expect(libcardTargets()).toHaveLength(6);
+    expect(libcardSnapshot()?.targetMode).toBe('explicit');
+    expect(getKv<{ error: string }>(state.db!, 'libcard-refresh', sourceKey(source))?.error).toContain('last good catalog is unchanged');
+    expect(readRecord(state.db!, 'project', id)).toEqual({ id, title: 'Native' });
+    setKv(state.db!, 'libcard-refresh', sourceKey(source), { attemptedAt: '2020-01-01T00:00:00.000Z' });
+    const corrected = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Résumé', 'label: Résumé\n    feedme: { id: resume }')));
+    await refreshLibcard(false, corrected);
+    expect(corrected).toHaveBeenCalledTimes(1);
+    expect(libcardTargets().some(p => p.id === 'resume')).toBe(true);
+  });
   it('surfaces native collisions in Studio status without changing the last-good import', async () => {
     importLibcard(state.db!, snapshot());
     putRecord(state.db!, 'project', 'open-source', { id: 'open-source', title: 'Native private title' });
@@ -146,12 +217,12 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
   });
   it('preserves demo target overrides through removal and stops accepting them outside the preview', () => {
     state.demo = true; state.remoteDemo = true;
-    const initial = snapshot(); importLibcard(state.db!, initial, true);
-    const id = libcardCatalog(initial, true).find(i => i.label === 'Résumé')!.targetId!;
+    const initial = snapshot(); importLibcard(state.db!, initial, 'preview');
+    const id = libcardCatalog(initial, 'preview').find(i => i.label === 'Résumé')!.targetId!;
     overrideLibcard(state.db!, id, true, 770000);
-    importLibcard(state.db!, { ...initial, document: { ...initial.document, items: initial.document.items.filter(i => i.label !== 'Résumé') } }, true);
+    importLibcard(state.db!, { ...initial, document: { ...initial.document, items: initial.document.items.filter(i => i.label !== 'Résumé') } }, 'preview');
     expect(readRecord<Project>(state.db!, 'project', id)?.libcard?.present).toBe(false);
-    importLibcard(state.db!, initial, true);
+    importLibcard(state.db!, initial, 'preview');
     expect(readRecord<Project>(state.db!, 'project', id)).toMatchObject({ status: 'archived', target: 770000, libcard: { hidden: true, demoOnly: true, present: true } });
     overrideLibcard(state.db!, id, false, 770000);
     expect(libcardTargets().some(p => p.id === id)).toBe(true);

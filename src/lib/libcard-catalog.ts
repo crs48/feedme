@@ -1,22 +1,22 @@
 import { createHash } from 'node:crypto';
-import type { LibcardItem, LibcardSnapshot } from './libcard-schema';
+import type { LibcardItem, LibcardSnapshot, LibcardTargetMode } from './libcard-schema';
 import type { Project } from './model';
 
 const seed = (value: string) => createHash('sha256').update(value).digest('hex');
 export type CatalogItem = LibcardItem & { targetId?: string; demoOnly?: boolean };
-// Demo-only IDs never imply creator consent in a real payment deployment.
-// Source records remain intact, including links without an explicit opt-in.
-export const libcardCatalog = (snapshot: LibcardSnapshot, previewAll = false): CatalogItem[] => {
+// Keep automatic live IDs separate from simulated payments. Explicit source IDs
+// always win; generated IDs survive title changes and source reordering.
+export const libcardCatalog = (snapshot: LibcardSnapshot, mode: LibcardTargetMode = 'all'): CatalogItem[] => {
   const used = new Set(['creator', 'amount', ...snapshot.document.items.flatMap(i => i.feedme ? [i.feedme.id] : [])]);
   let remaining = 99 - snapshot.document.items.filter(i => i.feedme).length;
   return snapshot.document.items.map(item => {
     if (item.feedme) return { ...item, targetId: item.feedme.id };
-    if (!previewAll || remaining <= 0) return item;
-    const base = `preview-${seed(`${item.kind}:${item.url}`).slice(0, 16)}`;
+    if (mode === 'explicit' || remaining <= 0) return item;
+    const base = `${mode === 'preview' ? 'preview' : 'auto'}-${seed(`${item.kind}:${item.url}`).slice(0, 16)}`;
     let id = base, suffix = 1;
     while (used.has(id)) id = `${base}-${++suffix}`;
     used.add(id); remaining--;
-    return { ...item, targetId: id, demoOnly: true };
+    return { ...item, targetId: id, demoOnly: mode === 'preview' };
   });
 };
 
