@@ -161,7 +161,7 @@ After deploying, set these in your host's secret/environment settings:
 
 1. `FEEDME_MODE=live`, `BLUESKY_HANDLE=your.handle`, and a `DATA_ENCRYPTION_KEY` generated with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Back up the key separately from the disk.
 2. `PUBLIC_URL=https://your-custom-domain` if using a custom domain or VPS. Render, Railway, Fly.io, and Koyeb generated domains are detected automatically when this variable is absent. Don't copy the local `.env` URL to a hosted instance.
-3. Stripe test credentials: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Sign in as the owner, create Habitat private storage, and finish Stripe Connect onboarding in the studio.
+3. Stripe credentials: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Sign in as the owner, create Habitat private storage, and open **Dashboard → Settings → Set up Stripe**. Follow the [Stripe setup guide](docs/stripe-setup.md), testing first in an isolated sandbox deployment with its own data directory before configuring production.
 
 Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the deployment configurations). Your handle is the only identity setting required; Feedme verifies and pins its permanent DID. Live hosting and payments still require HTTPS, encryption, and provider credentials. Follow [identity/payment setup and the live acceptance checklist](docs/hosting.md#live-configuration) before taking real payments.
 

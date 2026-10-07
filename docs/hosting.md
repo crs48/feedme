@@ -82,12 +82,14 @@ Habitat’s own service can be self-hosted separately. Feedme is TypeScript and 
 
 ### Connect payments
 
-1. Configure your Stripe platform for Connect and use **test mode** credentials first.
-2. In **Dashboard → Settings**, choose **Connect Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
+Use **Dashboard → Settings → Set up Stripe** for a guided checklist, exact webhook URL, required events, and Stripe account readiness. The [Stripe setup guide](stripe-setup.md) explains credentials, restricted-key permissions, and separate sandbox/production deployments.
+
+1. Configure your Stripe platform for Connect and use **test mode** credentials first, in an isolated sandbox deployment with its own data directory.
+2. In **Dashboard → Settings → Set up Stripe**, choose **Set up payouts with Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
 3. Register `https://support.example.com/api/stripe/webhook` as a **connected-account** event destination using API version `2026-08-26.dahlia` (matching the installed Stripe SDK) and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 4. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, **`invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`**. Existing installations must add the invoice and subscription events before offering recurring support.
 5. Enable eligible payment methods on the connected account. Checkout selects methods dynamically; card wallets such as Apple Pay and Google Pay depend on account, currency, device, and Stripe eligibility. Feedme does not promise every method on every checkout.
-6. Follow the acceptance checklist below, then replace test credentials and webhook configuration when ready for real payments.
+6. Follow the acceptance checklist below in an isolated sandbox deployment, then configure live credentials, onboarding, and a live webhook on the production deployment. Keep their data directories separate: changing keys does not migrate a saved test connected account or its payment ledger.
 
 Checkout verifies both `charges_enabled` and `payouts_enabled`. Feedme makes direct charges to the connected account and sets no application fee. Stripe processing and applicable Billing fees still apply. Refunds and disputes are managed from Stripe’s dashboard; webhooks update Feedme. The current release offers USD one-time, monthly, and yearly support. Before opening the first recurring Checkout, Feedme creates a connected-account Customer Portal configuration with invoice history, payment-method updates, cancellation at the end of the period, and email login enabled. See [recurring support](recurring-support.md) for accounting and recovery details.
 

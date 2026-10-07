@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 import type { Support } from '../src/lib/model';
 let db: DatabaseSync;
-const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn(), portal: vi.fn(), protect: vi.fn() }));
+const mock = vi.hoisted(() => ({ create: vi.fn(), retrieve: vi.fn(), portal: vi.fn(), protect: vi.fn(), webhook: 'whsec_fixture' }));
 vi.mock('stripe', () => ({ default: class { accounts = { retrieve: mock.retrieve }; billingPortal = { configurations: { create: mock.portal } }; checkout = { sessions: { create: mock.create } }; } }));
-vi.mock('../src/lib/config', () => ({ config: () => ({ stripeKey: 'sk_test_fixture', origin: 'https://feedme.example' }) }));
+vi.mock('../src/lib/config', () => ({ config: () => ({ stripeKey: 'sk_test_fixture', stripeWebhookSecret: mock.webhook, origin: 'https://feedme.example' }) }));
 vi.mock('../src/lib/habitat', () => ({ privateSpace: () => 'space', protectCheckoutIntent: mock.protect }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 import { openDatabase, putRecord, readRecord, setKv } from '../src/lib/db';
@@ -15,6 +15,7 @@ const intent: Support = { id: 'tip-1', projectId: 'sauna', amount: 1000, currenc
 const items = [{ title: 'Sauna', amount: 667 }, { title: 'Writing', amount: 333 }];
 describe('split Stripe Checkout contract', () => {
   beforeEach(() => {
+    mock.webhook = 'whsec_fixture';
     db = openDatabase(':memory:'); setKv(db, 'app', 'stripe-account', 'acct_creator');
     mock.protect.mockReset().mockResolvedValue(undefined);
     mock.portal.mockReset().mockResolvedValue({ id: 'bpc_test', login_page: { url: 'https://billing.stripe.com/test' } });
@@ -22,6 +23,12 @@ describe('split Stripe Checkout contract', () => {
     mock.create.mockReset().mockResolvedValue({ id: 'cs_one', url: 'https://checkout.stripe.com/one' });
   });
   afterEach(() => db.close());
+  it('does not open a charge-capable checkout without a webhook signing secret', async () => {
+    mock.webhook = '';
+    await expect(checkout(intent, items)).rejects.toThrow('payment notifications');
+    expect(mock.retrieve).not.toHaveBeenCalled();
+    expect(mock.create).not.toHaveBeenCalled();
+  });
   it('creates one connected-account session with exact line items and the parent payment reference', async () => {
     await expect(checkout(intent, items)).resolves.toBe('https://checkout.stripe.com/one');
     const [params, options] = mock.create.mock.calls[0];
