@@ -84,7 +84,21 @@ Automatic IDs are derived from the item kind and destination URL. Renaming or re
 
 Résumé, phone, email, and social links are included in the default unless skipped. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. In `explicit` mode, non-skipped links without `feedme.id` stay visible without pick controls. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account, never to the destination of a link.
 
-Avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped. Feedme uses the profile name, tagline, and location in the creator header. The first text block remains in the cached snapshot for compatibility but is not displayed above the pick controls. It does not scrape the website or import themes.
+The creator header automatically reads the configured owner's display name, handle, avatar, and bio from Bluesky. The handle links to their Bluesky profile using its permanent DID. Live instances use the pinned owner identity; changing a handle does not change who owns the site. The public profile is cached in SQLite and checked every 15 minutes, including by the background sync loop. Failed requests retain the last successful profile. An empty Bluesky bio stays empty; LibCard's tagline and text blocks never replace it. This display cache does not edit the stored Feedme profile or publish anything to AT Protocol.
+
+Before the first successful Bluesky fetch, Feedme uses the saved Feedme bio, saved or configured handle, and LibCard name/avatar. LibCard still supplies location, links, socials, and targets. Offline demos keep their fictional identity; only the explicitly enabled real-source demo fetches a real Bluesky profile. The first text block and tagline remain in the cached LibCard snapshot for compatibility but are not displayed as the bio or above the pick controls. Feedme does not scrape the website or import themes.
+
+Fallback LibCard avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped.
+
+## Visit layout
+
+The compact creator header uses the Bluesky bio, with safe HTTPS URLs, bare domains, and @handles rendered as links. Line breaks are preserved; HTML in the bio is displayed as text.
+
+Links are grouped by their LibCard `status`: `ready`, `wip`, `writing`, `reading`, `experiment`, `exploration`, and `dormant`. Missing or custom statuses appear under **More to explore**. The source order stays intact within each group; grouping never changes target IDs, checkout eligibility, or payment history. Experiments, explorations, and dormant groups begin collapsed, and open automatically for preselected picks. Set `LIBCARD_COLLAPSE_QUIET=false` to expand every group. Socials appear below projects. Set `LIBCARD_SHOW_GITHUB_STARS=false` to hide companion GitHub badges.
+
+Pick controls use the same integer weights as checkout. The gift panel displays the exact cent allocation using the server's largest-remainder algorithm, even for an $11 gift split three ways. The mobile review bar leads to the amount, frequency, privacy, note, and review controls. Without JavaScript, labeled integer inputs and standard form submissions remain available. Changing the amount preserves selections.
+
+Old snapshots remain readable and usable offline. The next successful refresh fetches the source without the previous catalog version's ETag so newly consumed status and skip fields are not lost to a `304` response.
 
 ## Refresh, local settings, and recovery
 

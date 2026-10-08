@@ -90,6 +90,12 @@ try {
   const receiptPath = checkout.headers.get('location');
   if (!receiptPath?.startsWith('/thanks?id=')) throw new Error(`Demo checkout failed: ${receiptPath}`);
   const receipt = await (await request(receiptPath)).text();
+  const publicText = 'More open tools, good stories, and time together. Cheering you on!';
+  await request('/api/social', { action: 'post', supportId: new URL(receiptPath, origin).searchParams.get('id'), consent: 'public', publicText });
+  const timeline = load(await (await request('/')).text());
+  const message = timeline('#supporters .tip-post');
+  if (message.length !== 1 || message.find('.tip-post-text').text() !== publicText || message.find('img,video,iframe').length || !message.find('a[href*="bsky.app/profile/"]').length)
+    throw new Error('The public shared post must appear once in the demo timeline as text and a Bluesky link, without its image.');
   const sharePath = load(receipt)('[data-share-url]').attr('value');
   if (!sharePath) throw new Error('Demo checkout did not produce a public support card.');
   const shareRoute = new URL(sharePath, origin).pathname;

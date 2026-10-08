@@ -33,6 +33,10 @@ const optIn = z.discriminatedUnion('skip', [z.object({
   blurb: z.string().trim().max(240).default(''), aspiration: z.number().int().min(0).max(1_000_000).optional(),
 })], { error: libcardOptInError });
 const presentation = {
+  status: z.unknown().transform(value => {
+    const known = z.enum(['ready', 'wip', 'writing', 'reading', 'experiment', 'exploration', 'dormant']).safeParse(value);
+    return known.success ? known.data : undefined;
+  }).optional(),
   icon: z.string().regex(/^[a-zA-Z0-9-]{1,64}$/).optional(),
   github: githubRepoSchema.optional(), star: z.boolean().optional(), stars: z.enum(['off', 'build', 'badge']).optional(),
 };
@@ -46,7 +50,7 @@ export const libcardDocumentSchema = z.object({
 });
 export const libcardTargetModeSchema = z.enum(['all', 'explicit', 'preview']);
 export type LibcardTargetMode = z.infer<typeof libcardTargetModeSchema>;
-export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.literal(2).optional(), targetMode: libcardTargetModeSchema.optional() });
+export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(), targetMode: libcardTargetModeSchema.optional() });
 export type LibcardDocument = z.infer<typeof libcardDocumentSchema>;
 export type LibcardItem = LibcardDocument['items'][number];
 export type LibcardSnapshot = z.infer<typeof libcardSnapshotSchema>;

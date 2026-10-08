@@ -11,7 +11,8 @@ import Avatar from '../components/Avatar.astro';
 import { config } from '../lib/config';
 import { demoPerson } from '../lib/demo-media';
 import { profile, projects, totals } from '../lib/repository';
-const snapshot = await loadLibcardSnapshot();
+import { refreshCreatorBluesky } from '../lib/creator-bluesky';
+const [snapshot] = await Promise.all([loadLibcardSnapshot(), refreshCreatorBluesky()]);
 if (config().libcard && !snapshot) Astro.response.status = 503;
 const p = libcardProfile(profile(), snapshot);
 const list = projects();
@@ -32,7 +33,7 @@ const circle = creatorCircle();
   .support-note > span { margin-left: auto; white-space: nowrap; }
   .circle-teaser { margin-top: 40px; display: flex; align-items: center; justify-content: space-between; gap: 20px; font-size: 14px; }
   .teaser-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
-  .teaser-card { border: 1px solid var(--color-border); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 14px; background: white; font-size: 13px; transition: border-color .15s; }
+  .teaser-card { border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; display: flex; align-items: center; gap: 14px; background: white; font-size: 13px; transition: border-color .15s; }
   .teaser-card:hover { border-color: #83b8ff; }
   .teaser-card strong { font-size: 14px; font-weight: 600; }
   @media(max-width:950px) { .support-note > span { display: none; } }

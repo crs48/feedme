@@ -8,8 +8,9 @@ import { LibcardImportError, libcardOptInError, libcardSnapshotSchema, parseLibc
 import { libcardFixture } from './libcard-fixture';
 import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
+import { cachedCreatorBluesky } from './creator-bluesky';
 
-export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 };
+export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 | 3 | 4 };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 export const storedLibcard = (db: DatabaseSync, source: LibcardSource) => {
   const snapshot = getKv<LibcardSnapshot>(db, 'libcard', 'snapshot');
@@ -47,7 +48,7 @@ export const libcardSnapshot = () => {
   const db = getDb();
   let snapshot = storedLibcard(db, cfg.libcard);
   if (cfg.demo && !cfg.libcardRemoteDemo && !snapshot && !getKv(db, 'recovery', 'paused')) {
-    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 2 };
+    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 4 };
     importLibcard(db, snapshot);
     snapshot = storedLibcard(db, cfg.libcard);
   }
@@ -84,11 +85,14 @@ export const libcardTargets = (snapshot = libcardSnapshot()) => {
 };
 export const libcardProfile = (base: Profile, snapshot = libcardSnapshot()): Profile => {
   const cfg = config();
-  // This is presentation only. Demo authentication still uses a fictional DID.
-  const handle = cfg.libcardRemoteDemo ? (cfg.identities.owner.startsWith('did:') ? '' : cfg.identities.owner) : base.handle;
+  const bluesky = cachedCreatorBluesky();
+  const configuredHandle = cfg.identities.owner.startsWith('did:') ? '' : cfg.identities.owner;
+  // LibCard describes the catalog. The bio and handle belong to Bluesky, even
+  // when its current bio is empty. Never substitute the card's tagline.
   return snapshot ? {
-    ...base, handle, name: snapshot.document.profile.name, bio: snapshot.document.profile.tagline,
-    location: snapshot.document.profile.location, avatar: snapshot.document.profile.avatar,
+    ...base, handle: bluesky?.handle ?? (cfg.libcardRemoteDemo ? configuredHandle : base.handle || configuredHandle),
+    name: bluesky?.name ?? snapshot.document.profile.name, bio: bluesky?.bio ?? base.bio,
+    location: snapshot.document.profile.location, avatar: bluesky ? bluesky.avatar : snapshot.document.profile.avatar,
   } : base;
 };
 export const overrideLibcard = (db: DatabaseSync, id: string, hidden: boolean, aspiration?: number) => {
@@ -107,15 +111,15 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   const key = sourceKey(cfg.libcard);
   const saved = libcardSnapshot();
   const previous = getKv<RefreshStatus>(db, 'libcard-refresh', key);
-  if (!force && previous && (!saved || saved.catalogVersion === 2 || previous.catalogVersion === 2) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
+  if (!force && previous && (!saved || saved.catalogVersion === 4 || previous.catalogVersion === 4) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
   const attemptedAt = new Date().toISOString();
-  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 2 });
+  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 4 });
   try {
     if (cfg.demo && !cfg.libcardRemoteDemo) {
-      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 2 });
+      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 4 });
     } else {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {
-        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 2 && saved.etag ? { 'If-None-Match': saved.etag } : {},
+        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 4 && saved.etag ? { 'If-None-Match': saved.etag } : {},
       });
       if (getKv(db, 'recovery', 'paused')) return;
       if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
@@ -126,7 +130,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
           while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > 256 * 1024) throw new LibcardImportError('LibCard config exceeds 256 KiB.'); chunks.push(chunk.value); }
         } finally { await reader.cancel(); }
         const text = Buffer.concat(chunks).toString('utf8');
-        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 2 });
+        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 4 });
         // A restore pause may have happened while GitHub was responding.
         if (getKv(db, 'recovery', 'paused')) return;
         importLibcard(db, snapshot);
@@ -139,7 +143,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
     const detail = error instanceof LibcardImportError ? error.message : error instanceof ZodError
       ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. ${error.issues.some(issue => issue.message === libcardOptInError) ? libcardOptInError : 'Check field types, unique target IDs, allowed URLs, and import limits.'}`
       : 'Check GitHub availability, YAML without aliases, unique target IDs, allowed URLs, and import limits.';
-    const status = { attemptedAt, catalogVersion: 2 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
+    const status = { attemptedAt, catalogVersion: 4 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
     setKv(db, 'libcard-refresh', key, status); return status;
   }
 };

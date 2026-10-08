@@ -135,7 +135,7 @@ describe('LibCard parser and managed import', () => {
       ['creator', 'creator'], ['presence', 'link'], ['open-source', 'link'], ['retired', 'link'], ['x', 'social'],
     ]);
     expect(doc.items[0]).toMatchObject({ icon: 'heart', feedme: { id: 'presence', aspiration: 3000, blurb: 'More hours in the room with people.' } });
-    expect(doc.items[0]).not.toHaveProperty('status'); expect(doc).not.toHaveProperty('feedme'); expect(doc).not.toHaveProperty('site');
+    expect(doc.items[0].status).toBe('ready'); expect(doc).not.toHaveProperty('feedme'); expect(doc).not.toHaveProperty('site');
     expect(readRecord<Project>(state.db!, 'project', 'presence')).toMatchObject({ target: 300000, summary: 'More hours in the room with people.', libcard: { sourceAspiration: 300000 } });
     expect(readRecord<Project>(state.db!, 'project', 'x')).toMatchObject({ title: 'My writing on X', summary: 'More of this voice.' });
     expect(readRecord<Project>(state.db!, 'project', 'retired')?.summary).toBe('');
@@ -249,6 +249,25 @@ describe('refresh and private recovery', () => {
     const providerFailure = await refreshLibcard(true, async () => { throw new Error('secret-provider-response'); });
     expect(providerFailure?.error).not.toContain('secret-provider-response'); expect(providerFailure?.error).toContain('No catalog has been imported yet.');
   });
+  it('refreshes a version-three snapshot without a stale ETag and archives newly skipped targets', async () => {
+    state.defaultSupport = 'all';
+    const old = { ...snapshot(), catalogVersion: 3 as const, etag: '"old-catalog"' };
+    importLibcard(state.db!, old);
+    const resume = libcardTargets().find(p => p.title === 'Résumé')!;
+    const updated = parse(libcardFixture);
+    updated.links.find((item: { label: string }) => item.label === 'Résumé').feedme = { skip: true };
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(stringify(updated), { headers: { etag: '"skipped"' } }));
+    await refreshLibcard(false, fetcher);
+    expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
+    expect(libcardSnapshot()?.catalogVersion).toBe(4);
+    expect(libcardTargets().some(p => p.id === resume.id)).toBe(false);
+    expect(readRecord<Project>(state.db!, 'project', resume.id)?.status).toBe('archived');
+    expect((await (await GET({} as APIContext)).json()).targets.some((p: { id: string }) => p.id === resume.id)).toBe(false);
+    const unchanged = vi.fn<typeof fetch>(async () => new Response(null, { status: 304 }));
+    await refreshLibcard(true, unchanged);
+    expect(unchanged.mock.calls[0][1]?.headers).toEqual({ 'If-None-Match': '"skipped"' });
+    expect(libcardTargets().some(p => p.id === resume.id)).toBe(false);
+  });
   it('rejects conflicting skip fields with a safe, clear diagnostic and retains the last-good catalog', async () => {
     importLibcard(state.db!, snapshot());
     const saved = libcardSnapshot();
@@ -273,7 +292,7 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     expect(libcardSnapshot()?.document.items.every(i => !i.feedme)).toBe(true);
     expect(libcardTargets().slice(1).every(p => p.libcard?.demoOnly)).toBe(true);
     const base = { name: 'Native', handle: 'native.example', bio: '', location: '', website: '' };
-    expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: 'Building xNet', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
+    expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: '', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
     expect(base.name).toBe('Native');
     state.remoteDemo = false;
     expect(libcardProfile(base).handle).toBe('native.example');
@@ -283,13 +302,13 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     expect(libcardSnapshot()?.document.profile.name).toBe('Christopher Smothers');
     expect(libcardSnapshot()?.document.items).toHaveLength(2);
   });
-  it('upgrades old snapshots without sending a stale ETag that would discard icons', async () => {
-    const old = { ...snapshot(), etag: '"old"' }; importLibcard(state.db!, old);
-    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart')));
+  it('upgrades version-two snapshots without a stale ETag so status groups can be imported', async () => {
+    const old = { ...snapshot(), catalogVersion: 2 as const, etag: '"old"' }; importLibcard(state.db!, old);
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart\n    status: ready')));
     await refreshLibcard(true, fetcher);
     expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
-    expect(libcardSnapshot()?.document.items[0].icon).toBe('heart');
-    expect(libcardSnapshot()?.catalogVersion).toBe(2);
+    expect(libcardSnapshot()?.document.items[0]).toMatchObject({ icon: 'heart', status: 'ready' });
+    expect(libcardSnapshot()?.catalogVersion).toBe(4);
   });
   it('preserves demo target overrides through removal and stops accepting them outside the preview', () => {
     state.demo = true; state.remoteDemo = true;

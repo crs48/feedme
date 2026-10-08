@@ -6,7 +6,7 @@ import { safeReturnPath } from '../lib/http';
 const cfg = config();
 ---
 <Layout title="Sign in" noindex>
-  <section class="shell py-14"><div class="mx-auto max-w-lg panel"><h1 class="display text-3xl mb-4">Sign in to Feedme</h1><p class="muted text-sm mb-7">Sign in with your Bluesky or other AT Protocol account. Habitat connects to your provider — your password stays there.</p>
+  <section class="shell page-section"><div class="mx-auto max-w-lg panel"><h1 class="display page-title mb-4">Sign in to Feedme</h1><p class="muted text-sm mb-7">Sign in with your Bluesky or other AT Protocol account. Habitat connects to your provider — your password stays there.</p>
     <form action="/auth/login" method="post"><input type="hidden" name="returnTo" value={safeReturnPath(Astro.url.searchParams.get('returnTo'))}/><label class="field">Your handle<input name="handle" placeholder="you.bsky.social" autocomplete="username" required maxlength="253"/></label><button class="button full">Continue with AT Protocol <Icon name="arrow" size={15}/></button></form>
     <p class="text-xs muted mt-4">Configured administrators are taken to the dashboard after sign-in.</p>
     {cfg.demo && <div class="mt-7 border-t border-[#e3e8ee] pt-6"><p class="text-xs muted mb-3">Just looking around? Explore with an example creator or supporter account. Real sign-in requires a public HTTPS URL.</p><form method="post" action="/auth/demo" class="mb-3"><input type="hidden" name="role" value="supporter"/><input type="hidden" name="returnTo" value={safeReturnPath(Astro.url.searchParams.get('returnTo'))}/><button class="button full">Explore as a supporter</button></form><form method="post" action="/auth/demo"><button class="button secondary full">Explore the demo studio</button></form></div>}
