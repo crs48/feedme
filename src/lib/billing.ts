@@ -1,4 +1,5 @@
 import type Stripe from 'stripe';
+import { stripeRequestOptions } from './stripe-context';
 import { config } from './config';
 import { getDb, getKv, setKv } from './db';
 
@@ -15,7 +16,7 @@ export const ensureBillingPortal = async (stripe: Stripe, account: string): Prom
       subscription_cancel: { enabled: true, mode: 'at_period_end', proration_behavior: 'none' },
       subscription_update: { enabled: false },
     },
-  }, { stripeAccount: account, idempotencyKey: `feedme-portal-v1-${config().origin}` });
+  }, { ...stripeRequestOptions(account), idempotencyKey: `feedme-portal-v1-${config().origin}` });
   const value = { id: portal.id, ...(portal.login_page?.url ? { loginUrl: portal.login_page.url } : {}) };
   setKv(getDb(), 'app', portalKey(account), value);
   return value;

@@ -28,7 +28,7 @@ describe('database release compatibility', () => {
     old.exec("INSERT INTO events VALUES ('evt_paid',123)");
     old.close();
     const next = openDatabase(path);
-    expect(readDatabaseVersion(next)).toBe(2);
+    expect(readDatabaseVersion(next)).toBe(3);
     expect(readRecord(next, 'support', support.id)).toEqual(support);
     expect(pendingWrites(next)[0]).toMatchObject({ attempts: 3, value: support });
     expect(next.prepare('SELECT * FROM events').all()).toEqual([{ id: 'evt_paid', created: 123 }]);
@@ -52,11 +52,22 @@ describe('database release compatibility', () => {
     db.prepare('INSERT INTO kv VALUES (?,?,?,NULL)').run('libcard','snapshot',seal({ fixture: true }));
     expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([]);
     migrateDatabase(db);
-    expect(readDatabaseVersion(db)).toBe(2);
+    expect(readDatabaseVersion(db)).toBe(3);
     expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([{ source: 'kv', kind: 'libcard', key: 'snapshot' }]);
     db.exec('DELETE FROM recovery_dirty');
     db.prepare('UPDATE kv SET value=? WHERE namespace=?').run(seal({ fixture: false }),'libcard');
     expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([{ source: 'kv', kind: 'libcard', key: 'snapshot' }]);
+    db.close();
+  });
+  it('backfills version-two Stripe bindings and tracks later changes', () => {
+    const db = openDatabase(':memory:');
+    db.prepare('INSERT INTO kv VALUES (?,?,?,NULL)').run('app', 'stripe-binding', seal({ accountId: 'acct_creator', mode: 'own-account', livemode: false }));
+    db.exec('PRAGMA user_version=2; DELETE FROM recovery_dirty');
+    migrateDatabase(db);
+    expect(db.prepare('SELECT * FROM recovery_dirty').all()).toEqual([{ source: 'kv', kind: 'app', key: 'stripe-binding' }]);
+    db.exec('DELETE FROM recovery_dirty');
+    db.prepare('UPDATE kv SET value=? WHERE key=?').run(seal({ accountId: 'acct_creator', mode: 'own-account', livemode: true }), 'stripe-binding');
+    expect(db.prepare('SELECT * FROM recovery_dirty').all()).toHaveLength(1);
     db.close();
   });
   it('rolls back every migration in the batch when a later migration fails', () => {

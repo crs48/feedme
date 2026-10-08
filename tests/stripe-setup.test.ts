@@ -1,4 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DatabaseSync } from 'node:sqlite';
+let db: DatabaseSync;
+vi.mock('../src/lib/db', async original => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
+import { openDatabase } from '../src/lib/db';
 const mock = vi.hoisted(() => ({ demo: false, key: '', webhook: '', account: undefined as string | undefined, space: undefined as string | undefined, retrieve: vi.fn() }));
 vi.mock('../src/lib/config', () => ({ config: () => ({ demo: mock.demo, stripeKey: mock.key, stripeWebhookSecret: mock.webhook, origin: 'https://feedme.example' }) }));
 vi.mock('../src/lib/habitat', () => ({ privateSpace: () => mock.space }));
@@ -6,7 +10,8 @@ vi.mock('../src/lib/payments', () => ({ connectedAccount: () => mock.account, st
 import { stripeSetup, stripeKeyMode } from '../src/lib/stripe-setup';
 
 describe('Stripe onboarding readiness', () => {
-  beforeEach(() => { mock.demo = false; mock.key = ''; mock.webhook = ''; mock.account = undefined; mock.space = undefined; mock.retrieve.mockReset(); });
+  afterEach(() => db.close());
+  beforeEach(() => { db = openDatabase(':memory:'); mock.demo = false; mock.key = ''; mock.webhook = ''; mock.account = undefined; mock.space = undefined; mock.retrieve.mockReset(); });
   it('shows missing setup without making a provider request', async () => {
     expect(await stripeSetup()).toMatchObject({ keyConfigured: false, webhookConfigured: false, accountCheck: 'not-checked', accountConnected: false, storageConnected: false, webhookUrl: 'https://feedme.example/api/stripe/webhook' });
     expect(mock.retrieve).not.toHaveBeenCalled();

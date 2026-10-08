@@ -1,7 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import type Stripe from 'stripe';
 import type { DatabaseSync } from 'node:sqlite';
-vi.mock('../src/lib/config', () => ({ config: () => ({ ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' }) }));
+const cfg = vi.hoisted(() => ({ stripeMode: 'connect', stripeAccountId: 'acct_one', stripeKey: 'rk_test_fixture', ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' }));
+vi.mock('../src/lib/config', () => ({ config: () => cfg }));
 import { openDatabase, putRecord, readRecord, setKv, getKv } from '../src/lib/db';
 import { reconcileStripe } from '../src/lib/recovery-stripe';
 import type { Support } from '../src/lib/model';
@@ -14,7 +15,7 @@ const provider = (overrides: { sessions?: unknown[]; subscriptions?: unknown[]; 
   const intent = overrides.intent || { id: 'pi_one', metadata: { feedme_support_id: 'tip' }, amount: 1100, amount_received: 1100, currency: 'usd', status: 'succeeded', customer: 'cus_one', latest_charge: { amount: 1100, amount_refunded: 300, paid: true, currency: 'usd', created: 1_790_337_600 } };
   return {
     accounts: { retrieve: vi.fn(async () => ({ id: 'acct_one' })) },
-    checkout: { sessions: { list: vi.fn(() => iterable(sessions)) } },
+    checkout: { sessions: { list: vi.fn(() => iterable(sessions.map(s => ({ livemode: false, ...s as object })))) } },
     subscriptions: { list: vi.fn(() => iterable(overrides.subscriptions || [])) },
     invoices: { list: vi.fn(() => iterable(overrides.invoices || [])) },
     invoicePayments: { list: vi.fn(async () => ({ has_more: false, data: [{ invoice: 'in_next', amount_paid: 1100, currency: 'usd', payment: { type: 'payment_intent', payment_intent: 'pi_one' } }] })) },
@@ -23,8 +24,16 @@ const provider = (overrides: { sessions?: unknown[]; subscriptions?: unknown[]; 
   };
 };
 describe('read-only Stripe recovery reconciliation', () => {
-  beforeEach(() => { db = openDatabase(':memory:'); setKv(db, 'app', 'stripe-account', 'acct_one'); putRecord(db, 'support', original.id, original); });
+  beforeEach(() => { cfg.stripeMode = 'connect'; db = openDatabase(':memory:'); setKv(db, 'app', 'stripe-account', 'acct_one'); putRecord(db, 'support', original.id, original); });
   afterEach(() => db.close());
+  it('restores own-account history using its original binding and no Connect header', async () => {
+    cfg.stripeMode = 'own-account';
+    setKv(db, 'app', 'stripe-binding', { accountId: 'acct_one', mode: 'own-account', livemode: false });
+    const client = provider(); await reconcileStripe(db, client as unknown as Stripe);
+    expect(readRecord(db, 'support', original.id)).toMatchObject({ status: 'paid', refundedAmount: 300 });
+    expect(client.paymentIntents.retrieve.mock.calls[0][2]).toEqual({});
+    expect(getKv(db, 'app', 'stripe-binding')).toMatchObject({ mode: 'own-account', livemode: false });
+  });
   it('finds checkout/payment IDs lost after issuing Stripe Checkout and accounts for later refunds', async () => {
     const client = provider(); await reconcileStripe(db, client as unknown as Stripe);
     expect(readRecord(db, 'support', original.id)).toMatchObject({ checkoutId: 'cs_one', paymentIntentId: 'pi_one', status: 'paid', refundedAmount: 300, visibility: 'anonymous', allocations: original.allocations });

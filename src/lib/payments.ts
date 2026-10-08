@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { paymentAccount, stripeRequestOptions, verifyStripeAccount } from './stripe-context';
 import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
@@ -14,8 +15,9 @@ export const stripeClient = () => {
   if (!key) throw new Error('Stripe is not configured yet.');
   return new Stripe(key, { maxNetworkRetries: 2, timeout: 15_000 });
 };
-export const connectedAccount = () => getKv<string>(getDb(), 'app', 'stripe-account');
+export const connectedAccount = () => paymentAccount();
 export const connectStripe = async () => {
+  if (config().stripeMode === 'own-account') throw new Error('Your own Stripe account is configured through host variables. No connected account is needed.');
   const stripe = stripeClient();
   let account = connectedAccount();
   if (!account) {
@@ -38,7 +40,7 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
   const stripe = stripeClient();
   const account = connectedAccount();
   if (!account) throw new Error('The creator hasn’t connected Stripe yet.');
-  const readiness = await stripe.accounts.retrieve(account);
+  const readiness = await verifyStripeAccount(stripe, account, getDb(), true);
   if (!readiness.charges_enabled || !readiness.payouts_enabled) throw new Error('The creator’s Stripe account is still being set up.');
   if (interval) await ensureBillingPortal(stripe, account);
   const stored = readRecord<Support>(getDb(), 'support', intent.id);
@@ -65,7 +67,7 @@ export const checkout = async (intent: Support, items: { title: string; amount: 
     cancel_url: intent.picks
       ? `${config().origin}/checkout/review?token=${encodeURIComponent(intent.id)}&notice=Checkout%20canceled.%20Review%20your%20gift%20to%20continue.`
       : `${config().origin}${intent.allocations ? '/' : `/support/${intent.projectId}`}?notice=Checkout%20canceled.%20You%20have%20not%20been%20charged.`,
-  }, { stripeAccount: account, idempotencyKey: `feedme-checkout-${intent.id}` });
+  }, { ...stripeRequestOptions(account), idempotencyKey: `feedme-checkout-${intent.id}` });
   // A webhook may arrive before this API call returns. Preserve its newer status.
   const latest = readRecord<Support>(getDb(), 'support', intent.id) || current;
   putRecord(getDb(), 'support', intent.id, { ...latest, checkoutId: result.id });

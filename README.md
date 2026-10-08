@@ -90,7 +90,7 @@ See the [administration guide](docs/admin.md) for project workflows, report defi
 - Author avatars on posts, with bundled demo portraits and responsive project photography. Missing portraits use initials; anonymous supporters use a generic icon.
 - Profile and project supporter timelines with public amounts and separately permitted anonymous entries. Private tips stay hidden.
 - One-time USD support with anonymous, creator-private, or public identity choices.
-- Stripe Connect hosted onboarding, direct-charge hosted Checkout, signed webhooks, and refund/dispute reconciliation.
+- Stripe hosted Checkout with optional own-account mode for personal sites, Connect onboarding, signed webhooks, and refund/dispute reconciliation.
 - Habitat private receipt storage and public PDS records, backed by an encrypted operational database and a durable retry queue.
 - Docker/Compose, a Render Blueprint, Fly.io and Railway configuration, and GitHub Actions checks.
 
@@ -107,7 +107,7 @@ flowchart LR
   Queue --> Public[Public PDS: projects, profile, updates, circle]
   Queue --> Private[Habitat private space: support receipts]
   Queue --> Ack[Public PDS: opt-in acknowledgments]
-  App --> Stripe[Stripe Connect hosted Checkout]
+  App --> Stripe[Stripe hosted Checkout]
   Stripe --> Events[Signed payment events]
   Events --> DB
 ```

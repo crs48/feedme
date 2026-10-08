@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { stripeRequestOptions, verifyStripeAccount } from '../../lib/stripe-context';
 import { currentUser } from '../../lib/auth';
 import { config } from '../../lib/config';
 import { getDb, putRecord, readRecord } from '../../lib/db';
@@ -25,10 +26,11 @@ export const POST: APIRoute = async (context) => {
     const account = connectedAccount();
     if (!account || subscription.accountId !== account) throw new Error('This subscription belongs to another Stripe account.');
     const stripe = stripeClient();
+    await verifyStripeAccount(stripe, account, getDb(), true);
     const portal = await ensureBillingPortal(stripe, account);
     const session = await stripe.billingPortal.sessions.create({ customer: subscription.customerId, configuration: portal.id,
       return_url: `${config().origin}/billing`,
-    }, { stripeAccount: account });
+    }, stripeRequestOptions(account));
     return context.redirect(session.url, 303);
   } catch (error) { return redirectNotice('/billing', errorMessage(error), true); }
 };

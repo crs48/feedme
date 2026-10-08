@@ -70,8 +70,12 @@ Local encrypted backups are configured on the same persistent volume. They help 
 - [x] Verify custom-domain DNS and Railway’s active HTTPS certificate.
 - [x] Verify the canonical LibCard GET/HEAD contract over TLS using the current public DNS address. The local resolver still caches the previous Vercel addresses; the ordinary `pnpm check:libcard-origin https://crs.tips` command should be rerun after that cache expires.
 - [ ] Sign in as `crs.land`, create private Habitat storage, and verify recovery.
-- [ ] Configure Stripe Connect test credentials, complete onboarding/webhook setup, and run [payment acceptance](hosting.md#live-acceptance-checklist).
+- [ ] Configure restricted Stripe sandbox credentials in an isolated installation, complete webhook setup, and run [payment acceptance](hosting.md#live-acceptance-checklist).
 - [ ] Back up the encryption keys separately; configure and test off-server backups.
 - [ ] Optionally add card-side tip actions: use the existing target IDs shown in Feedme Studio as LibCard `feedme.id` values, enable its `feedme` block pointing to `https://crs.tips`, refresh Feedme, then rebuild LibCard.
 
 Feedme now includes all LibCard links and socials as selectable targets by default, even without source `feedme` objects. Hide exceptions in Studio. `LIBCARD_DEFAULT_SUPPORT=explicit` restores the older behavior where this catalog initially contained only `creator`. No aspirations or support totals are invented. Stripe credentials and private Habitat storage are not configured, so the server cannot issue a charge-capable checkout yet. DNS activation does not by itself enable payments.
+
+### Personal Stripe account configuration
+
+The `crs-tips` production service uses `STRIPE_MODE=own-account` and `STRIPE_ENVIRONMENT=live`. Set `STRIPE_ACCOUNT_ID` to the live account owning its restricted key. Store `STRIPE_SECRET_KEY` and the **Your account** webhook's `STRIPE_WEBHOOK_SECRET` only in Railway Variables. The account-mode code is covered by automated tests; completing provider sandbox acceptance still requires its separate credentials and recovery space. See [Stripe setup](stripe-setup.md).

@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { verifyStripeAccount } from './stripe-context';
 import { config } from './config';
 import { privateSpace } from './habitat';
 import { connectedAccount, stripeClient } from './payments';
@@ -19,7 +20,7 @@ export const stripeSetup = async () => {
   const cfg = config();
   const account = connectedAccount();
   const base = {
-    demo: cfg.demo, mode: stripeKeyMode(cfg.stripeKey),
+    demo: cfg.demo, mode: stripeKeyMode(cfg.stripeKey), ownAccount: cfg.stripeMode === 'own-account',
     keyConfigured: Boolean(cfg.stripeKey), webhookConfigured: Boolean(cfg.stripeWebhookSecret),
     storageConnected: Boolean(privateSpace()), accountConnected: Boolean(account),
     webhookUrl: `${cfg.origin}/api/stripe/webhook`,
@@ -28,7 +29,7 @@ export const stripeSetup = async () => {
   };
   if (cfg.demo || !cfg.stripeKey || !account) return base;
   try {
-    const result = await stripeClient().accounts.retrieve(account, {}, { timeout: 5000, maxNetworkRetries: 0 });
+    const result = await verifyStripeAccount(stripeClient(), account);
     if (result.id !== account) return { ...base, accountCheck: 'unavailable' as const };
     return { ...base, accountCheck: 'verified' as const, detailsSubmitted: result.details_submitted === true,
       chargesEnabled: result.charges_enabled === true, payoutsEnabled: result.payouts_enabled === true };
