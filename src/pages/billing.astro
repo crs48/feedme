@@ -17,9 +17,9 @@ const loginUrl = account ? savedBillingPortal(account)?.loginUrl : undefined;
 const statusLabel = (s?: Subscription) => !s ? 'Confirming subscription' : s.status === 'canceled' ? 'Stopped' : s.cancelAt !== undefined ? `Stops ${new Date(s.cancelAt * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}` : s.cancelAtPeriodEnd ? 'Stops at the end of this period' : ({ active: 'Active', past_due: 'Payment needs attention', unpaid: 'Unpaid', incomplete: 'Awaiting first payment', incomplete_expired: 'Checkout expired', paused: 'Paused', trialing: 'Trial' }[s.status] || 'Check billing settings');
 ---
 <Layout title="Manage recurring support" noindex>
-  <section class="shell py-10"><div class="max-w-2xl mx-auto">
+  <section class="shell page-section"><div class="max-w-2xl mx-auto">
     <a class="back-link" href="/">← Back to projects</a>
-    <h1 class="display text-3xl mt-5 mb-4">Your recurring support</h1>
+    <h1 class="display page-title mt-5 mb-4">Your recurring support</h1>
     <p class="muted text-sm mb-6">{cfg.demo ? 'Explore your demo subscriptions. No automatic payments are made.' : 'Manage renewals, update payment details, and view invoices securely with Stripe. Stopping renewals keeps your previous tips in place.'}</p>
     {roots.map((root) => { const subscription = readRecord<Subscription>(getDb(), 'subscription', root.id); const payments = records.filter((s) => s.id === root.id || s.recurringRootId === root.id).sort((a,b) => b.createdAt.localeCompare(a.createdAt)); return <article class="panel mb-5">
       <div class="billing-heading"><div><p class="eyebrow">{frequencyLabel(root.frequency)}</p><h2 class="section-title mt-2">{money(root.amount)}{frequencySuffix(root.frequency)}</h2></div><span class="tag">{statusLabel(subscription)}</span></div>

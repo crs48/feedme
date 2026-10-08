@@ -10,7 +10,7 @@ import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
 import { cachedCreatorBluesky } from './creator-bluesky';
 
-export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 };
+export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 | 3 };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 export const storedLibcard = (db: DatabaseSync, source: LibcardSource) => {
   const snapshot = getKv<LibcardSnapshot>(db, 'libcard', 'snapshot');
@@ -48,7 +48,7 @@ export const libcardSnapshot = () => {
   const db = getDb();
   let snapshot = storedLibcard(db, cfg.libcard);
   if (cfg.demo && !cfg.libcardRemoteDemo && !snapshot && !getKv(db, 'recovery', 'paused')) {
-    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 2 };
+    snapshot = { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: new Date().toISOString(), catalogVersion: 3 };
     importLibcard(db, snapshot);
     snapshot = storedLibcard(db, cfg.libcard);
   }
@@ -111,15 +111,15 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   const key = sourceKey(cfg.libcard);
   const saved = libcardSnapshot();
   const previous = getKv<RefreshStatus>(db, 'libcard-refresh', key);
-  if (!force && previous && (!saved || saved.catalogVersion === 2 || previous.catalogVersion === 2) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
+  if (!force && previous && (!saved || saved.catalogVersion === 3 || previous.catalogVersion === 3) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
   const attemptedAt = new Date().toISOString();
-  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 2 });
+  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 3 });
   try {
     if (cfg.demo && !cfg.libcardRemoteDemo) {
-      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 2 });
+      importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 3 });
     } else {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {
-        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 2 && saved.etag ? { 'If-None-Match': saved.etag } : {},
+        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 3 && saved.etag ? { 'If-None-Match': saved.etag } : {},
       });
       if (getKv(db, 'recovery', 'paused')) return;
       if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
@@ -130,7 +130,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
           while (true) { const chunk = await reader.read(); if (chunk.done) break; size += chunk.value.byteLength; if (size > 256 * 1024) throw new LibcardImportError('LibCard config exceeds 256 KiB.'); chunks.push(chunk.value); }
         } finally { await reader.cancel(); }
         const text = Buffer.concat(chunks).toString('utf8');
-        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 2 });
+        const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 3 });
         // A restore pause may have happened while GitHub was responding.
         if (getKv(db, 'recovery', 'paused')) return;
         importLibcard(db, snapshot);
@@ -143,7 +143,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
     const detail = error instanceof LibcardImportError ? error.message : error instanceof ZodError
       ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. Check field types, unique target IDs, allowed URLs, and import limits.`
       : 'Check GitHub availability, YAML without aliases, unique target IDs, allowed URLs, and import limits.';
-    const status = { attemptedAt, catalogVersion: 2 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
+    const status = { attemptedAt, catalogVersion: 3 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
     setKv(db, 'libcard-refresh', key, status); return status;
   }
 };

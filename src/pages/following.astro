@@ -22,7 +22,7 @@ const visible = subscriptions.slice(page * 8, page * 8 + 8);
 const path = (params: Record<string, string>) => `/following?${new URLSearchParams({ view: projectsOnly ? 'projects' : 'people', page: String(page), ...params })}`;
 ---
 <Layout title="Following" noindex>
-  <section class="shell py-10"><div class="following-heading"><div><h1 class="display text-3xl mb-3">Following</h1><p class="muted text-sm max-w-xl">The latest from the people and projects you follow.</p></div><span class="avatar w-16 h-16"><Icon name="leaf" size={28}/></span></div>
+  <section class="shell page-section"><div class="following-heading"><div><h1 class="display page-title mb-3">Following</h1><p class="muted text-sm max-w-xl">The latest from the people and projects you follow.</p></div><span class="avatar w-16 h-16"><Icon name="leaf" size={28}/></span></div>
     <nav class="flex tabs mt-8 mb-8" aria-label="Following feeds"><a class="tab" href="/following" aria-current={projectsOnly ? 'page' : undefined}>Project updates</a><a class="tab" href="/following?view=people" aria-current={!projectsOnly ? 'page' : undefined}>People on Bluesky</a></nav>
     {config().demo && <p class="notice mb-6">You’re exploring demo follows and posts. Nothing here changes a real Bluesky account.</p>}
     {unavailable && <p class="notice error" role="status">Your social provider could not load this feed. Refresh or <a class="underline" href="/login?returnTo=/following">reconnect your account</a>. Your follows have not changed.</p>}

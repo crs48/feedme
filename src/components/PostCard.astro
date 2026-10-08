@@ -31,9 +31,9 @@ const authorUrl = post.demo ? (post.did === config().ownerDid ? '/' : undefined)
   .post-avatar { display: block; align-self: start; min-height: 44px; }
   .post-content { min-width: 0; }
   .post-author { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 7px; line-height: 1.5; }
-  .author-name { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+  .author-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
   .author-name:hover { text-decoration: underline; }
-  .post-handle, time { font-size: 13px; color: var(--color-muted); }
+  .post-handle, time { font-size: 12px; color: var(--color-muted); }
   .post-handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   time::before { content: '·'; margin-right: 7px; }
   .post-context { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; font-size: 12px; color: var(--color-muted); }
@@ -41,8 +41,8 @@ const authorUrl = post.demo ? (post.did === config().ownerDid ? '/' : undefined)
   .post-text a { color: var(--color-primary); }
   .post-text a:hover { text-decoration: underline; }
   .post-images { display: grid; gap: 6px; } .post-images.multiple { grid-template-columns: 1fr 1fr; }
-  .post-images img { display: block; width: 100%; max-height: 500px; object-fit: cover; border-radius: 12px; }
-  .link-card { display: block; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; }
+  .post-images img { display: block; width: 100%; max-height: 500px; object-fit: cover; border-radius: 8px; }
+  .link-card { display: block; overflow: hidden; border: 1px solid var(--color-border); border-radius: 8px; }
   .link-card img { width: 100%; max-height: 250px; object-fit: cover; } .link-card > div { padding: 16px; }
   .post-action { display: flex; align-items: center; gap: 8px; width: fit-content; min-height: 44px; margin-top: 4px; font-size: 12px; color: var(--color-muted); }
   .post-action:hover { color: var(--color-primary); }

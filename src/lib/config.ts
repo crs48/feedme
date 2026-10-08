@@ -55,6 +55,8 @@ export const config = () => {
     demo, sandbox, origin, ownerDid, adminDids, identities, tipAmounts,
     siteName: process.env.SITE_NAME?.trim() || undefined,
     libcardDefaultSupport: libcardDefaultSupport as 'all' | 'explicit',
+    libcardCollapseQuiet: process.env.LIBCARD_COLLAPSE_QUIET !== 'false',
+    libcardShowGithubStars: process.env.LIBCARD_SHOW_GITHUB_STARS !== 'false',
     libcardRemoteDemo: demo && Boolean(process.env.LIBCARD_REPO) && libcardDemoSource === 'github',
     libcard: process.env.LIBCARD_REPO ? libcardSourceSchema.parse({ repo: process.env.LIBCARD_REPO, ref: process.env.LIBCARD_REF || 'main' }) : undefined, defaultTipAmount: tipAmounts[1], dataDir,
     discoveryRelay: process.env.DISCOVERY_RELAY_URL || 'https://relay1.us-east.bsky.network',

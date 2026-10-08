@@ -67,7 +67,7 @@ describe('LibCard parser and managed import', () => {
       ['creator', 'creator'], ['presence', 'link'], ['open-source', 'link'], ['retired', 'link'], ['x', 'social'],
     ]);
     expect(doc.items[0]).toMatchObject({ icon: 'heart', feedme: { id: 'presence', aspiration: 3000, blurb: 'More hours in the room with people.' } });
-    expect(doc.items[0]).not.toHaveProperty('status'); expect(doc).not.toHaveProperty('feedme'); expect(doc).not.toHaveProperty('site');
+    expect(doc.items[0].status).toBe('ready'); expect(doc).not.toHaveProperty('feedme'); expect(doc).not.toHaveProperty('site');
     expect(readRecord<Project>(state.db!, 'project', 'presence')).toMatchObject({ target: 300000, summary: 'More hours in the room with people.', libcard: { sourceAspiration: 300000 } });
     expect(readRecord<Project>(state.db!, 'project', 'x')).toMatchObject({ title: 'My writing on X', summary: 'More of this voice.' });
     expect(readRecord<Project>(state.db!, 'project', 'retired')?.summary).toBe('');
@@ -207,13 +207,13 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     expect(libcardSnapshot()?.document.profile.name).toBe('Christopher Smothers');
     expect(libcardSnapshot()?.document.items).toHaveLength(2);
   });
-  it('upgrades old snapshots without sending a stale ETag that would discard icons', async () => {
-    const old = { ...snapshot(), etag: '"old"' }; importLibcard(state.db!, old);
-    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart')));
+  it('upgrades version-two snapshots without a stale ETag so status groups can be imported', async () => {
+    const old = { ...snapshot(), catalogVersion: 2 as const, etag: '"old"' }; importLibcard(state.db!, old);
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart\n    status: ready')));
     await refreshLibcard(true, fetcher);
     expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
-    expect(libcardSnapshot()?.document.items[0].icon).toBe('heart');
-    expect(libcardSnapshot()?.catalogVersion).toBe(2);
+    expect(libcardSnapshot()?.document.items[0]).toMatchObject({ icon: 'heart', status: 'ready' });
+    expect(libcardSnapshot()?.catalogVersion).toBe(3);
   });
   it('preserves demo target overrides through removal and stops accepting them outside the preview', () => {
     state.demo = true; state.remoteDemo = true;

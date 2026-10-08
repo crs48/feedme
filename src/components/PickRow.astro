@@ -1,0 +1,34 @@
+---
+import type { Project } from '../lib/model';
+import type { LibcardItem } from '../lib/libcard-schema';
+import { config } from '../lib/config';
+import { socialLabel } from '../lib/pick-groups';
+import LibcardIcon from './LibcardIcon.astro';
+import LibcardGithub from './LibcardGithub.astro';
+import LibcardGoal from './LibcardGoal.astro';
+interface Props { project: Project; item?: LibcardItem; count: number; share: string; publicAmount: number; creatorName: string; }
+const { project: p, item, count, share, publicAmount, creatorName } = Astro.props;
+const social = p.libcard?.kind === 'social';
+const creator = p.id === 'creator';
+const title = creator ? `No preference — just ${creatorName}` : social ? socialLabel(p.title) : p.title;
+---
+<article class:list={['pick-row', { 'pick-social': social, 'pick-creator': creator }]} data-pick-row={p.id} data-pick-title={title} data-selected={String(count > 0)}>
+  {!social && <div class="pick-icon" aria-hidden="true"><LibcardIcon name={item?.icon || (creator ? 'heart' : 'link')} size={creator ? 20 : 16}/></div>}
+  <div class="pick-copy"><h3>{p.libcard?.url ? <a class="pick-title" href={p.libcard.url} rel="noopener noreferrer">{social && <LibcardIcon name={item?.icon || 'link'} size={14}/>}<span>{title}</span></a> : title}</h3>
+    {creator ? <p>Skip the list. They decide where it helps most.</p> : p.summary && <p>{p.summary}</p>}
+    {item && !social && <div class="pick-details"><span class="pick-destination">{item.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>{config().libcardShowGithubStars !== false && <LibcardGithub item={item} compact/>}</div>}
+    <LibcardGoal project={p} publicAmount={publicAmount} compact/>
+  </div>
+  <div class="pick-choice">
+    <output data-pick-share aria-live="off">{share}</output>
+    <label data-pick-input-label for={`pick-${p.id}`}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input/>
+    <div class="pick-controls" data-pick-controls hidden>
+      <button type="button" class="pick-start" data-pick-start aria-label={`Add a pick to ${p.title}`}><span aria-hidden="true">+{!social && ' Pick'}</span></button>
+      <div class="pick-stepper" data-pick-stepper hidden>
+        <button type="button" data-pick-remove aria-label={`Remove one pick from ${p.title}`}><span aria-hidden="true">−</span></button>
+        <output data-pick-count aria-live="off">{count}</output>
+        <button type="button" data-pick-add aria-label={`Add a pick to ${p.title}`}><span aria-hidden="true">+</span></button>
+      </div>
+    </div>
+  </div>
+</article>

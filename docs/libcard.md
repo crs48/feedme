@@ -80,6 +80,16 @@ Before the first successful Bluesky fetch, Feedme uses the saved Feedme bio, sav
 
 Fallback LibCard avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped.
 
+## Visit layout
+
+The compact creator header uses the Bluesky bio, with safe HTTPS URLs, bare domains, and @handles rendered as links. Line breaks are preserved; HTML in the bio is displayed as text.
+
+Links are grouped by their LibCard `status`: `ready`, `wip`, `writing`, `reading`, `experiment`, `exploration`, and `dormant`. Missing or custom statuses appear under **More to explore**. The source order stays intact within each group; grouping never changes target IDs, checkout eligibility, or payment history. Experiments, explorations, and dormant groups begin collapsed, and open automatically for preselected picks. Set `LIBCARD_COLLAPSE_QUIET=false` to expand every group. Socials appear below projects. Set `LIBCARD_SHOW_GITHUB_STARS=false` to hide companion GitHub badges.
+
+Pick controls use the same integer weights as checkout. The gift panel displays the exact cent allocation using the server's largest-remainder algorithm, even for an $11 gift split three ways. The mobile review bar leads to the amount, frequency, privacy, note, and review controls. Without JavaScript, labeled integer inputs and standard form submissions remain available. Changing the amount preserves selections.
+
+Old snapshots remain readable and usable offline. The next successful refresh fetches the source without the previous catalog version's ETag so newly consumed status fields are not lost to a `304` response.
+
 ## Refresh, local settings, and recovery
 
 ```mermaid

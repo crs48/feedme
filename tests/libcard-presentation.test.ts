@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parseLibcard, type LibcardSnapshot } from '../src/lib/libcard-schema';
+import { parseLibcard, libcardSnapshotSchema, type LibcardSnapshot } from '../src/lib/libcard-schema';
 import { libcardCatalog, sampleLibcardGoal } from '../src/lib/libcard-catalog';
 import { cachedGithubStars, githubRepo, refreshGithubStars } from '../src/lib/libcard-github';
 import { openDatabase, setKv } from '../src/lib/db';
 import type { Project } from '../src/lib/model';
+
+import { groupForItem, pickGroups } from '../src/lib/pick-groups';
 
 const source = { repo: 'test/card', ref: 'main' };
 const text = `profile: {name: Chris}
@@ -15,6 +17,17 @@ const snapshot = (): LibcardSnapshot => ({ source, document: parseLibcard(text, 
 afterEach(() => { vi.useRealTimers(); });
 
 describe('LibCard catalog presentation', () => {
+  it('keeps supported source statuses for grouping without changing target identity or order', () => {
+    const data = snapshot();
+    const statuses = ['ready', 'wip', 'writing', 'reading', 'experiment', 'exploration', 'dormant', 'custom'];
+    data.document = parseLibcard(`profile: {name: Chris}\nlinks:\n${statuses.map((status, n) => `  - {label: Item ${n}, url: 'https://example.com/${n}', status: ${status}}`).join('\n')}`, source);
+    expect(data.document.items.map(groupForItem)).toEqual([...statuses.slice(0, -1), 'other']);
+    const catalog = libcardCatalog(data);
+    const grouped = pickGroups.flatMap(group => catalog.filter(item => groupForItem(item) === group.id));
+    expect(grouped.map(item => item.targetId)).toEqual(catalog.map(item => item.targetId));
+    expect(libcardCatalog({ ...data, document: { ...data.document, items: data.document.items.map(item => ({ ...item, status: undefined })) } }).map(item => item.targetId)).toEqual(catalog.map(item => item.targetId));
+    for (const catalogVersion of [2, 3]) expect(libcardSnapshotSchema.parse({ ...data, catalogVersion }).document.items).toEqual(data.document.items);
+  });
   it('retains source titles, icons, companion repositories and star modes', () => {
     const items = snapshot().document.items;
     expect(items[0]).toMatchObject({ label: 'xNet', icon: 'network', github: 'https://github.com/crs48/xNet', stars: 'build' });
