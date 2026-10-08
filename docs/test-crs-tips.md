@@ -18,11 +18,11 @@ This is the isolated payment-testing counterpart to [crs.tips](crs-tips.md), usi
 
 ## Deployment status
 
-The sandbox-capable application deployed successfully on 2026-10-07 (Railway deployment `49133f92-a93d-4b3d-af04-ddb7f6391e60`, commit `7a32ae8`, subsequently merged into `main` in PR #10). The service now tracks `main` with **Wait for CI** enabled.
+DNS, HTTPS, creator sign-in, private Habitat storage, and Stripe sandbox payments were activated and verified on **2026-10-08**. The service tracks `main` with **Wait for CI** enabled. The activation deployment was `4f8177cd-2fec-40cf-9c92-2b8f0a2b3ed1` (`acc46c4`); subsequent main deployments retain the same volume and configuration.
 
-A [read-only preview](https://crs-tips-test-sandbox.up.railway.app/) is available while DNS is pending. Its health check reports sandbox mode; the real LibCard import contains 28 selectable targets, a $44 default, and zero public payment signal. The discovery declaration returns 404 and responses carry noindex headers. Forms and OAuth use the canonical `test.crs.tips` origin, so use that address for sign-in and payment testing after DNS activation.
+Use [test.crs.tips](https://test.crs.tips/) for sign-in and testing. Health reports sandbox mode, the real LibCard catalog contains 28 selectable targets, and the default amount is $44. The discovery declaration returns 404 and responses carry noindex headers.
 
-DNS ownership, the sandbox API key/webhook, creator sign-in, and payment acceptance are still pending. The public preview does not prove payment readiness.
+The key saved in Railway is a standard **sandbox** server key, verified against the dedicated sandbox account above. The webhook is enabled at `https://test.crs.tips/api/stripe/webhook`, with all twelve events from [Stripe setup](stripe-setup.md), API version `2026-08-26.dahlia`, and its own signing secret. Production credentials were not copied.
 
 ## DNS
 
@@ -41,10 +41,26 @@ Railway must verify the records and issue a valid certificate before sign-in or 
 - [x] Attach a separate persistent volume and generate independent encryption keys.
 - [x] Configure `FEEDME_MODE=sandbox`, `STRIPE_MODE=own-account`, `STRIPE_ENVIRONMENT=test`, the sandbox account ID, public URL, and LibCard source.
 - [x] Deploy the sandbox-capable application and verify its health/banner.
-- [ ] Add DNS records and verify HTTPS at `test.crs.tips`.
-- [ ] Save the dedicated sandbox restricted key in this service's `STRIPE_SECRET_KEY` variable.
-- [ ] Configure the sandbox webhook and save its signing secret.
-- [ ] Sign in as `crs.land`, create sandbox private storage, and verify recovery.
+- [x] Add DNS records and verify HTTPS at `test.crs.tips`.
+- [x] Save the dedicated sandbox server API key in this service's `STRIPE_SECRET_KEY` variable.
+- [x] Configure the sandbox webhook and save its signing secret.
+- [x] Sign in as `crs.land`, create sandbox private storage, and verify recovery.
 - [ ] Complete payment, renewal, refund, and cancellation acceptance tests.
 
 The webhook URL is `https://test.crs.tips/api/stripe/webhook`. Follow [Stripe setup](stripe-setup.md) for permissions and event selection, and [the sandbox guide](sandbox.md) for safeguards and test-card instructions. Keep all secrets in Railway or your password manager, never in this document.
+
+## Verified payment behavior
+
+Tests on 2026-10-08 used Stripe's synthetic `4242` card and an example.com email address. No real money moved and no public Bluesky writes were made.
+
+- [x] Complete a $1 one-time anonymous gift through hosted Checkout; verify the signed `checkout.session.completed` event and Feedme's paid receipt.
+- [x] Refund 50¢, verify 50¢ net in Feedme, then refund the remaining 50¢ and verify `refunded` with $0 net.
+- [x] Complete a $1 monthly anonymous gift; verify `invoice.paid`, one ledger contribution, and an active subscription.
+- [x] Open the supporter billing portal and schedule cancellation; Stripe confirms no renewal after the current period.
+- [x] Verify private Habitat recovery and an encrypted local backup after creator sign-in.
+- [ ] Verify a later paid renewal and replay its webhook without double counting.
+- [ ] Exercise yearly, failed/asynchronous payments, disputes, and the other [acceptance cases](hosting.md#live-acceptance-checklist).
+
+A billing-cycle reset and short trial adjustment did **not** produce a second paid renewal under Stripe's flexible billing mode. Its $0 adjustment invoice is not a contribution. Renewal acceptance remains unchecked; use a compatible test-clock fixture for that scenario. The test subscription is scheduled to stop on November 8, 2026.
+
+The sandbox's private Habitat checkpoint is separate from production. Encrypted file backups currently live on its Railway volume; independent object-storage backups and a full replacement-server restore remain separate acceptance work.
