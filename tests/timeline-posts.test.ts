@@ -26,7 +26,7 @@ describe('text-only timeline shares', () => {
   it('returns only public text, safe facet links and the Bluesky URL, never embed images', async () => {
     const result = await timelinePosts([uri]);
     expect(result.get(uri)).toEqual({
-      url: `https://bsky.app/profile/${encodeURIComponent(actor)}/post/3mposttest2222`,
+      url: `https://bsky.app/profile/${actor}/post/3mposttest2222`,
       segments: [{ text: 'More', href: 'https://example.com/' }, { text: ' of this!' }], sensitive: false,
     });
     expect(JSON.stringify([...result])).not.toMatch(/thumb|embed|blob|avatar|card|cid/);

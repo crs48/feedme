@@ -27,6 +27,7 @@ describe('public demo build boundaries', () => {
     ['/lexicons/fund.feedme.profile.json', '/lexicons/fund.feedme.profile.json'], ['#story', '#story'],
     ['/?tipsPage=1#supporters', '/demo/tips/1/#supporters'],
     ['https://bsky.app/profile/did%3Aplc%3Adddddddddddddddddddddddd', '/demo/following/people/'],
+    ['https://bsky.app/profile/did:plc:dddddddddddddddddddddddd', '/demo/following/people/'],
     ['https://github.com/crs48/feedme', 'https://github.com/crs48/feedme'], ['https://maya.example.com', '/demo/recommend/dddddddddddddddddddddddd/'],
     ['https://example.com/garden', '/demo/recommend/dddddddddddddddddddddddd/'],
   ])('maps %s to a static destination', (source, expected) => expect(demoPath(source)).toBe(expected));

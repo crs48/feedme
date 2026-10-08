@@ -1,4 +1,5 @@
 ---
+import { blueskyProfileUrl } from '../lib/bluesky-url';
 import { libcardProfile } from '../lib/libcard';
 import FollowButton from './FollowButton.astro';
 import Avatar from './Avatar.astro';
@@ -11,7 +12,7 @@ import { profileText } from '../lib/profile-text';
 await refreshCreatorBluesky();
 const p = libcardProfile(profile());
 const blueskyActor = cachedCreatorBluesky()?.did || (!config().demo && config().ownerDid) || p.handle;
-const blueskyUrl = blueskyActor ? `https://bsky.app/profile/${encodeURIComponent(blueskyActor)}` : undefined;
+const blueskyUrl = blueskyActor ? blueskyProfileUrl(blueskyActor) : undefined;
 const bio = profileText(p.bio);
 ---
 <section class="creator shell">
