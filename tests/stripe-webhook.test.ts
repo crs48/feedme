@@ -67,6 +67,35 @@ describe('connected-account recurring webhook routing', () => {
     expect(readRecord<Support>(db, 'support', root.id)?.status).toBe('pending');
     expect(db.prepare('SELECT * FROM events').all()).toHaveLength(0);
   });
+  it('acknowledges zero-value trial adjustments without inventing a payment or retrying forever', async () => {
+    const adjustment = { ...invoice, id: 'in_trial', billing_reason: 'subscription_update', total: 0, amount_due: 0, amount_paid: 0 };
+    expect((await deliver('evt_trial', 'invoice.paid', adjustment)).status).toBe(200);
+    expect((await deliver('evt_trial', 'invoice.paid', adjustment)).status).toBe(200);
+    expect(mock.payments).not.toHaveBeenCalled();
+    expect(mock.paymentIntent).not.toHaveBeenCalled();
+    expect(readRecord(db, 'support', root.id)).toEqual(root);
+    expect(listRecords(db, 'support')).toHaveLength(1);
+    expect(db.prepare('SELECT * FROM events').all()).toHaveLength(1);
+  });
+  it('still rejects adjustments with a positive amount or a mismatched account', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    for (const amounts of [{ total: 3000, amount_due: 0, amount_paid: 0 }, { total: 0, amount_due: 1, amount_paid: 0 }, { total: 0, amount_due: 0, amount_paid: 1 }]) {
+      expect((await deliver('evt_adjustment', 'invoice.paid', { ...invoice, billing_reason: 'subscription_update', ...amounts })).status).toBe(500);
+    }
+    putRecord(db, 'support', root.id, { ...root, accountId: 'acct_other' });
+    expect((await deliver('evt_wrong_account', 'invoice.paid', { ...invoice, billing_reason: 'subscription_update', total: 0, amount_due: 0, amount_paid: 0 })).status).toBe(500);
+    expect(readRecord<Support>(db, 'support', root.id)?.status).toBe('pending');
+    expect(db.prepare('SELECT * FROM events').all()).toHaveLength(0);
+  });
+  it('retains scheduled cancellation dates from the portal and clears them when renewed', async () => {
+    const subscription = { id: 'sub_one', customer: 'cus_one', metadata: { feedme_support_id: root.id }, status: 'active', cancel_at_period_end: false, cancel_at: 200, items: { data: [{ current_period_end: 200 }] } };
+    mock.subscription.mockResolvedValue(subscription);
+    expect((await deliver('evt_scheduled', 'customer.subscription.updated', subscription)).status).toBe(200);
+    expect(readRecord(db, 'subscription', root.id)).toMatchObject({ cancelAt: 200, cancelAtPeriodEnd: false });
+    mock.subscription.mockResolvedValue({ ...subscription, cancel_at: null });
+    expect((await deliver('evt_resumed', 'customer.subscription.updated', subscription)).status).toBe(200);
+    expect(readRecord(db, 'subscription', root.id)).not.toHaveProperty('cancelAt');
+  });
   it('uses the latest subscription snapshot for delayed update events', async () => {
     const subscription = { id: 'sub_one', customer: 'cus_one', metadata: { feedme_support_id: root.id }, status: 'active', cancel_at_period_end: false, items: { data: [{ current_period_end: 200 }] } };
     mock.subscription.mockResolvedValue({ ...subscription, cancel_at_period_end: true });

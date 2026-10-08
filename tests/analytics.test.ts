@@ -56,6 +56,7 @@ describe('admin earnings reports', () => {
     const subscriptions = [subscription(sample.id, 'active', true), subscription(yearly.id, 'active'), subscription('late','past_due'),subscription('canceled','canceled')];
     expect(recurringSummary([monthly,yearly], subscriptions)).toEqual({ active: 2, ending: 1, monthly: 4000, pastDue: 1 });
     expect(recurringSummary([monthly,yearly], subscriptions, 'writing')).toMatchObject({ active: 1, monthly: 1000, pastDue: 0 });
+    expect(recurringSummary([yearly], [{ ...subscription(yearly.id, 'active'), cancelAt: 200 }])).toMatchObject({ active: 1, ending: 1 });
   });
   it('applies combined frequency, status, and privacy filters', () => {
     const paid = { ...sample, frequency: 'monthly' as const, visibility: 'private' as const };

@@ -5,7 +5,7 @@ import { config } from './config';
 import { getKv, listRecords, putRecord, readRecord, setKv } from './db';
 import { stripeClient } from './payments';
 import type { Support } from './model';
-import { applyBillingEvent, bindSubscriptionCheckout, stripeId, verifiedInvoicePayment } from './recurring';
+import { applyBillingEvent, bindSubscriptionCheckout, isZeroValueSubscriptionAdjustment, stripeId, verifiedInvoicePayment } from './recurring';
 
 const MAX_RESOURCES = 100_000;
 // Only resource reads are used. This path must never create sessions, charges, refunds or subscriptions.
@@ -33,6 +33,7 @@ export const reconcileStripe = async (db: DatabaseSync, client?: Stripe) => {
     applyBillingEvent(db, { type: 'customer.subscription.updated', created: now, account, data: { object: subscription } } as Stripe.Event, config().ownerDid, { subscription });
     for await (const invoice of stripe.invoices.list({ subscription: subscription.id, limit: 100 }, options)) {
       limit(); if (invoice.status !== 'paid' && invoice.status !== 'open' && invoice.status !== 'uncollectible') continue;
+      if (isZeroValueSubscriptionAdjustment(invoice)) continue;
       seenInvoices.add(invoice.id);
       const payment = invoice.status === 'paid' ? await verifiedInvoicePayment(stripe, invoice, account) : undefined;
       applyBillingEvent(db, { type: payment ? 'invoice.paid' : 'invoice.payment_failed', created: now, account, data: { object: invoice } } as Stripe.Event, config().ownerDid, { payment });

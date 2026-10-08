@@ -10,12 +10,15 @@ import { billingInterval } from './billing-frequency';
 // Operational billing identifiers stay private; public projections never copy these fields.
 export type Subscription = {
   id: string; accountId: string; subscriptionId: string; customerId: string;
-  status: string; cancelAtPeriodEnd: boolean; currentPeriodEnd?: number; eventCreated: number;
+  status: string; cancelAtPeriodEnd: boolean; cancelAt?: number; currentPeriodEnd?: number; eventCreated: number;
 };
 export type InvoicePayment = { invoiceId: string; paymentIntentId: string; amount: number; currency: string; customerId: string };
 export type BillingEventContext = { payment?: InvoicePayment; subscription?: Stripe.Subscription };
 export const stripeId = (value: string | { id: string } | null | undefined) => typeof value === 'string' ? value : value?.id;
 export const invoiceRootId = (invoice: Stripe.Invoice) => invoice.parent?.subscription_details?.metadata?.feedme_support_id;
+// Stripe emits paid $0 adjustment invoices for trials without taking a payment.
+export const isZeroValueSubscriptionAdjustment = (invoice: Stripe.Invoice) => invoice.billing_reason === 'subscription_update'
+  && invoice.status === 'paid' && invoice.total === 0 && invoice.amount_due === 0 && invoice.amount_paid === 0;
 export const invoiceSupportId = (rootId: string, invoice: Pick<Stripe.Invoice, 'id' | 'billing_reason'>) => invoice.billing_reason === 'subscription_create'
   ? rootId : `invoice-${createHash('sha256').update(`${rootId}:${invoice.id}`).digest('hex').slice(0, 32)}`;
 
@@ -50,6 +53,7 @@ export const applyBillingEvent = (db: DatabaseSync, event: Stripe.Event, ownerDi
     if (previous.status === 'canceled' || event.created < previous.eventCreated) return;
     putRecord(db, 'subscription', root.id, { ...previous, status: subscription.status,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      cancelAt: subscription.cancel_at ?? undefined,
       currentPeriodEnd: subscription.items.data[0]?.current_period_end, eventCreated: event.created,
     } satisfies Subscription);
     return;
@@ -59,8 +63,10 @@ export const applyBillingEvent = (db: DatabaseSync, event: Stripe.Event, ownerDi
   const rootId = invoiceRootId(invoice);
   const root = rootId ? readRecord<Support>(db, 'support', rootId) : undefined;
   if (!root) return;
+  if (root.accountId !== event.account) throw new Error('Invoice account mismatch.');
+  if (event.type === 'invoice.paid' && isZeroValueSubscriptionAdjustment(invoice)) return;
   // No prorations, manual invoices, coupons, credits, or changed amounts may silently alter the saved split.
-  if (root.accountId !== event.account || !['subscription_create', 'subscription_cycle'].includes(invoice.billing_reason || '') ||
+  if (!['subscription_create', 'subscription_cycle'].includes(invoice.billing_reason || '') ||
     invoice.total !== root.amount || invoice.currency !== root.currency || invoice.amount_due !== root.amount)
     throw new Error('Invoice does not match the saved recurring support.');
   const subscription = bindSubscription(db, root, stripeId(invoice.parent?.subscription_details?.subscription), stripeId(invoice.customer));

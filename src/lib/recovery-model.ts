@@ -25,7 +25,7 @@ export const supportRecoverySchema = z.object({
     ctx.addIssue({ code: 'custom', message: 'Invalid payment allocation or refund total.' });
   if (s.visibility === 'anonymous' && s.supporterDid) ctx.addIssue({ code: 'custom', message: 'Anonymous support cannot contain a supporter identity.' });
 });
-const subscription = z.object({ id, accountId: id, subscriptionId: id, customerId: id, status: id, cancelAtPeriodEnd: z.boolean(), currentPeriodEnd: z.number().int().nonnegative().optional(), eventCreated: z.number().int().nonnegative() });
+const subscription = z.object({ id, accountId: id, subscriptionId: id, customerId: id, status: id, cancelAtPeriodEnd: z.boolean(), cancelAt: z.number().int().nonnegative().optional(), currentPeriodEnd: z.number().int().nonnegative().optional(), eventCreated: z.number().int().nonnegative() });
 const audit = z.object({ id, actor: didSchema, action: id, target: z.string().max(2048), createdAt: z.iso.datetime() });
 export const recordSchemas = { profile: profileSchema, project: projectSchema, update: updateSchema, friend: friendSchema, support: supportRecoverySchema, subscription, 'admin-event': audit };
 // These are logical application data, never OAuth credentials, cookies, API keys or cached profiles.

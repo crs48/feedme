@@ -57,8 +57,10 @@ describe('read-only Stripe recovery reconciliation', () => {
     putRecord(db, 'support', original.id, { ...original, frequency: 'monthly' });
     const subscription = { id: 'sub_one', customer: 'cus_one', metadata: { feedme_support_id: 'tip' }, status: 'canceled', cancel_at_period_end: false, items: { data: [{ current_period_end: 123 }] } };
     const invoice = { id: 'in_next', customer: 'cus_one', parent: { subscription_details: { subscription: 'sub_one', metadata: { feedme_support_id: 'tip' } } }, billing_reason: 'subscription_cycle', total: 1100, amount_due: 1100, amount_paid: 1100, currency: 'usd', status: 'paid', created: 1_790_337_600, status_transitions: { paid_at: 1_790_337_600 } };
-    const client = provider({ sessions: [{ id: 'cs_one', metadata: { feedme_support_id: 'tip' }, client_reference_id: 'tip', amount_total: 1100, currency: 'usd', mode: 'subscription', subscription: 'sub_one', customer: 'cus_one' }], subscriptions: [subscription], invoices: [invoice] });
+    const adjustment = { ...invoice, id: 'in_trial', billing_reason: 'subscription_update', total: 0, amount_due: 0, amount_paid: 0 };
+    const client = provider({ sessions: [{ id: 'cs_one', metadata: { feedme_support_id: 'tip' }, client_reference_id: 'tip', amount_total: 1100, currency: 'usd', mode: 'subscription', subscription: 'sub_one', customer: 'cus_one' }], subscriptions: [subscription], invoices: [adjustment, invoice] });
     await reconcileStripe(db, client as unknown as Stripe);
+    expect(client.invoicePayments.list).toHaveBeenCalledTimes(1);
     const id = invoiceSupportId('tip', { id: invoice.id, billing_reason: 'subscription_cycle' });
     expect(readRecord(db, 'support', id)).toMatchObject({ recurringRootId: 'tip', invoiceId: 'in_next', paymentIntentId: 'pi_one', status: 'paid', refundedAmount: 300, visibility: 'anonymous' });
     expect(readRecord(db, 'subscription', 'tip')).toMatchObject({ status: 'canceled' });

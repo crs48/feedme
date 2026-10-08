@@ -14,7 +14,7 @@ const records = listRecords<Support>(getDb(), 'support');
 const roots = records.filter((s) => s.frequency && s.frequency !== 'once' && !s.recurringRootId && canAccessTip(s, Astro.locals.user, Astro.cookies.get('feedme_checkout')?.value));
 const account = connectedAccount();
 const loginUrl = account ? savedBillingPortal(account)?.loginUrl : undefined;
-const statusLabel = (s?: Subscription) => !s ? 'Confirming subscription' : s.status === 'canceled' ? 'Stopped' : s.cancelAtPeriodEnd ? 'Stops at the end of this period' : ({ active: 'Active', past_due: 'Payment needs attention', unpaid: 'Unpaid', incomplete: 'Awaiting first payment', incomplete_expired: 'Checkout expired', paused: 'Paused', trialing: 'Trial' }[s.status] || 'Check billing settings');
+const statusLabel = (s?: Subscription) => !s ? 'Confirming subscription' : s.status === 'canceled' ? 'Stopped' : s.cancelAt !== undefined ? `Stops ${new Date(s.cancelAt * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}` : s.cancelAtPeriodEnd ? 'Stops at the end of this period' : ({ active: 'Active', past_due: 'Payment needs attention', unpaid: 'Unpaid', incomplete: 'Awaiting first payment', incomplete_expired: 'Checkout expired', paused: 'Paused', trialing: 'Trial' }[s.status] || 'Check billing settings');
 ---
 <Layout title="Manage recurring support" noindex>
   <section class="shell py-10"><div class="max-w-2xl mx-auto">

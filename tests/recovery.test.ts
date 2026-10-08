@@ -71,12 +71,12 @@ describe('complete private recovery checkpoints', () => {
     putRecord(db, 'project', 'draft', { ...project, id: 'draft', status: 'draft' });
     const tip: Support = { id: 'tip', projectId: project.id, amount: 1100, currency: 'usd', visibility: 'anonymous', note: 'Private note', status: 'paid', refundedAmount: 200, disputed: false, createdAt: '2026-09-25T12:00:00Z', accountId: 'acct_a', checkoutId: 'cs_a', paymentIntentId: 'pi_a', frequency: 'monthly', subscriptionId: 'sub_a', invoiceId: 'in_a', activityId: 'activity', allocations: [{ projectId: project.id, amount: 1100, activityId: 'part-activity' }] };
     putRecord(db, 'support', tip.id, tip); setKv(db, 'app', 'stripe-account', 'acct_a');
-    putRecord(db, 'subscription', tip.id, { id: tip.id, accountId: 'acct_a', subscriptionId: 'sub_a', customerId: 'cus_a', status: 'active', cancelAtPeriodEnd: false, eventCreated: 1 });
+    putRecord(db, 'subscription', tip.id, { id: tip.id, accountId: 'acct_a', subscriptionId: 'sub_a', customerId: 'cus_a', status: 'active', cancelAtPeriodEnd: false, cancelAt: 1794147137, eventCreated: 1 });
     setKv(db, 'support-share-id', tip.id, 'abcdefghijklmnopqrstuvwx'); setKv(db, 'support-share-payment', 'abcdefghijklmnopqrstuvwx', tip.id);
     setKv(db, 'oauth-session', owner, { token: 'never-export-this' });
     expect((await drainOutbox()).failed).toBe(0);
     const result = await downloadRecovery(space); const target = openDatabase(':memory:');
-    try { importRecovery(target, result.checkpoint, result.entries); expect(readRecord(target, 'support', tip.id)).toEqual(tip); expect(readRecord(target, 'project', 'draft')).toMatchObject({ status: 'draft' }); expect(getKv(target, 'support-share-payment', 'abcdefghijklmnopqrstuvwx')).toBe(tip.id); expect(getKv(target, 'oauth-session', owner)).toBeUndefined(); expect(getKv(target, 'recovery', 'paused')).toBe(true); } finally { target.close(); }
+    try { importRecovery(target, result.checkpoint, result.entries); expect(readRecord(target, 'support', tip.id)).toEqual(tip); expect(readRecord(target, 'subscription', tip.id)).toMatchObject({ cancelAt: 1794147137, cancelAtPeriodEnd: false }); expect(readRecord(target, 'project', 'draft')).toMatchObject({ status: 'draft' }); expect(getKv(target, 'support-share-payment', 'abcdefghijklmnopqrstuvwx')).toBe(tip.id); expect(getKv(target, 'oauth-session', owner)).toBeUndefined(); expect(getKv(target, 'recovery', 'paused')).toBe(true); } finally { target.close(); }
     expect(JSON.stringify([...remote])).not.toContain('never-export-this');
     await expect(protectCheckoutIntent()).resolves.toBeUndefined();
   });

@@ -89,7 +89,7 @@ export const recurringSummary = (records: Support[], subscriptions: Subscription
     const support = root && projectPayment(root, projectId);
     return support ? [{ subscription, support }] : [];
   });
-  return { active: active.length, ending: active.filter(({ subscription }) => subscription.cancelAtPeriodEnd).length,
+  return { active: active.length, ending: active.filter(({ subscription }) => subscription.cancelAtPeriodEnd || subscription.cancelAt !== undefined).length,
     monthly: Math.round(active.reduce((sum, { support }) => sum + (support.frequency === 'yearly' ? support.amount / 12 : support.frequency === 'monthly' ? support.amount : 0), 0)),
     pastDue: subscriptions.filter((s) => ['past_due', 'unpaid'].includes(s.status) && (!projectId || records.some((p) => p.id === s.id && projectPayment(p, projectId)))).length,
   };

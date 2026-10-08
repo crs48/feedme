@@ -4,7 +4,7 @@ import type Stripe from 'stripe';
 import { config } from '../../../lib/config';
 import { getDb, listRecords } from '../../../lib/db';
 import type { Support } from '../../../lib/model';
-import { invoiceRootId, recurringRefundSupportId, verifiedInvoicePayment, type BillingEventContext } from '../../../lib/recurring';
+import { invoiceRootId, isZeroValueSubscriptionAdjustment, recurringRefundSupportId, verifiedInvoicePayment, type BillingEventContext } from '../../../lib/recurring';
 import { applyStripeEvent, connectedAccount, stripeClient } from '../../../lib/payments';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -23,7 +23,7 @@ export const POST: APIRoute = async ({ request }) => {
     const stripe = stripeClient();
     const account = connectedAccount()!;
     const billingContext: BillingEventContext = {};
-    if (event.type === 'invoice.paid' && invoiceRootId(event.data.object as Stripe.Invoice)) {
+    if (event.type === 'invoice.paid' && invoiceRootId(event.data.object as Stripe.Invoice) && !isZeroValueSubscriptionAdjustment(event.data.object as Stripe.Invoice)) {
       billingContext.payment = await verifiedInvoicePayment(stripe, event.data.object as Stripe.Invoice, account);
     }
     if (['customer.subscription.created', 'customer.subscription.updated'].includes(event.type) && (event.data.object as Stripe.Subscription).metadata.feedme_support_id) {
