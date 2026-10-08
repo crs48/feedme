@@ -53,6 +53,7 @@ export const config = () => {
   }
   return {
     demo, sandbox, origin, ownerDid, adminDids, identities, tipAmounts,
+    siteName: process.env.SITE_NAME?.trim() || undefined,
     libcardDefaultSupport: libcardDefaultSupport as 'all' | 'explicit',
     libcardRemoteDemo: demo && Boolean(process.env.LIBCARD_REPO) && libcardDemoSource === 'github',
     libcard: process.env.LIBCARD_REPO ? libcardSourceSchema.parse({ repo: process.env.LIBCARD_REPO, ref: process.env.LIBCARD_REF || 'main' }) : undefined, defaultTipAmount: tipAmounts[1], dataDir,

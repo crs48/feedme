@@ -10,6 +10,7 @@ This is the isolated payment-testing counterpart to [crs.tips](crs-tips.md), usi
 | Service | `crs-tips-test` · `e9d92295-949b-435a-ad66-face315d74a8` |
 | Volume | `c7a67919-d3a8-48db-b17a-f905575d7815`, mounted at `/data` |
 | Canonical URL | `https://test.crs.tips` |
+| Site name | `Tip Chris` (`SITE_NAME`) |
 | Stripe sandbox | `acct_1UO4KUE9iIaZDKhG` |
 | Creator | `crs.land` (sign in separately on the test domain) |
 | LibCard source | `crs48/LIBCard`, `main` |

@@ -123,6 +123,7 @@ try {
     });
     $('a[href],link[href]').each((_, element) => {
       const href = $(element).attr('href');
+      if ($(element).is('[data-feedme-attribution]')) return;
       if ($(element).is('link[rel=canonical]')) $(element).attr('href', `${demoOrigin}${target}`);
       else $(element).attr('href', map(href, path));
     });

@@ -165,6 +165,8 @@ After deploying, set these in your host's secret/environment settings:
 
 Keep **one running instance** and persist the entire `DATA_DIR` (`/data` in the deployment configurations). Your handle is the only identity setting required; Feedme verifies and pins its permanent DID. Live hosting and payments still require HTTPS, encryption, and provider credentials. Follow [identity/payment setup and the live acceptance checklist](docs/hosting.md#live-configuration) before taking real payments.
 
+Self-hosted sites display your creator name beside the Feedme mark. Set an optional `SITE_NAME` environment variable, such as `SITE_NAME="Tip Chris"`, for a custom header, browser title, and installed-app name. This leaves your Bluesky identity and profile name intact. A small **Powered by Feedme** badge links to [feedme.fund](https://feedme.fund/); on mobile it sits in the footer, clear of donation controls. The official website and demo keep Feedme branding.
+
 ### Koyeb demo button
 
 [![Deploy a demo to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=git&repository=github.com%2Fcrs48%2Ffeedme&branch=main&name=feedme&builder=dockerfile&dockerfile=Dockerfile&instance_type=free&ports=4321%3Bhttp%3B%2F&env%5BFEEDME_MODE%5D=demo&env%5BPORT%5D=4321)

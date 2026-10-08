@@ -3,11 +3,14 @@ import '../styles/global.css';
 import Icon from '../components/Icon.astro';
 import BrandIcon from '../components/BrandIcon.astro';
 import BrandMeta from '../components/BrandMeta.astro';
+import PoweredBy from '../components/PoweredBy.astro';
+import { siteName } from '../lib/site-branding';
 import { config } from '../lib/config';
 import { isAdmin } from '../lib/auth';
 interface Props { title?: string; description?: string; noindex?: boolean; image?: { url: string; alt: string; width: number; height: number }; }
 const { title = 'Good things grow with a little support', description = 'A home for the things you make and the people who make them possible.', noindex = false } = Astro.props;
 const cfg = config();
+const name = siteName(cfg);
 const user = Astro.locals.user;
 const canonical = new URL(Astro.url.pathname, cfg.origin).href;
 const notice = Astro.url.searchParams.get('notice');
@@ -18,9 +21,10 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
 <html lang="en">
   <head>
     <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>{cfg.sandbox ? 'Sandbox · ' : ''}{title} · Feedme</title><meta name="description" content={description}/>
-    <link rel="canonical" href={canonical}/><BrandMeta/>
-    <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · Feedme`}/>
+    <title>{cfg.sandbox ? 'Sandbox · ' : ''}{title} · {name}</title><meta name="description" content={description}/>
+    <link rel="canonical" href={canonical}/><BrandMeta name={name} manifest={cfg.demo && !cfg.siteName ? '/site.webmanifest' : '/app.webmanifest'}/>
+    <meta property="og:type" content="website"/><meta property="og:title" content={`${title} · ${name}`}/>
+    <meta property="og:site_name" content={name}/>
     <meta property="og:description" content={description}/><meta property="og:url" content={canonical}/>
     <meta property="og:image" content={socialImage.url}/><meta name="theme-color" content="#ffffff"/>
     {socialImage && <><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content={String(socialImage.width)}/><meta property="og:image:height" content={String(socialImage.height)}/><meta property="og:image:alt" content={socialImage.alt}/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content={socialImage.url}/><meta name="twitter:image:alt" content={socialImage.alt}/></>}
@@ -31,7 +35,7 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
     {cfg.demo && <div class="demo-strip"><span class="demo-label">Demo</span> {cfg.libcardRemoteDemo ? 'Real LibCard profile. Simulated tips. No real payments.' : 'Explore Feedme. No real payments.'}</div>}
     {cfg.sandbox && <div class="demo-strip"><span class="demo-label">Sandbox</span> Test payments only. No real money moves. Bluesky publishing is disabled.</div>}
     <header class="site-header shell">
-      <a href="/" class="brand" aria-label="Feedme home"><BrandIcon/>feedme</a>
+      <a href="/" class="brand" aria-label={`${name} home`}><BrandIcon/><span>{name === 'Feedme' ? 'feedme' : name}</span></a>
       <nav aria-label="Main navigation" class="flex items-center gap-7">
         <a href="/discover" class="nav-link">Discover</a>
         <a href="/about" class="about-link muted nav-link">About</a>
@@ -44,8 +48,9 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
       <slot/>
     </main>
     <footer class="shell site-footer">
-      <a href="/about">Feedme · Independent work, supported.</a>
+      <a href="/">{name} · Independent work, supported.</a>
       <div class="flex flex-wrap gap-5"><a href="/billing">Manage support</a><a href="/privacy">Privacy</a><a href="/about">Open source <span aria-hidden="true">↗</span></a></div>
+      <PoweredBy/>
     </footer>
   </body>
 </html>
@@ -53,10 +58,13 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
   .demo-strip { background: var(--color-surface); border-bottom: 1px solid var(--color-border); text-align: center; padding: 8px 12px; font-size: 12px; color: var(--color-muted); }
   .demo-label { display: inline-block; margin-right: 8px; border: 1px solid #d8dce5; padding: 0 5px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   .site-header { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--color-border); }
-  .brand { display: flex; align-items: center; gap:8px; min-height: 44px; font-weight: 700; font-size: 23px; letter-spacing: -.06em; }
+  .brand { display: flex; align-items: center; gap:8px; min-height: 44px; min-width:0; font-weight: 700; font-size: 23px; letter-spacing: -.04em; }
+  .brand span { overflow-wrap:anywhere; }
   .nav-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; }
   .site-footer { padding-block: 24px; margin-top: 64px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-muted); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
+  @media(min-width:801px) { .site-footer { padding-bottom:84px; } }
+  @media(max-width:800px) { .site-footer { flex-wrap:wrap; } .site-footer :global(.powered-by) { margin-left:auto; } }
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
   @media(max-width:700px) { .site-header { min-height: 68px; gap: 8px; flex-wrap:wrap; padding-block:10px; } .site-header nav { gap: 12px; flex-wrap:wrap; } .site-header .button { padding: 8px 12px; } .about-link { display: none; } .site-footer { align-items: flex-start; flex-direction: column; gap: 0; margin-top: 40px; } }

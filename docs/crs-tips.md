@@ -44,6 +44,7 @@ The following non-secret configuration is already saved in Railway:
 ```dotenv
 FEEDME_MODE=live
 PUBLIC_URL=https://crs.tips
+SITE_NAME="Tip Chris"
 BLUESKY_HANDLE=crs.land
 LIBCARD_REPO=crs48/LIBCard
 LIBCARD_REF=main
