@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { publicTipActivity, type Support } from '../src/lib/model';
 import { supporterTimeline } from '../src/lib/support-timeline';
 const owner = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -39,6 +39,36 @@ const split: Support = { ...sample, allocations: [
 ] };
 
 describe('payment-level supporter timeline', () => {
+  it('links the confirmed shared post only to its public payment, once per split', () => {
+    const uri = `at://${sample.supporterDid}/app.bsky.feed.post/3mposttest2222`;
+    const sharedPost = vi.fn((s: Support) => s.id === split.id ? uri : undefined);
+    const feed = supporterTimeline([split, { ...split, id: 'another-payment' }], owner, undefined, 0, 12, sharedPost);
+    expect(feed.entries.filter((entry) => 'postUri' in entry)).toEqual([expect.objectContaining({ postUri: uri })]);
+    expect(sharedPost).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(feed)).not.toMatch(/secret|NOTE|activity|checkout|picks/);
+    expect(supporterTimeline([split], owner, 'writing', 0, 12, sharedPost).entries[0]).toHaveProperty('postUri', uri);
+  });
+  it('does not look up shared posts for anonymous, private, or unpaid support', () => {
+    const sharedPost = vi.fn();
+    const feed = supporterTimeline([
+      { ...split, visibility: 'anonymous', announceAnonymously: true },
+      { ...split, visibility: 'private' }, { ...split, status: 'pending' },
+      { ...split, refundedAmount: split.amount }, { ...split, disputed: true },
+    ], owner, undefined, 0, 12, sharedPost);
+    expect(feed.entries).toHaveLength(1);
+    expect(feed.entries[0]).not.toHaveProperty('postUri');
+    expect(sharedPost).not.toHaveBeenCalled();
+  });
+  it('rejects foreign or invalid post references and resolves only the visible page', () => {
+    for (const uri of [undefined, `at://${owner}/app.bsky.feed.post/3mposttest2222`,
+      `at://${sample.supporterDid}/fund.feedme.support/secret`, 'javascript:alert(1)']) {
+      expect(supporterTimeline([split], owner, undefined, 0, 12, () => uri).entries[0]).not.toHaveProperty('postUri');
+    }
+    const sharedPost = vi.fn(() => undefined);
+    const records = Array.from({ length: 30 }, (_, i) => ({ ...split, id: `tip-${i}` }));
+    supporterTimeline(records, owner, undefined, 1, 12, sharedPost);
+    expect(sharedPost).toHaveBeenCalledTimes(12);
+  });
   it('shows a split payment once with its exact total and an allowlisted breakdown', () => {
     const feed = supporterTimeline([split], owner);
     expect(feed.total).toBe(1);
