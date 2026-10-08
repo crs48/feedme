@@ -24,14 +24,19 @@ const tipAmountsFromEnv = () => {
 };
 
 export const config = () => {
+  const mode = process.env.FEEDME_MODE || 'demo';
+  if (!['demo', 'live', 'sandbox'].includes(mode)) throw new Error('FEEDME_MODE must be demo, live, or sandbox.');
+  const sandbox = mode === 'sandbox';
   const tipAmounts = tipAmountsFromEnv();
   const stripeMode = process.env.STRIPE_MODE || 'connect';
   if (!['connect', 'own-account'].includes(stripeMode)) throw new Error('STRIPE_MODE must be connect or own-account.');
   const stripeAccountId = process.env.STRIPE_ACCOUNT_ID || '';
   if (stripeMode === 'own-account' && !/^acct_[A-Za-z0-9]+$/.test(stripeAccountId)) throw new Error('Own-account mode requires STRIPE_ACCOUNT_ID.');
-  const stripeEnvironment = process.env.STRIPE_ENVIRONMENT || '';
+  const stripeEnvironment = process.env.STRIPE_ENVIRONMENT || (sandbox ? 'test' : '');
   if (stripeEnvironment && !['test', 'live'].includes(stripeEnvironment)) throw new Error('STRIPE_ENVIRONMENT must be test or live.');
-  const demo = process.env.FEEDME_MODE !== 'live';
+  if (sandbox && (stripeEnvironment !== 'test' || (process.env.STRIPE_SECRET_KEY && !/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY))))
+    throw new Error('Sandbox mode requires a Stripe test key and STRIPE_ENVIRONMENT=test.');
+  const demo = mode === 'demo';
   const libcardDemoSource = process.env.LIBCARD_DEMO_SOURCE || 'fixture';
   if (!['fixture', 'github'].includes(libcardDemoSource)) throw new Error('LIBCARD_DEMO_SOURCE must be fixture or github.');
   const libcardDefaultSupport = process.env.LIBCARD_DEFAULT_SUPPORT || 'all';
@@ -47,7 +52,7 @@ export const config = () => {
       throw new Error('Live mode requires a 32-byte DATA_ENCRYPTION_KEY encoded as hex.');
   }
   return {
-    demo, origin, ownerDid, adminDids, identities, tipAmounts,
+    demo, sandbox, origin, ownerDid, adminDids, identities, tipAmounts,
     libcardDefaultSupport: libcardDefaultSupport as 'all' | 'explicit',
     libcardRemoteDemo: demo && Boolean(process.env.LIBCARD_REPO) && libcardDemoSource === 'github',
     libcard: process.env.LIBCARD_REPO ? libcardSourceSchema.parse({ repo: process.env.LIBCARD_REPO, ref: process.env.LIBCARD_REF || 'main' }) : undefined, defaultTipAmount: tipAmounts[1], dataDir,

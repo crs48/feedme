@@ -48,6 +48,6 @@ export const localCheckpoint = (db: DatabaseSync, owner: string, space: string) 
   const inventory = localRecoveryInventory(db);
   const keys = inventory.map(r => r.digest).sort();
   const indexes = Array.from({ length: Math.ceil(keys.length / 500) }, (_, n) => ({ $type: RECOVERY_INDEX, version: 1, owner, instance: recoveryInstance(db), records: keys.slice(n * 500, (n + 1) * 500) }));
-  return { indexes, checkpoint: checkpointSchema.parse({ $type: CHECKPOINT, version: 1, owner, instance: recoveryInstance(db), space, indexes: indexes.map(hashValue), digest: inventoryDigest(inventory), count: inventory.length, createdAt: new Date().toISOString() } satisfies Checkpoint) };
+  return { indexes, checkpoint: checkpointSchema.parse({ $type: CHECKPOINT, version: 1, owner, instance: recoveryInstance(db), space, ...(getKv(db, 'app', 'deployment-mode') === 'sandbox' ? { environment: 'sandbox' as const } : {}), indexes: indexes.map(hashValue), digest: inventoryDigest(inventory), count: inventory.length, createdAt: new Date().toISOString() } satisfies Checkpoint) };
 };
 export const recoveryPending = (db: DatabaseSync) => Number((db.prepare('SELECT (SELECT COUNT(*) FROM recovery_dirty) + (SELECT COUNT(*) FROM outbox) AS count').get() as { count: number }).count);

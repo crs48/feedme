@@ -63,6 +63,7 @@ export const recoveryEnvelope = (owner: string, instance: string, location: Reco
 });
 export const indexSchema = z.object({ $type: z.literal(RECOVERY_INDEX), version: z.literal(1), owner: didSchema, instance: z.uuid(), records: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(500) });
 export const checkpointSchema = z.object({
+  environment: z.enum(['live', 'sandbox']).optional(),
   $type: z.literal(CHECKPOINT), version: z.literal(1), owner: didSchema, instance: z.uuid(), space: z.string().startsWith('at://').max(2048),
   indexes: z.array(z.string().regex(/^[a-f0-9]{64}$/)).max(200),
   digest: z.string().regex(/^[a-f0-9]{64}$/), count: z.number().int().nonnegative().max(100_000), createdAt: z.iso.datetime(),

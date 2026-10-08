@@ -7,6 +7,7 @@ import { localCheckpoint, prepareRecovery } from './recovery-tracking';
 
 // Pinned contract: habitat-network/habitat@85654a07. Queries are GET, procedures POST.
 export const habitatCall = async <T>(method: string, payload: Record<string, unknown>, query = false): Promise<T> => {
+  if (config().sandbox && !query && method.startsWith('com.atproto.')) throw new Error('Public AT Protocol writes are disabled in the sandbox.');
   const session = await (await oauthClient()).restore(config().ownerDid);
   const params = new URLSearchParams(Object.entries(payload).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]));
   const response = await session.fetchHandler(`/xrpc/${method}${query ? `?${params}` : ''}`, {
@@ -27,12 +28,13 @@ export const habitatCall = async <T>(method: string, payload: Record<string, unk
   return body ? JSON.parse(body) as T : undefined as T;
 };
 export const privateSpace = () => getKv<string>(getDb(), 'app', 'private-space');
+export const privateSpaceType = () => `${NS}.${config().sandbox ? 'sandboxReceipts' : 'receipts'}`;
 export const createPrivateSpace = async () => {
   if (privateSpace()) return privateSpace();
   const { discoverRecoverySpaces } = await import('./recovery-import');
   if ((await discoverRecoverySpaces()).some(s => s.checkpoint)) throw new Error('A saved Feedme already exists. Open Data & backups to restore it before creating new storage.');
   const { uri } = await habitatCall<{ uri: string }>('network.habitat.simplespace.createSpace', {
-    did: config().ownerDid, type: `${NS}.receipts`,
+    did: config().ownerDid, type: privateSpaceType(),
     config: { policy: 'member-list', appAccess: { $type: 'network.habitat.simplespace.defs#open' } },
   });
   if (!uri?.startsWith('at://')) throw new Error('Habitat did not return a valid private space.');
@@ -65,7 +67,7 @@ const drain = async () => {
   let sent = 0, failed = 0;
   const unavailable = new Set<string>();
   const started = Date.now();
-  const rows = [...pendingWrites(db, 'private'), ...pendingWrites(db, 'public')];
+  const rows = [...pendingWrites(db, 'private'), ...(config().sandbox ? [] : pendingWrites(db, 'public'))];
   for (const row of rows) {
     if (Date.now() - started > 25_000) break;
     if (unavailable.has(row.destination)) continue;

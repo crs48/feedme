@@ -19,7 +19,7 @@ export const openDatabase = (path: string) => {
 };
 let database: DatabaseSync;
 export const getDb = () => {
-  if (database) { migrateProtocol(database, config()); return database; }
+  if (database) { const cfg = config(); assertDatabaseMode(database, cfg); migrateProtocol(database, cfg); return database; }
   const cfg = config();
   mkdirSync(cfg.dataDir, { recursive: true, mode: 0o700 });
   acquireDataLock(cfg.dataDir);
@@ -27,6 +27,8 @@ export const getDb = () => {
   const path = join(cfg.dataDir, cfg.libcardRemoteDemo ? 'demo-libcard.sqlite' : cfg.demo ? 'demo.sqlite' : 'feedme.sqlite');
   database = openDatabase(path);
   chmodSync(path, 0o600);
+  try { assertDatabaseMode(database, cfg); }
+  catch (error) { database.close(); database = undefined!; throw error; }
   if (!database.prepare("SELECT 1 FROM kv WHERE namespace='app' AND key='initialized'").get()) {
     const data = cfg.demo && !cfg.libcardRemoteDemo ? {
       profile: [demoProfile], project: demoProjects, update: demoUpdates, friend: demoFriends, support: demoSupports,
@@ -103,9 +105,19 @@ export const getKv = <T>(db: DatabaseSync, ns: string, key: string): T | undefin
   return unseal<T>(row.value);
 };
 export const deleteKv = (db: DatabaseSync, ns: string, key: string) => db.prepare('DELETE FROM kv WHERE namespace=? AND key=?').run(ns, key);
+// Pin environment independently of Stripe: even an unpaid installation can have
+// a creator grant and private storage. Old, initialized databases belong to live.
+export const assertDatabaseMode = (db: DatabaseSync, cfg: { demo: boolean; sandbox?: boolean }) => {
+  if (cfg.demo) return;
+  const expected = cfg.sandbox ? 'sandbox' : 'live';
+  const saved = getKv<string>(db, 'app', 'deployment-mode') || (getKv(db, 'app', 'initialized') ? 'live' : undefined);
+  if (saved && saved !== expected) throw new Error('This database belongs to a different deployment mode. Use separate storage for sandbox and live.');
+  if (!getKv(db, 'app', 'deployment-mode')) setKv(db, 'app', 'deployment-mode', expected);
+};
 export type OutboxEntry = { id: number; destination: 'public' | 'private'; collection: string; rkey: string; value: unknown | null; attempts: number; revision: number };
 export const enqueue = (db: DatabaseSync, destination: OutboxEntry['destination'], collection: string, rkey: string, value: unknown | null) => {
   if (destination === 'public' && ['fund.feedme.recovery', 'fund.feedme.checkpoint', 'fund.feedme.recoveryIndex', 'fund.feedme.support'].includes(collection)) throw new Error('Private records cannot be sent to a public repository.');
+  if (destination === 'public' && config().sandbox) return;
   return db.prepare(`INSERT INTO outbox(destination,collection,rkey,value) VALUES(?,?,?,?)
     ON CONFLICT(destination,collection,rkey) DO UPDATE SET value=excluded.value,attempts=0,revision=outbox.revision+1,error=NULL`).run(destination, collection, rkey, seal(value));
 };

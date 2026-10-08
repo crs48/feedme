@@ -19,6 +19,11 @@
           "createdAt"
         ],
         "properties": {
+          "environment": {
+            "type": "string",
+            "enum": ["live", "sandbox"],
+            "description": "Deployment boundary. Omitted on legacy live checkpoints; sandbox checkpoints cannot be restored into live."
+          },
           "version": {
             "type": "integer",
             "const": 1

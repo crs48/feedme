@@ -6,10 +6,11 @@ import { overrideLibcard } from '../src/lib/libcard';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
 const transport = vi.hoisted(() => vi.fn());
+const mode = vi.hoisted(() => ({ sandbox: false }));
 const owner = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa';
 const space = 'at://did:web:pear.example/network.habitat.space/receipts';
 let db: DatabaseSync;
-vi.mock('../src/lib/config', () => ({ config: () => ({ demo: false, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' }) }));
+vi.mock('../src/lib/config', () => ({ config: () => ({ demo: false, sandbox: mode.sandbox, ownerDid: 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa' }) }));
 vi.mock('../src/lib/auth', () => ({ oauthClient: async () => ({ restore: async () => ({ fetchHandler: transport }) }) }));
 vi.mock('../src/lib/db', async original => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 import { openDatabase, putRecord, setKv, getKv, enqueue, readRecord, transaction } from '../src/lib/db';
@@ -34,8 +35,27 @@ const mockServer = () => transport.mockImplementation(async (path: string, init:
 const seed = () => { putRecord(db, 'profile', 'self', { ...demoProfile, avatar: undefined }); putRecord(db, 'project', demoProjects[0].id, demoProjects[0]); setKv(db, 'app', 'private-space', space); };
 
 describe('complete private recovery checkpoints', () => {
-  beforeEach(() => { db = openDatabase(':memory:'); remote.clear(); mockServer(); });
+  beforeEach(() => { db = openDatabase(':memory:'); mode.sandbox = false; remote.clear(); mockServer(); });
   afterEach(() => { db.close(); transport.mockReset(); });
+  it('round trips sandbox recovery and rejects restoring it across deployment modes', async () => {
+    mode.sandbox = true; setKv(db, 'app', 'deployment-mode', 'sandbox'); seed(); await drainOutbox();
+    const result = await downloadRecovery(space);
+    expect(result.checkpoint.environment).toBe('sandbox');
+    const target = openDatabase(':memory:');
+    try {
+      mode.sandbox = false;
+      await expect(downloadRecovery(space)).rejects.toThrow('different deployment mode');
+      expect(() => importRecovery(target, result.checkpoint, result.entries)).toThrow('different deployment mode');
+      mode.sandbox = true;
+      importRecovery(target, result.checkpoint, result.entries);
+      expect(getKv(target, 'app', 'deployment-mode')).toBe('sandbox');
+      expect(readRecord(target, 'profile', 'self')).toBeDefined();
+    } finally { target.close(); }
+  });
+  it('refuses legacy live Habitat data in the sandbox', async () => {
+    seed(); await drainOutbox(); mode.sandbox = true;
+    await expect(downloadRecovery(space)).rejects.toThrow('different deployment mode');
+  });
   it('tracks updates and deletes in the same SQLite transaction, excluding secrets', () => {
     seed(); prepareRecovery(db, owner);
     expect(() => transaction(db, () => { putRecord(db, 'project', demoProjects[0].id, { ...demoProjects[0], title: 'Rolled back' }); throw new Error('rollback'); })).toThrow();

@@ -1,0 +1,42 @@
+# test.crs.tips
+
+This is the isolated payment-testing counterpart to [crs.tips](crs-tips.md), using Christopher's public LibCard source and the dedicated **crs.tips sandbox** Stripe account. It must never share production's database, encryption keys, Stripe credentials, or private Habitat space.
+
+[Open the Railway sandbox service](https://railway.com/project/20a3c02a-2960-458b-9e67-187bef03bd43/service/e9d92295-949b-435a-ad66-face315d74a8?environmentId=5015c91d-d145-4a56-a4a9-eda3d77ec569).
+
+| Resource | Value |
+| --- | --- |
+| Railway environment | `sandbox` · `5015c91d-d145-4a56-a4a9-eda3d77ec569` |
+| Service | `crs-tips-test` · `e9d92295-949b-435a-ad66-face315d74a8` |
+| Volume | `c7a67919-d3a8-48db-b17a-f905575d7815`, mounted at `/data` |
+| Canonical URL | `https://test.crs.tips` |
+| Stripe sandbox | `acct_1UO4KUE9iIaZDKhG` |
+| Creator | `crs.land` (sign in separately on the test domain) |
+| LibCard source | `crs48/LIBCard`, `main` |
+| Suggested amounts | `$11`, `$44`, `$111`, `$222` |
+| Health | `/api/health`, expected `mode: "sandbox"` |
+
+## DNS
+
+In Vercel → Domains → crs.tips → DNS Records, add these records. Leave production's apex ALIAS and other records unchanged.
+
+| Type | Name | Value |
+| --- | --- | --- |
+| CNAME | `test` | `xglx893t.up.railway.app` |
+| TXT | `_railway-verify.test` | `railway-verify=6b202453dc1f48474a517bbf9fad219a990d7e6f7a24e628a41d36e8d0a430a9` |
+
+Railway must verify the records and issue a valid certificate before sign-in or Stripe webhooks can work at the canonical address.
+
+## Activation
+
+- [x] Create an empty Railway environment and service, without copying production.
+- [x] Attach a separate persistent volume and generate independent encryption keys.
+- [x] Configure `FEEDME_MODE=sandbox`, `STRIPE_MODE=own-account`, `STRIPE_ENVIRONMENT=test`, the sandbox account ID, public URL, and LibCard source.
+- [ ] Deploy the sandbox-capable application and verify its health/banner.
+- [ ] Add DNS records and verify HTTPS at `test.crs.tips`.
+- [ ] Save the dedicated sandbox restricted key in this service's `STRIPE_SECRET_KEY` variable.
+- [ ] Configure the sandbox webhook and save its signing secret.
+- [ ] Sign in as `crs.land`, create sandbox private storage, and verify recovery.
+- [ ] Complete payment, renewal, refund, and cancellation acceptance tests.
+
+The webhook URL is `https://test.crs.tips/api/stripe/webhook`. Follow [Stripe setup](stripe-setup.md) for permissions and event selection, and [the sandbox guide](sandbox.md) for safeguards and test-card instructions. Keep all secrets in Railway or your password manager, never in this document.

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { z } from 'zod';
 import { config } from './config';
-import { habitatCall, readPrivateRecord } from './habitat';
+import { habitatCall, readPrivateRecord, privateSpaceType } from './habitat';
 import { CHECKPOINT, RECOVERY, RECOVERY_INDEX, checkpointSchema, indexSchema, recoveryEnvelopeSchema, parsePortableValue, hashValue, inventoryDigest, recoveryKey, type Checkpoint, type RecoveryEnvelope } from './recovery-model';
 import { getDb, getKv, listRecords, openDatabase, putRecord, readRecord, setKv, transaction } from './db';
 import { NS, type Support, type Project, type Update } from './model';
@@ -15,7 +15,7 @@ import { reconcileStripe } from './recovery-stripe';
 export const discoverRecoverySpaces = async () => {
   const found: { space: string; checkpoint: Checkpoint | null }[] = []; const seen = new Set<string>(); let cursor: string | undefined;
   do {
-    const result = z.object({ spaces: z.array(z.object({ uri: z.string().startsWith('at://'), isOwner: z.boolean() })).max(1000), cursor: z.string().optional() }).parse(await habitatCall('network.habitat.space.listSpaces', { did: config().ownerDid, type: `${NS}.receipts`, limit: 100, cursor }, true));
+    const result = z.object({ spaces: z.array(z.object({ uri: z.string().startsWith('at://'), isOwner: z.boolean() })).max(1000), cursor: z.string().optional() }).parse(await habitatCall('network.habitat.space.listSpaces', { did: config().ownerDid, type: privateSpaceType(), limit: 100, cursor }, true));
     for (const item of result.spaces) if (item.isOwner && !found.some(f => f.space === item.uri)) {
       const record = await readPrivateRecord(item.uri, CHECKPOINT, 'self');
       const parsed = checkpointSchema.safeParse(record?.value);
@@ -31,6 +31,7 @@ export const discoverRecoverySpaces = async () => {
 export const downloadRecovery = async (space: string) => {
   const result = await readPrivateRecord(space, CHECKPOINT, 'self');
   const checkpoint = checkpointSchema.parse(result?.value);
+  assertRecoveryMode(checkpoint);
   if (checkpoint.owner !== config().ownerDid || checkpoint.space !== space) throw new Error('Recovery checkpoint belongs to another creator or space.');
   const entries: RecoveryEnvelope[] = []; const logical = new Set<string>(); const physical = new Set<string>(); let bytes = 0;
   for (const key of checkpoint.indexes) {
@@ -79,6 +80,7 @@ export const validateRecoveryRelations = (db: DatabaseSync) => {
   }
 };
 export const importRecovery = (db: DatabaseSync, checkpoint: Checkpoint, entries: RecoveryEnvelope[]) => transaction(db, () => {
+  assertRecoveryMode(checkpoint);
   if (db.prepare('SELECT 1 FROM records LIMIT 1').get()) throw new Error('Import requires an empty staging database.');
   if (checkpoint.count !== entries.length || inventoryDigest(entries.map(e => ({ rkey: recoveryKey(e), digest: hashValue(e) }))) !== checkpoint.digest) throw new Error('The recovery checkpoint is incomplete.');
   for (const entry of entries) {
@@ -87,11 +89,16 @@ export const importRecovery = (db: DatabaseSync, checkpoint: Checkpoint, entries
     if (entry.table === 'records') putRecord(db, entry.kind, entry.key, value); else setKv(db, entry.kind, entry.key, value);
   }
   setKv(db, 'app', 'initialized', true); setKv(db, 'app', 'owner-did', checkpoint.owner); setKv(db, 'app', 'protocol-version', NS); setKv(db, 'app', 'private-space', checkpoint.space);
+  setKv(db, 'app', 'deployment-mode', checkpoint.environment || 'live');
   setKv(db, 'recovery', 'instance', checkpoint.instance); setKv(db, 'recovery', 'checkpoint', checkpoint); setKv(db, 'recovery', 'paused', true);
   // Record the exact remote checkpoint from which the candidate was built.
   db.prepare("INSERT INTO sync_receipts VALUES ('private',?,?,?,?,?)").run(CHECKPOINT, 'self', hashValue(checkpoint), null, new Date().toISOString());
   validateRecoveryRelations(db);
 });
+export const assertRecoveryMode = (checkpoint: Checkpoint) => {
+  if ((checkpoint.environment || 'live') !== (config().sandbox ? 'sandbox' : 'live'))
+    throw new Error('Recovery belongs to a different deployment mode. Sandbox and live storage cannot be mixed.');
+};
 export type RecoveryReport = { id: string; createdAt: string; checkpointAt: string; source: string; projects: number; payments: number; subscriptions: number; file: string; stripe: string };
 export const stageHabitatRecovery = async (space: string) => {
   const key = backupKey(); // Fail before downloading private data if no recovery key is configured.

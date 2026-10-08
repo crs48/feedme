@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DatabaseSync } from 'node:sqlite';
-const mocks = vi.hoisted(() => ({ transport: vi.fn(), restore: vi.fn(), demo: false }));
+const mocks = vi.hoisted(() => ({ transport: vi.fn(), restore: vi.fn(), demo: false, sandbox: false }));
 let db: DatabaseSync;
 const actor = 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb';
 const owner = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa';
-vi.mock('../src/lib/config', () => ({ config: () => ({ demo: mocks.demo, ownerDid: owner }) }));
+vi.mock('../src/lib/config', () => ({ config: () => ({ demo: mocks.demo, sandbox: mocks.sandbox, ownerDid: owner }) }));
 vi.mock('../src/lib/auth', () => ({ oauthClient: async () => ({ restore: mocks.restore }), digest: (input: string) => createHash('sha256').update(input).digest('hex') }));
 vi.mock('../src/lib/db', async (original) => ({ ...await original<typeof import('../src/lib/db')>(), getDb: () => db }));
 import { openDatabase, setKv } from '../src/lib/db';
@@ -17,11 +17,22 @@ import type { Support } from '../src/lib/model';
 
 describe('actor-scoped social records', () => {
   beforeEach(() => {
-    db = openDatabase(':memory:'); mocks.demo = false; mocks.transport.mockReset(); mocks.restore.mockReset();
+    db = openDatabase(':memory:'); mocks.demo = false; mocks.sandbox = false; mocks.transport.mockReset(); mocks.restore.mockReset();
     mocks.restore.mockImplementation(async (did: string) => ({ did, fetchHandler: mocks.transport }));
   });
   afterEach(() => db.close());
   const record = (subject = owner, rkey = '3mfollowtest22') => ({ uri: `at://${actor}/${FOLLOW}/${rkey}`, cid: 'bafytest', value: { $type: FOLLOW, subject, createdAt: '2026-09-25T12:00:00Z' } });
+  it('allows sandbox reads but rejects posts, follows, deletes and image uploads', async () => {
+    mocks.sandbox = true;
+    mocks.transport.mockImplementation(async () => Response.json({ records: [] }));
+    expect(await readFollows(actor, 'creator')).toEqual([]);
+    await expect(changeFollow(actor, 'creator', owner, true)).rejects.toThrow('sandbox');
+    await expect(publishPost(actor, 'test', { $type: 'app.bsky.feed.post', text: 'test' })).rejects.toThrow('sandbox');
+    await expect(uploadSocialImage(actor, new Uint8Array([1]))).rejects.toThrow('sandbox');
+    mocks.transport.mockImplementation(async () => Response.json({ records: [record()] }));
+    await expect(changeFollow(actor, 'creator', owner, false)).rejects.toThrow('sandbox');
+    expect(mocks.transport.mock.calls.every(([, init]) => init.method === 'GET')).toBe(true);
+  });
   it('finds an existing native follow on a later PDS page without duplicating it', async () => {
     mocks.transport.mockResolvedValueOnce(Response.json({ records: [], cursor: 'next' })).mockResolvedValueOnce(Response.json({ records: [record()] }));
     await changeFollow(actor, 'creator', owner, true);
