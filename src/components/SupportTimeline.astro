@@ -6,10 +6,16 @@ import { payments, project } from '../lib/repository';
 import { people } from '../lib/people';
 import { money } from '../lib/model';
 import { supporterTimeline } from '../lib/support-timeline';
+import { publishedPost } from '../lib/social-repo';
+import { timelinePosts } from '../lib/timeline-posts';
 interface Props { projectId?: string; }
 const { projectId } = Astro.props;
-const feed = supporterTimeline(payments(), config().ownerDid, projectId, Number(Astro.url.searchParams.get('tipsPage')) || 0);
-const supporters = await people(feed.entries.flatMap((entry) => entry.visibility === 'public' ? [entry.supporter] : []));
+const feed = supporterTimeline(payments(), config().ownerDid, projectId, Number(Astro.url.searchParams.get('tipsPage')) || 0, 12,
+  (support) => publishedPost(support.supporterDid!, `tip:${support.id}`)?.uri);
+const [supporters, posts] = await Promise.all([
+  people(feed.entries.flatMap((entry) => entry.visibility === 'public' ? [entry.supporter] : [])),
+  timelinePosts(feed.entries.flatMap((entry) => entry.visibility === 'public' && entry.postUri ? [entry.postUri] : [])),
+]);
 const href = (page: number) => { const params = new URLSearchParams(Astro.url.search); params.set('tipsPage', String(page)); return `${Astro.url.pathname}?${params}#supporters`; };
 ---
 <section id="supporters" class="supporter-timeline mt-12" aria-label="Recent supporters">
@@ -19,6 +25,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
       const person = entry.visibility === 'public' ? supporters.get(entry.supporter) : undefined;
       const name = entry.visibility === 'anonymous' ? 'Anonymous' : person?.name || 'Supporter';
       const profileUrl = entry.visibility === 'public' ? `https://bsky.app/profile/${encodeURIComponent(entry.supporter)}` : undefined;
+      const post = entry.visibility === 'public' && entry.postUri ? posts.get(entry.postUri) : undefined;
       const parts = entry.projects.map((part) => {
         const p = project(part.projectId);
         const url = p?.libcard ? p.libcard.url || '/' : p && ['active', 'complete'].includes(p.status) ? `/support/${p.id}` : undefined;
@@ -35,6 +42,11 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
             </div>
             {amount !== undefined && <div class="tip-amount"><strong>{money(amount)}</strong>{projectId && entry.visibility === 'public' && amount !== entry.amount && <small>of a {money(entry.amount)} tip</small>}</div>}
           </div>
+          {post && <div class="tip-post">
+            {post.sensitive ? <p class="tip-post-warning">This post has a content warning. View it on Bluesky with your moderation settings.</p>
+              : <p class="tip-post-text">{post.segments.map((segment) => segment.href ? <a href={segment.href} rel="noopener noreferrer ugc">{segment.text}</a> : segment.text)}</p>}
+            <a class="tip-post-link" href={post.url} rel="noopener noreferrer">View on Bluesky <span aria-hidden="true">↗</span></a>
+          </div>}
           <details class="tip-breakdown" data-tip-breakdown>
             <summary aria-label={`Support breakdown: ${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`}>
               <span>Supported {parts.length === 1 ? parts[0].title : `${parts.length} projects`}</span><span class="tip-chevron" aria-hidden="true">⌄</span>
@@ -114,6 +126,12 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   .tip-handle { display:block; color:var(--color-muted); font-size:12px; margin-top:2px; }
   .tip-amount { margin-left:auto; text-align:right; font-size:14px; white-space:nowrap; }
   .tip-amount small { display:block; color:var(--color-muted); font-size:11px; }
+  .tip-post { margin-top:12px; }
+  .tip-post-text { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; line-height:1.65; }
+  .tip-post-text a, .tip-post-link { color:var(--color-primary); }
+  .tip-post-text a:hover, .tip-post-link:hover { text-decoration:underline; }
+  .tip-post-link { display:inline-flex; align-items:center; gap:4px; min-height:44px; font-size:12px; }
+  .tip-post-warning { font-size:12px; color:var(--color-muted); }
   .tip-breakdown { position:relative; margin-block:2px; }
   .tip-breakdown summary { display:flex; align-items:center; gap:6px; width:fit-content; max-width:100%; min-height:44px; color:var(--color-primary); font-size:12px; cursor:pointer; list-style:none; border-radius:4px; }
   .tip-breakdown summary::-webkit-details-marker { display:none; }
