@@ -6,4 +6,11 @@ import Icon from '../../src/components/LibcardIcon.astro';
     <div><p class="eyebrow">LibCard + Feedme</p><h2 id="libcard-teaser-heading">Your links can open<br/>new possibilities.</h2><p>Let people tip the work they find on your LibCard. They choose what they’d love to see more of. You keep the freedom to follow your own direction.</p><div class="hero-actions"><a class="button" href="/libcard/">Explore the integration <span aria-hidden="true">→</span></a><a class="text-link" href="/libcard/setup/">Connect your card</a></div></div>
     <div class="libcard-teaser-steps"><div><span aria-hidden="true"><Icon name="link" size={22}/></span><p><strong>The links you already share.</strong>Choose the projects, writing, and socials that welcome support.</p></div><div><span aria-hidden="true"><Icon name="heart" size={22}/></span><p><strong>A little encouragement, with direction.</strong>One tip, a few picks, and a clearer sense of what resonates.</p></div></div>
   </div>
+  <div class="live-example-teaser"><span>See a live setup</span><a href="https://crs.land/">crs.land <span aria-hidden="true">↗</span></a><span aria-hidden="true">→</span><a href="https://crs.tips/">Tip Chris · crs.tips <span aria-hidden="true">↗</span></a><a class="live-example-story" href="/libcard/#example">How they connect <span aria-hidden="true">→</span></a></div>
 </section>
+<style>
+  .live-example-teaser { display:flex; align-items:center; flex-wrap:wrap; gap:4px 16px; padding:16px 4px; font-size:13px; color:#61758c; }
+  .live-example-teaser a { display:inline-flex; align-items:center; gap:5px; min-height:44px; color:#0866ff; }
+  .live-example-story { margin-left:auto; }
+  @media(max-width:720px) { .live-example-teaser { gap:0 12px; } .live-example-teaser > span:first-child { flex-basis:100%; } .live-example-story { margin-left:0; } }
+</style>

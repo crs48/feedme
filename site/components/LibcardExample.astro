@@ -1,28 +1,65 @@
 ---
 import Icon from '../../src/components/LibcardIcon.astro';
+import BrandIcon from '../../src/components/BrandIcon.astro';
+// Existing public target IDs from crs.tips/api/public/libcard. Rendering this
+// static example needs no live requests or payment data.
 const links = [
-  { icon: 'github', title: 'Small, useful tools', detail: 'A little more open source', picks: 3, share: 75, amount: '$16.50' },
-  { icon: 'leaf', title: 'Notes from the garden', detail: 'A little more writing', picks: 1, share: 25, amount: '$5.50' },
+  { icon: 'heart', title: '75m of Presence aka Coaching', detail: 'crs.coach', url: 'https://crs.coach/', id: 'auto-70708493c98f3456' },
+  { icon: 'leaf', title: 'Digital Garden', detail: 'crs.garden', url: 'https://crs.garden/', id: 'auto-df0c6fe84a72cd82' },
+  { icon: 'github', title: 'xNet', detail: 'xnet.fyi', url: 'https://xnet.fyi/', id: 'auto-fbe99b53b3f9e055' },
 ];
+const pickUrl = (id: string) => {
+  const url = new URL('/checkout', 'https://crs.tips');
+  url.searchParams.set(id, '1');
+  return url.href;
+};
 ---
-<figure class="libcard-example" id="example" aria-labelledby="example-caption">
-  <div class="libcard-example-grid">
-    <div class="libcard-example-card">
-      <div class="libcard-example-label"><Icon name="contact" size={17}/><span>Your LibCard</span></div>
-      <div class="libcard-example-profile"><img src="/demo/avatars/12.jpg" alt="" width="48" height="48" loading="lazy"/><div><strong>Alex Rivers</strong><span>Making room for good things.</span></div></div>
-      <div class="libcard-example-links">
-        {links.map(link => <div class="libcard-example-link"><span class="libcard-example-icon"><Icon name={link.icon} size={20}/></span><div><strong>{link.title}</strong><span>{link.detail}</span></div><span class="libcard-example-tag">More of this <span aria-hidden="true">↗</span></span></div>)}
-        <div class="libcard-example-link"><span class="libcard-example-icon"><Icon name="contact" size={20}/></span><div><strong>My résumé</strong><span>An ordinary link, as always.</span></div><span aria-hidden="true">↗</span></div>
+<div class="live-example" id="example">
+  <div class="live-heading"><p class="eyebrow">A real person. Two connected sites.</p><h2>Meet Chris’s setup.</h2><p>Christopher Smothers shares his coaching, writing, and open-source work on <a href="https://crs.land/">crs.land</a>. His Feedme at <a href="https://crs.tips/">crs.tips</a> imports those links and turns them into places to direct a tip.</p></div>
+  <figure class="libcard-example" aria-labelledby="example-caption">
+    <div class="libcard-example-grid">
+      <div class="libcard-example-card">
+        <a class="libcard-example-label live-domain" href="https://crs.land/"><Icon name="contact" size={17}/><strong>crs.land <span aria-hidden="true">↗</span></strong><span>LibCard</span></a>
+        <div class="libcard-example-profile"><span class="live-monogram" aria-hidden="true">CS</span><div><strong>Christopher Smothers</strong><span>Coaching, writing, and open source.</span></div></div>
+        <div class="libcard-example-links">
+          {links.map(link => <a class="libcard-example-link live-link" href={link.url}><span class="libcard-example-icon"><Icon name={link.icon} size={20}/></span><div><strong>{link.title}</strong><span>{link.detail}</span></div><span aria-hidden="true">↗</span></a>)}
+        </div>
+        <div class="live-card-action"><a class="button secondary" href="https://crs.land/">Visit Chris’s LibCard <span aria-hidden="true">↗</span></a></div>
       </div>
-      <p class="libcard-example-footnote">Choose which links can receive support.</p>
+      <span class="libcard-example-arrow" aria-hidden="true">→</span>
+      <div class="libcard-example-card libcard-example-gift">
+        <a class="libcard-example-label live-domain" href="https://crs.tips/"><Icon name="heart" size={17}/><strong>crs.tips <span aria-hidden="true">↗</span></strong><span>Feedme</span></a>
+        <div class="libcard-example-profile"><BrandIcon size={48}/><div><strong>Tip Chris</strong><span>The same links. A little encouragement.</span></div></div>
+        <div class="libcard-example-links">
+          {links.map(link => <a class="libcard-example-link live-link" href={pickUrl(link.id)} aria-label={`Open Tip Chris with ${link.title} selected`}><span class="libcard-example-icon"><Icon name={link.icon} size={20}/></span><div><strong>{link.title}</strong><span>Open with this pick selected</span></div><span class="libcard-example-tag">Pick <span aria-hidden="true">↗</span></span></a>)}
+        </div>
+        <div class="live-card-action"><a class="button" href="https://crs.tips/">Visit Tip Chris <span aria-hidden="true">↗</span></a></div>
+      </div>
     </div>
-    <span class="libcard-example-arrow" aria-hidden="true">→</span>
-    <div class="libcard-example-card libcard-example-gift">
-      <div class="libcard-example-label"><Icon name="heart" size={17}/><span>A tip on Feedme</span></div>
-      <div class="libcard-example-total"><span>Give this to Alex.</span><strong>$22<span>one time</span></strong></div>
-      <dl class="libcard-example-split">{links.map(link => <div><dt><span>{link.title}</span><small>{link.picks} {link.picks === 1 ? 'pick' : 'picks'}</small></dt><dd><strong>{link.amount}</strong><span>{link.share}% of this tip</span></dd></div>)}</dl>
-      <p class="libcard-example-freedom">They get all of it.<br/>Where you placed it is a suggestion.</p>
-    </div>
-  </div>
-  <figcaption id="example-caption">Illustration with a fictional creator and sample amounts. A visitor can adjust the picks and amount on Feedme before paying.</figcaption>
-</figure>
+    <figcaption id="example-caption">A few links from Chris’s real catalog. These open live sites; completed checkouts on crs.tips are real payments. For simulated tips, <a href="/demo/">explore the demo</a>.</figcaption>
+  </figure>
+  <ol class="live-flow"><li><span>01</span><div><strong>Discover on LibCard.</strong><p>crs.land is the public profile and source of the links.</p></div></li><li><span>02</span><div><strong>Choose on Feedme.</strong><p>crs.tips imports the catalog. Pick what you like and review your gift.</p></div></li><li><span>03</span><div><strong>Give through Stripe.</strong><p>Continue to hosted checkout. Chris receives the tip and your encouragement.</p></div></li></ol>
+  <a class="text-link live-setup-link" href="/libcard/setup/#live-setup">See the settings behind this example <span aria-hidden="true">→</span></a>
+</div>
+<style>
+  .live-example { scroll-margin-top:24px; }
+  .live-heading { max-width:690px; margin-bottom:28px; }
+  .live-heading h2 { font-size:clamp(28px,3.6vw,40px); line-height:1.2; letter-spacing:-.04em; font-weight:600; margin:14px 0; }
+  .live-heading > p:not(.eyebrow) { font-size:15px; line-height:1.85; color:#61758c; }
+  .live-heading a, figcaption a { color:#0866ff; text-decoration:underline; text-underline-offset:3px; }
+  .live-domain { min-height:48px; }
+  .live-domain strong { font-size:13px; font-weight:600; color:#294c77; }
+  .live-domain > span { margin-left:auto; }
+  .live-monogram { display:grid; place-items:center; flex:none; width:48px; height:48px; border-radius:50%; background:#edf3ec; color:#55704e; font-size:16px; font-weight:600; }
+  .live-link { min-height:74px; border-radius:6px; }
+  .live-link:hover { background:#f7faff; }
+  .live-card-action { padding:18px 22px 22px; }
+  .live-card-action .button { width:100%; font-size:13px; }
+  .live-flow { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px; margin-top:30px; }
+  .live-flow li { display:flex; gap:12px; }
+  .live-flow li > span { color:#0866ff; font-size:11px; padding-top:3px; }
+  .live-flow strong { font-size:14px; font-weight:550; }
+  .live-flow p { font-size:12px; color:#61758c; line-height:1.8; margin-top:6px; }
+  .live-setup-link { font-size:13px; }
+  @media(max-width:720px) { .live-flow { grid-template-columns:1fr; gap:18px; } .live-heading { margin-bottom:22px; } }
+</style>
