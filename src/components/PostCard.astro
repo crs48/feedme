@@ -1,4 +1,5 @@
 ---
+import { blueskyProfileUrl } from '../lib/bluesky-url';
 import type { PostView } from '../lib/bsky-content';
 import PostVideo from './PostVideo.astro';
 import Avatar from './Avatar.astro';
@@ -7,7 +8,7 @@ import { config } from '../lib/config';
 import { demoImageSources } from '../lib/demo-media';
 interface Props { post: PostView; projectTitle?: string; }
 const { post, projectTitle } = Astro.props;
-const authorUrl = post.demo ? (post.did === config().ownerDid ? '/' : undefined) : `https://bsky.app/profile/${encodeURIComponent(post.did)}`;
+const authorUrl = post.demo ? (post.did === config().ownerDid ? '/' : undefined) : blueskyProfileUrl(post.did);
 ---
 <article class="social-post">
   <a class="post-avatar" href={authorUrl} aria-label={authorUrl ? `View ${post.author}’s profile` : undefined} rel="noopener noreferrer"><Avatar name={post.author} src={post.avatar}/></a>

@@ -1,3 +1,4 @@
+import { blueskyProfileUrl } from './bluesky-url';
 import { RichText } from '@atproto/api';
 import { safeWebUrl } from './markdown';
 import { accountIdentifier } from './identity-settings';
@@ -15,7 +16,7 @@ export const profileText = (text: string): TextSegment[] => {
     if (segment.mention) {
       try {
         const handle = accountIdentifier(segment.text);
-        if (!handle.startsWith('did:')) return { text: segment.text, href: `https://bsky.app/profile/${encodeURIComponent(handle)}` };
+        if (!handle.startsWith('did:')) return { text: segment.text, href: blueskyProfileUrl(handle) };
       } catch { /* Render unrecognized text as text. */ }
     }
     return { text: segment.text };

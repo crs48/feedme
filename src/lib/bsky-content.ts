@@ -1,3 +1,4 @@
+import { blueskyProfileUrl } from './bluesky-url';
 import { z } from 'zod';
 import { safeWebUrl } from './markdown';
 import { blueskyPostUrl } from './social-model';
@@ -22,7 +23,7 @@ export const richText = (text: string, facets: unknown): TextSegment[] => {
     if (start < end || finish <= start || !boundaries.has(start) || !boundaries.has(finish)) continue;
     const feature = facet.features[0];
     const href = feature?.$type === 'app.bsky.richtext.facet#link' ? safeWebUrl(feature.uri)
-      : feature?.$type === 'app.bsky.richtext.facet#mention' && didSchema.safeParse(feature.did).success ? `https://bsky.app/profile/${encodeURIComponent(String(feature.did))}`
+      : feature?.$type === 'app.bsky.richtext.facet#mention' && didSchema.safeParse(feature.did).success ? blueskyProfileUrl(String(feature.did))
       : feature?.$type === 'app.bsky.richtext.facet#tag' && typeof feature.tag === 'string' ? `https://bsky.app/search?q=${encodeURIComponent(`#${feature.tag}`)}` : undefined;
     if (!href) continue;
     if (start > end) segments.push({ text: bytes.subarray(end, start).toString() });

@@ -1,3 +1,4 @@
+import { blueskyProfileUrl } from './bluesky-url';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { didSchema, NS, LEGACY_NS } from './model';
@@ -47,5 +48,5 @@ export const projectPost = (text: string, project: { title: string; summary: str
 });
 export const blueskyPostUrl = (uri: string) => {
   const match = /^at:\/\/([^/]+)\/app\.bsky\.feed\.post\/([a-zA-Z0-9._~:-]+)$/.exec(uri);
-  return match && didSchema.safeParse(match[1]).success ? `https://bsky.app/profile/${encodeURIComponent(match[1])}/post/${encodeURIComponent(match[2])}` : undefined;
+  return match && didSchema.safeParse(match[1]).success ? `${blueskyProfileUrl(match[1])}/post/${encodeURIComponent(match[2])}` : undefined;
 };

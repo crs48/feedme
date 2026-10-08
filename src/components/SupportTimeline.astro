@@ -1,4 +1,5 @@
 ---
+import { blueskyProfileUrl } from '../lib/bluesky-url';
 import Icon from './Icon.astro';
 import Avatar from './Avatar.astro';
 import { config } from '../lib/config';
@@ -24,7 +25,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
     {feed.entries.length ? <ol>{feed.entries.map((entry) => {
       const person = entry.visibility === 'public' ? supporters.get(entry.supporter) : undefined;
       const name = entry.visibility === 'anonymous' ? 'Anonymous' : person?.name || 'Supporter';
-      const profileUrl = entry.visibility === 'public' ? `https://bsky.app/profile/${encodeURIComponent(entry.supporter)}` : undefined;
+      const profileUrl = entry.visibility === 'public' ? blueskyProfileUrl(entry.supporter) : undefined;
       const post = entry.visibility === 'public' && entry.postUri ? posts.get(entry.postUri) : undefined;
       const parts = entry.projects.map((part) => {
         const p = project(part.projectId);
