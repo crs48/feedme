@@ -15,9 +15,11 @@ const listed = hints?.dids.includes(cfg.ownerDid);
 ---
 <section class="admin-card">
   <h2>Your place in the network</h2>
+  {cfg.sandbox ? <p class="admin-help mt-3">This sandbox is excluded from the creator directory. Test activity never publishes to your public PDS or changes your live Feedme address.</p> : <>
   <p class="admin-help mt-3">Your profile tells other Feedme instances where to find you. The public directory checks for new profiles nightly.</p>
   <dl class="mt-4"><div class="admin-stat-line"><dt>Public announcement</dt><dd>{cfg.demo ? 'Demo preview' : pending ? 'Awaiting sync' : publication.state === 'unavailable' ? 'Could not check PDS' : published ? 'Published to your PDS' : advertised?.discoverable === false ? 'Discovery disabled' : 'Save profile to publish'}</dd></div><div class="admin-stat-line"><dt>Directory</dt><dd>{cfg.demo ? 'Sample only' : listed ? 'Found in directory' : published ? 'Not confirmed yet' : 'Not listed'}</dd></div></dl>
   {published && <><p class="admin-help mt-4">Introduce your Feedme on Bluesky. You’ll review the post in Bluesky before sharing it.</p><a class="button secondary mt-3" href={launchPostUrl(cfg.origin)} rel="noopener noreferrer">Share your Feedme ↗</a></>}
   {!cfg.demo && <a class="button secondary mt-3" href="https://feedme.fund/creators/">Browse the public directory ↗</a>}
   <p class="admin-help mt-4">A missing listing may mean the next scan is pending, your website could not be verified, or the relay has not found your account. Website checks do not verify payment readiness.</p>
+  </>}
 </section>

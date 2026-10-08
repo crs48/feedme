@@ -5,7 +5,7 @@ import { config } from '../src/lib/config';
 import { acquireDataLock } from './data-lock.mjs';
 import { backupKey, restoreSnapshot, performBackup } from '../src/lib/backups';
 import { backupStore } from '../src/lib/backup-store';
-import { getKv, openDatabase, readRecord, setKv } from '../src/lib/db';
+import { assertDatabaseMode, getKv, openDatabase, readRecord, setKv } from '../src/lib/db';
 import { reconcileStripe } from '../src/lib/recovery-stripe';
 import { validateRecoveryRelations } from '../src/lib/recovery-import';
 import { rememberIdentity } from '../src/lib/identity-settings';
@@ -39,6 +39,7 @@ if (command === 'list') {
       await restoreSnapshot(body, staged, owner, backupKey());
       const candidate = openDatabase(staged);
       try {
+        assertDatabaseMode(candidate, cfg);
         if (getKv(candidate, 'app', 'owner-did') && getKv(candidate, 'app', 'owner-did') !== owner) throw new Error('The database owner does not match the backup envelope.');
         if (!readRecord(candidate, 'profile', 'self')) throw new Error('The candidate has no creator profile.');
         setKv(candidate, 'app', 'owner-did', owner);

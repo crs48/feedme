@@ -51,7 +51,7 @@ DATA_DIR=/data
 HOST=0.0.0.0
 PORT=4321
 HABITAT_URL=https://pear.habitat.network
-TIP_AMOUNTS=11,22,44,88
+TIP_AMOUNTS=11,44,111,222
 BACKUP_DIR=/data/backups
 ```
 
@@ -62,19 +62,19 @@ Local encrypted backups are configured on the same persistent volume. They help 
 ## Verified and remaining
 
 - [x] First Railway deployment reached `SUCCESS` for `ecd2ea6` (`88934f91-8d23-47fa-a93c-b11f55130af3`).
-- [x] Diagnostic health endpoint returns HTTP 200, app version `0.1.0`, database schema `2`.
+- [x] Diagnostic health endpoint returns HTTP 200, app version `0.1.0`, database schema `3` after the Stripe account-binding migration.
 - [x] Homepage imports Christopher’s real name and LibCard links.
 - [x] Public LibCard endpoint returns HTTP 200, canonical `https://crs.tips`, and public caching.
 - [x] Unauthenticated Studio access redirects to sign-in; this is live identity mode, not a shared editable demo.
 - [x] Main-branch deployment trigger has `checkSuites: true`; one replica and persistent volume are configured.
 - [x] Verify custom-domain DNS and Railway’s active HTTPS certificate.
 - [x] Verify the canonical LibCard GET/HEAD contract over TLS using the current public DNS address. The local resolver still caches the previous Vercel addresses; the ordinary `pnpm check:libcard-origin https://crs.tips` command should be rerun after that cache expires.
-- [ ] Sign in as `crs.land`, create private Habitat storage, and verify recovery.
+- [x] Sign in as `crs.land`, create private Habitat storage, and verify recovery.
 - [ ] Configure restricted Stripe sandbox credentials in an isolated installation, complete webhook setup, and run [payment acceptance](hosting.md#live-acceptance-checklist).
 - [ ] Back up the encryption keys separately; configure and test off-server backups.
 - [ ] Optionally add card-side tip actions: use the existing target IDs shown in Feedme Studio as LibCard `feedme.id` values, enable its `feedme` block pointing to `https://crs.tips`, refresh Feedme, then rebuild LibCard.
 
-Feedme now includes all LibCard links and socials as selectable targets by default, even without source `feedme` objects. Hide exceptions in Studio. `LIBCARD_DEFAULT_SUPPORT=explicit` restores the older behavior where this catalog initially contained only `creator`. No aspirations or support totals are invented. Stripe credentials and private Habitat storage are not configured, so the server cannot issue a charge-capable checkout yet. DNS activation does not by itself enable payments.
+Feedme now includes all LibCard links and socials as selectable targets by default, even without source `feedme` objects. Hide exceptions in Studio. `LIBCARD_DEFAULT_SUPPORT=explicit` restores the older behavior where this catalog initially contained only `creator`. No aspirations or support totals are invented. Live Stripe credentials, the signed webhook, and private Habitat recovery are configured. An unpaid Checkout was created and expired, and its real signed expiration webhook was verified. No real money was charged. Completed payments, renewals, and refunds still need acceptance testing in [test.crs.tips](test-crs-tips.md).
 
 ### Personal Stripe account configuration
 

@@ -23,6 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('X-Frame-Options', 'DENY');
+  if (cfg.sandbox) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   // All pages include session-aware navigation; avoid leaking authenticated HTML through a CDN.
   const publicLibcard = context.url.pathname === '/api/public/libcard' && ['GET', 'HEAD'].includes(context.request.method) && response.status === 200;
   response.headers.set('Cache-Control', publicLibcard ? 'public, max-age=60' : 'private, no-store');

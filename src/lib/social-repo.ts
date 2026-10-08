@@ -17,6 +17,7 @@ export const socialClient = async (actor: string) => {
   if (session.did !== actor) throw new Error('Reconnect your AT Protocol account.');
   const signal = AbortSignal.timeout(10_000);
   return async (method: string, params: Record<string, unknown>, write = false, appview = false): Promise<unknown> => {
+    if (write && config().sandbox) throw new Error('Posts, follows, and recommendations cannot be published from the sandbox.');
     const query = write ? '' : `?${new URLSearchParams(Object.entries(params).flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).map((item) => [key, String(item)])))}`;
     const response = await session.fetchHandler(`/xrpc/${method}${query}`, {
       method: write ? 'POST' : 'GET', signal,
@@ -33,6 +34,7 @@ export const socialClient = async (actor: string) => {
 };
 
 export const uploadSocialImage = async (actor: string, png: Uint8Array) => {
+  if (config().sandbox) throw new Error('Images cannot be published to Bluesky from the sandbox.');
   didSchema.parse(actor);
   if (png.byteLength > 1_000_000) throw new Error('The support image is too large for Bluesky.');
   if (config().demo) return undefined;

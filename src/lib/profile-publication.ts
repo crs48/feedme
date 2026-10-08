@@ -5,9 +5,9 @@ import { publicJson, PublicHttpError } from './public-network';
 import { profileUri, resolvePublicIdentity, xrpcUrl } from './public-identity';
 import { saveProfile } from './repository';
 
-export type Publication = { state: 'ready'; token: string; profile?: Profile } | { state: 'demo' | 'unavailable'; token: '' };
+export type Publication = { state: 'ready'; token: string; profile?: Profile } | { state: 'demo' | 'sandbox' | 'unavailable'; token: '' };
 export const readPublication = async (): Promise<Publication> => {
-  const cfg = config(); if (cfg.demo) return { state: 'demo', token: '' };
+  const cfg = config(); if (cfg.sandbox) return { state: 'sandbox', token: '' }; if (cfg.demo) return { state: 'demo', token: '' };
   try {
     const { pds } = await resolvePublicIdentity(cfg.ownerDid);
     try {
@@ -22,6 +22,7 @@ export const readPublication = async (): Promise<Publication> => {
 export const publicationConflict = (remote: Profile | undefined, origin: string, discoverable: boolean) => Boolean(remote && ((remote.feedmeUrl && remote.feedmeUrl !== origin) || (remote.discoverable === false && discoverable)));
 export const publishProfile = async (value: unknown, token: string, confirmed: boolean) => {
   const cfg = config(); const profile = profileSchema.parse(value);
+  if (cfg.sandbox) throw new Error('Public profile publishing is disabled in the sandbox. Your live Feedme address stays unchanged.');
   if (cfg.demo) return saveProfile(profile, null);
   const remote = await readPublication();
   if (remote.state !== 'ready') throw new Error('Your current PDS profile could not be checked. Reload Settings and retry; nothing was published.');

@@ -98,7 +98,7 @@ Feedme refuses to open charge-capable checkout without private storage and a web
 
 ## 4. Test in an isolated deployment, then configure production
 
-Use a separate Feedme deployment, HTTPS origin, persistent `DATA_DIR`, encryption keys, test identity/private Habitat recovery space, Stripe sandbox credentials, and sandbox webhook. Never run two active writers against the same Habitat recovery space.
+Use `FEEDME_MODE=sandbox` in a separate Feedme deployment with its own HTTPS origin, persistent `DATA_DIR`, encryption keys, Stripe sandbox credentials, and sandbox webhook. The same Bluesky creator can sign in: sandbox mode blocks public PDS mutations and creates a separate private Habitat space. Never copy production data, credentials, or storage bindings into the sandbox. See [the sandbox guide](sandbox.md) and [test.crs.tips setup](test-crs-tips.md). Never run two active writers against the same Habitat recovery space.
 
 Before the first checkout, Feedme pins the verified merchant ID, account mode, and test/live environment in private recovery metadata. Later requests reject a different binding. Key rotation within the same account and environment is supported. A legacy Connect database cannot silently become an own-account database. Keep production history intact; changing a key is not a data migration.
 
