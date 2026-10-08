@@ -21,10 +21,17 @@ export const libcardMetadataSchema = z.object({
   aspirationOverride: z.number().int().min(0).max(100_000_000).optional(),
   demoOnly: z.boolean().optional(),
 });
-const optIn = z.object({
+export const libcardOptInError = 'Use feedme: { skip: true } with no other fields, or provide a valid feedme.id with optional blurb, aspiration, and skip: false.';
+const optIn = z.discriminatedUnion('skip', [z.object({
+  skip: z.literal(true),
+  id: z.never({ error: libcardOptInError }).optional(),
+  blurb: z.never({ error: libcardOptInError }).optional(),
+  aspiration: z.never({ error: libcardOptInError }).optional(),
+}).strict(), z.object({
   id: targetId.refine(id => !['creator', 'amount'].includes(id), 'This ID is reserved.'),
+  skip: z.literal(false).optional(),
   blurb: z.string().trim().max(240).default(''), aspiration: z.number().int().min(0).max(1_000_000).optional(),
-});
+})], { error: libcardOptInError });
 const presentation = {
   status: z.unknown().transform(value => {
     const known = z.enum(['ready', 'wip', 'writing', 'reading', 'experiment', 'exploration', 'dormant']).safeParse(value);
@@ -38,12 +45,12 @@ export const libcardDocumentSchema = z.object({
   profile: z.object({ name: z.string().trim().min(1).max(80), tagline: z.string().max(500).default(''), location: z.string().max(80).default(''), avatar: z.url().max(2048).refine(v => new URL(v).protocol === 'https:').optional() }),
   about: z.string().max(2000).default(''), items: z.array(item).max(500),
 }).superRefine((doc, ctx) => {
-  const ids = doc.items.flatMap(i => i.feedme ? [i.feedme.id] : []);
+  const ids = doc.items.flatMap(i => i.feedme?.id ? [i.feedme.id] : []);
   if (ids.length > 99 || new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', message: 'Use at most 99 unique opted-in target IDs across links and socials.' });
 });
 export const libcardTargetModeSchema = z.enum(['all', 'explicit', 'preview']);
 export type LibcardTargetMode = z.infer<typeof libcardTargetModeSchema>;
-export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.union([z.literal(2), z.literal(3)]).optional(), targetMode: libcardTargetModeSchema.optional() });
+export const libcardSnapshotSchema = z.object({ source: libcardSourceSchema, document: libcardDocumentSchema, hash: z.string().regex(/^[a-f0-9]{64}$/), etag: z.string().max(512).optional(), checkedAt: z.iso.datetime(), catalogVersion: z.union([z.literal(2), z.literal(3), z.literal(4)]).optional(), targetMode: libcardTargetModeSchema.optional() });
 export type LibcardDocument = z.infer<typeof libcardDocumentSchema>;
 export type LibcardItem = LibcardDocument['items'][number];
 export type LibcardSnapshot = z.infer<typeof libcardSnapshotSchema>;

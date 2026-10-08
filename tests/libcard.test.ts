@@ -17,6 +17,8 @@ import { projectSchema, type Project, type Support } from '../src/lib/model';
 import { prepareRecovery } from '../src/lib/recovery-tracking';
 import { parsePortableValue, recoveryEnvelope, supportRecoverySchema } from '../src/lib/recovery-model';
 import { queueSupport } from '../src/lib/support-ledger';
+import { picksFromForm, prefillPicks } from '../src/lib/picks';
+import { validatePickReview, type PickReview } from '../src/lib/pick-checkout';
 import { saveProject, projects } from '../src/lib/repository';
 import { GET } from '../src/pages/api/public/libcard';
 import type { APIContext } from 'astro';
@@ -27,6 +29,72 @@ beforeEach(() => { state.db = openDatabase(':memory:'); state.enabled = true; st
 afterEach(() => { state.db!.close(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('LibCard parser and managed import', () => {
+  it.each(['links', 'socials'])('accepts exact skip shapes and preserves ordinary opt-ins in %s', field => {
+    const item = field === 'links' ? { label: 'Card link', url: 'https://example.com/link' } : { platform: 'x', url: 'https://x.com/example' };
+    const doc = (feedme: unknown) => parseLibcard(stringify({ profile: { name: 'Alex' }, [field]: [{ ...item, feedme }] }), source);
+    expect(doc({ skip: true }).items[0].feedme).toEqual({ skip: true });
+    expect(doc({ id: 'one' }).items[0].feedme).toEqual({ id: 'one', blurb: '' });
+    expect(doc({ skip: false, id: 'one', blurb: ' More of this. ', aspiration: 1200 }).items[0].feedme)
+      .toEqual({ skip: false, id: 'one', blurb: 'More of this.', aspiration: 1200 });
+    for (const extra of [{ id: 'one' }, { blurb: '' }, { aspiration: 0 }, { id: 'one', blurb: 'Words', aspiration: 1 }])
+      expect(() => doc({ skip: true, ...extra })).toThrow('skip: true');
+    for (const invalid of [{ skip: true, extra: true }, { skip: false }, {}, { skip: 'true' }, { skip: 1 }, { skip: null }, { skip: false, id: 'creator' }, { skip: false, id: 'amount' }, { skip: false, id: 'Not a slug' }])
+      expect(() => doc(invalid)).toThrow();
+  });
+  it.each(['all', 'explicit'] as const)('excludes skipped links and socials from import, checkout, and public signal in %s mode', async mode => {
+    state.defaultSupport = mode;
+    const initial = snapshot(); importLibcard(state.db!, initial);
+    const presence = readRecord<Project>(state.db!, 'project', 'presence')!;
+    overrideLibcard(state.db!, 'presence', false, 120000);
+    const recurring = tip('recurring', { frequency: 'monthly', subscriptionId: 'sub-original', picks: [{ projectId: 'presence', count: 3 }, { projectId: 'x', count: 2 }, { projectId: 'creator', count: 1 }] });
+    putRecord(state.db!, 'support', recurring.id, recurring);
+    const skipped: LibcardSnapshot = { ...initial, document: { ...initial.document, items: initial.document.items.map(item => ['presence', 'x'].includes(item.feedme?.id || '') ? { ...item, feedme: { skip: true } } : item) } };
+    importLibcard(state.db!, skipped);
+    expect(libcardCatalog(skipped, mode).some(item => item.feedme?.skip)).toBe(false);
+    expect(readRecord<Project>(state.db!, 'project', 'presence')).toMatchObject({ createdAt: presence.createdAt, status: 'archived', target: 120000, libcard: { present: false, hidden: false } });
+    expect(readRecord<Project>(state.db!, 'project', 'x')).toMatchObject({ status: 'archived', libcard: { present: false } });
+    const ids = libcardTargets().map(p => p.id);
+    expect(ids).not.toContain('presence'); expect(ids).not.toContain('x'); expect(ids).toContain('creator');
+    expect(prefillPicks(new URLSearchParams('presence=1&x=1'), ids, 4400)).toMatchObject({ picks: [], removed: true });
+    const forged = new FormData(); forged.set('pick:presence', '1');
+    expect(() => picksFromForm(forged, ids)).toThrow('target list changed');
+    expect(() => validatePickReview({} as APIContext, { ...recurring } as unknown as PickReview)).toThrow('no longer accepting picks');
+    const body = await (await GET({} as APIContext)).json();
+    expect(body.targets.some((t: { id: string }) => ['presence', 'x'].includes(t.id))).toBe(false);
+    expect(body.targets[0]).toMatchObject({ id: 'creator', publicCount: 1, publicShareMillis: 1000 });
+    expect(readRecord(state.db!, 'support', recurring.id)).toEqual(recurring);
+    // Even an old Studio form cannot reactivate a source-skipped project.
+    overrideLibcard(state.db!, 'presence', false, 120000);
+    expect(readRecord<Project>(state.db!, 'project', 'presence')?.status).toBe('archived');
+    importLibcard(state.db!, initial);
+    expect(readRecord<Project>(state.db!, 'project', 'presence')).toMatchObject({ createdAt: presence.createdAt, status: 'active', target: 120000 });
+    expect(readRecord(state.db!, 'support', recurring.id)).toEqual(recurring);
+  });
+  it.each(['all', 'explicit'] as const)('imports only the creator when every source item is skipped in %s mode', mode => {
+    state.defaultSupport = mode;
+    const initial = snapshot();
+    importLibcard(state.db!, { ...initial, document: { ...initial.document, items: initial.document.items.map(item => ({ ...item, feedme: { skip: true } })) } });
+    expect(libcardTargets().map(p => p.id)).toEqual(['creator']);
+    expect(listRecords<Project>(state.db!, 'project').map(p => p.id)).toEqual(['creator']);
+    expect(libcardSnapshot()?.document.items).toHaveLength(initial.document.items.length);
+  });
+  it('restores the same automatic ID after a skip, keeping overrides and local hiding', () => {
+    state.defaultSupport = 'all';
+    const initial = snapshot(); importLibcard(state.db!, initial);
+    const resume = libcardTargets().find(p => p.title === 'Résumé')!;
+    const skipped: LibcardSnapshot = { ...initial, document: { ...initial.document, items: initial.document.items.map(item => item.label === 'Résumé' ? { ...item, feedme: { skip: true } } : item) } };
+    overrideLibcard(state.db!, resume.id, false, 12300);
+    importLibcard(state.db!, skipped);
+    expect(readRecord<Project>(state.db!, 'project', resume.id)).toMatchObject({ status: 'archived', libcard: { present: false } });
+    const saved = libcardSnapshot()!;
+    const envelope = recoveryEnvelope('did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', '98d3c0e0-87f3-4d8e-82a2-91cf8b668a31', { table: 'kv', kind: 'libcard', key: 'snapshot' }, saved);
+    expect(parsePortableValue(envelope, JSON.parse(envelope.json))).toEqual(saved);
+    importLibcard(state.db!, initial);
+    expect(libcardTargets().find(p => p.title === 'Résumé')).toMatchObject({ id: resume.id, createdAt: resume.createdAt, status: 'active', target: 12300 });
+    overrideLibcard(state.db!, resume.id, true, 45600);
+    importLibcard(state.db!, skipped); importLibcard(state.db!, initial);
+    expect(readRecord<Project>(state.db!, 'project', resume.id)).toMatchObject({ status: 'archived', target: 45600, libcard: { present: true, hidden: true } });
+  });
   it('imports all links and socials as real managed targets without editing the source', async () => {
     state.defaultSupport = 'all';
     const initial = snapshot(); importLibcard(state.db!, initial);
@@ -181,6 +249,33 @@ describe('refresh and private recovery', () => {
     const providerFailure = await refreshLibcard(true, async () => { throw new Error('secret-provider-response'); });
     expect(providerFailure?.error).not.toContain('secret-provider-response'); expect(providerFailure?.error).toContain('No catalog has been imported yet.');
   });
+  it('refreshes a version-three snapshot without a stale ETag and archives newly skipped targets', async () => {
+    state.defaultSupport = 'all';
+    const old = { ...snapshot(), catalogVersion: 3 as const, etag: '"old-catalog"' };
+    importLibcard(state.db!, old);
+    const resume = libcardTargets().find(p => p.title === 'Résumé')!;
+    const updated = parse(libcardFixture);
+    updated.links.find((item: { label: string }) => item.label === 'Résumé').feedme = { skip: true };
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(stringify(updated), { headers: { etag: '"skipped"' } }));
+    await refreshLibcard(false, fetcher);
+    expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
+    expect(libcardSnapshot()?.catalogVersion).toBe(4);
+    expect(libcardTargets().some(p => p.id === resume.id)).toBe(false);
+    expect(readRecord<Project>(state.db!, 'project', resume.id)?.status).toBe('archived');
+    expect((await (await GET({} as APIContext)).json()).targets.some((p: { id: string }) => p.id === resume.id)).toBe(false);
+    const unchanged = vi.fn<typeof fetch>(async () => new Response(null, { status: 304 }));
+    await refreshLibcard(true, unchanged);
+    expect(unchanged.mock.calls[0][1]?.headers).toEqual({ 'If-None-Match': '"skipped"' });
+    expect(libcardTargets().some(p => p.id === resume.id)).toBe(false);
+  });
+  it('rejects conflicting skip fields with a safe, clear diagnostic and retains the last-good catalog', async () => {
+    importLibcard(state.db!, snapshot());
+    const saved = libcardSnapshot();
+    const result = await refreshLibcard(true, async () => new Response(consumerYaml.replace('id: presence', 'id: presence\n      skip: true')));
+    expect(result?.error).toContain('feedme: { skip: true } with no other fields');
+    expect(result?.error).toContain('last good snapshot is unchanged');
+    expect(libcardSnapshot()).toEqual(saved);
+  });
   it('previews every real source item without changing source opt-ins or the stored identity', async () => {
     state.demo = true; state.remoteDemo = true;
     expect(libcardSnapshot()).toBeUndefined();
@@ -213,7 +308,7 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     await refreshLibcard(true, fetcher);
     expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
     expect(libcardSnapshot()?.document.items[0]).toMatchObject({ icon: 'heart', status: 'ready' });
-    expect(libcardSnapshot()?.catalogVersion).toBe(3);
+    expect(libcardSnapshot()?.catalogVersion).toBe(4);
   });
   it('preserves demo target overrides through removal and stops accepting them outside the preview', () => {
     state.demo = true; state.remoteDemo = true;

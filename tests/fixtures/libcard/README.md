@@ -5,3 +5,5 @@
 The JSON is a consumer shape/forward-compatibility fixture, including unknown fields and an API-only target. It is not Feedme payment history or an expected monetary total. Feedme's endpoint keeps its stricter public-field allowlist.
 
 The YAML imports `creator`, `presence`, `open-source`, `retired`, and `x`; the HTTP fixture hides `retired` locally. `seed.ts` runs only in a fresh temporary demo process, then deliberately triggers a native-ID collision to verify Studio's diagnostic and last-good retention. No test contacts GitHub, Stripe, or Habitat.
+
+`skipped.config.yaml` is a Feedme-authored regression fixture for LibCard's merged per-item `feedme: { skip: true }` contract. The seed combines it with the unchanged consumer YAML, importing one link and social before skipping them, and skipping two other items from the start. HTTP checks run in both `all` and `explicit` modes and verify catalog/API omission, checkout exclusion, and read-only “Skipped in LibCard” rows in Studio. The public response contract in `scripts/libcard-contract.mjs` is unchanged; it never includes the source `feedme` object.

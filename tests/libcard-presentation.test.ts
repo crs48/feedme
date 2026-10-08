@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { stringify } from 'yaml';
 import { parseLibcard, libcardSnapshotSchema, type LibcardSnapshot } from '../src/lib/libcard-schema';
 import { libcardCatalog, sampleLibcardGoal } from '../src/lib/libcard-catalog';
 import { cachedGithubStars, githubRepo, refreshGithubStars } from '../src/lib/libcard-github';
@@ -26,7 +27,7 @@ describe('LibCard catalog presentation', () => {
     const grouped = pickGroups.flatMap(group => catalog.filter(item => groupForItem(item) === group.id));
     expect(grouped.map(item => item.targetId)).toEqual(catalog.map(item => item.targetId));
     expect(libcardCatalog({ ...data, document: { ...data.document, items: data.document.items.map(item => ({ ...item, status: undefined })) } }).map(item => item.targetId)).toEqual(catalog.map(item => item.targetId));
-    for (const catalogVersion of [2, 3]) expect(libcardSnapshotSchema.parse({ ...data, catalogVersion }).document.items).toEqual(data.document.items);
+    for (const catalogVersion of [2, 3, 4]) expect(libcardSnapshotSchema.parse({ ...data, catalogVersion }).document.items).toEqual(data.document.items);
   });
   it('retains source titles, icons, companion repositories and star modes', () => {
     const items = snapshot().document.items;
@@ -58,6 +59,29 @@ describe('LibCard catalog presentation', () => {
     const catalog = libcardCatalog(data);
     expect(catalog).toHaveLength(110); expect(catalog.filter(i => i.targetId)).toHaveLength(99);
     expect(catalog[109].targetId).toBe('explicit'); expect(catalog[109].demoOnly).toBeUndefined();
+  });
+  it.each(['all', 'explicit', 'preview'] as const)('skipped items neither reserve IDs nor consume the 99-target cap in %s mode', mode => {
+    const skipped = Array.from({ length: 120 }, (_, n) => ({ label: `Skipped ${n}`, url: `https://example.com/skip/${n}`, feedme: { skip: true } }));
+    const explicit = Array.from({ length: 99 }, (_, n) => ({ label: `Target ${n}`, url: `https://example.com/target/${n}`, feedme: { id: `target-${n}`, skip: false } }));
+    const data = { ...snapshot(), document: parseLibcard(stringify({ profile: { name: 'Chris' }, links: [...skipped, ...explicit] }), source) };
+    const catalog = libcardCatalog(data, mode);
+    expect(catalog).toHaveLength(99);
+    expect(catalog.map(item => item.targetId)).toEqual(explicit.map(item => item.feedme.id));
+    expect(data.document.items.filter(item => item.feedme?.skip)).toHaveLength(120);
+    expect(() => parseLibcard(stringify({ profile: { name: 'Chris' }, links: [...skipped, ...explicit, { label: 'Too many', url: 'https://example.com/extra', feedme: { id: 'extra' } }] }), source)).toThrow('99 unique');
+  });
+  it.each(['all', 'preview'] as const)('skips items before automatic assignment and preserves automatic IDs in %s mode', mode => {
+    const data = snapshot();
+    const before = libcardCatalog(data, mode);
+    const skipped: LibcardSnapshot = { ...data, document: { ...data.document, items: data.document.items.map((item, i) => i === 0 ? { ...item, feedme: { skip: true } } : item) } };
+    expect(libcardCatalog(skipped, mode).map(item => item.targetId)).toEqual(before.slice(1).map(item => item.targetId));
+    expect(libcardCatalog(data, mode)).toEqual(before);
+    const many: LibcardSnapshot = { ...data, document: { ...data.document, items: [
+      ...skipped.document.items.filter(item => item.feedme?.skip),
+      ...Array.from({ length: 99 }, (_, n) => ({ label: `Auto ${n}`, url: `https://example.com/${n}`, kind: 'link' as const })),
+    ] } };
+    expect(libcardCatalog(many, mode)).toHaveLength(99);
+    expect(libcardCatalog(many, mode).every(item => item.targetId)).toBe(true);
   });
   it('keeps randomized goals stable, honors local overrides, and includes beyond-goal examples', () => {
     const p = { id: 'presence', target: 0, libcard: { aspirationOverride: undefined } } as Project;
