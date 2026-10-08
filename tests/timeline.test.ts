@@ -29,6 +29,71 @@ describe('supporter timeline privacy', () => {
     expect(first.entries).toHaveLength(12); expect(first.hasOlder).toBe(true);
     expect(second.entries).toHaveLength(3); expect(second.hasOlder).toBe(false); expect(second.hasNewer).toBe(true);
     expect(first.entries[0].createdAt).toBe(records[28].createdAt);
-    expect(first.entries.every((e) => e.project.endsWith('/sauna'))).toBe(true);
+    expect(first.entries.every((e) => e.projects.some((p) => p.projectId === 'sauna'))).toBe(true);
+  });
+});
+
+const split: Support = { ...sample, allocations: [
+  { projectId: 'sauna', amount: 500, activityId: 'sauna-activity' },
+  { projectId: 'writing', amount: 2000, activityId: 'writing-activity' },
+] };
+
+describe('payment-level supporter timeline', () => {
+  it('shows a split payment once with its exact total and an allowlisted breakdown', () => {
+    const feed = supporterTimeline([split], owner);
+    expect(feed.total).toBe(1);
+    expect(feed.entries).toEqual([{
+      visibility: 'public', supporter: sample.supporterDid, amount: 2500, createdAt: sample.createdAt,
+      projects: [{ projectId: 'sauna', amount: 500 }, { projectId: 'writing', amount: 2000 }],
+    }]);
+    expect(JSON.stringify(feed)).not.toMatch(/secret|NOTE|activity|checkout|picks/);
+  });
+  it('does not merge distinct payments from the same person at the same time', () => {
+    const feed = supporterTimeline([split, { ...split, id: 'another-payment' }], owner);
+    expect(feed.total).toBe(2);
+    expect(feed.entries).toHaveLength(2);
+  });
+  it('paginates payments, and finds projects beyond the first allocation', () => {
+    const records = Array.from({ length: 13 }, (_, i) => ({ ...split, id: `payment-${String(i).padStart(2, '0')}`, amount: 2500 + i,
+      allocations: split.allocations!.map((part, index) => ({ ...part, amount: part.amount + (index === 0 ? i : 0) })),
+    }));
+    const first = supporterTimeline(records, owner, 'writing');
+    const last = supporterTimeline([...records].reverse(), owner, 'writing', 1);
+    expect(first.total).toBe(13);
+    expect(first.entries).toHaveLength(12);
+    expect(first.hasOlder).toBe(true);
+    expect(last.entries).toHaveLength(1);
+    expect(last.entries[0]).toMatchObject({ amount: 2500 });
+    expect(last.hasNewer).toBe(true);
+    expect(last.hasOlder).toBe(false);
+    expect(supporterTimeline(records, owner, 'missing').total).toBe(0);
+  });
+  it('uses verified payment time and keeps legacy single-project tips', () => {
+    const paidAt = '2026-09-26T00:00:00Z';
+    const feed = supporterTimeline([sample, { ...split, id: 'later', paidAt }], owner);
+    expect(feed.entries.map((e) => e.createdAt)).toEqual([paidAt, sample.createdAt]);
+    expect(feed.entries[1].projects).toEqual([{ projectId: 'sauna', amount: 2500 }]);
+  });
+  it('keeps refunded parts consistent with the ledger and omits fully reversed tips', () => {
+    const partial = { ...split, refundedAmount: 700 };
+    expect(supporterTimeline([partial], owner).entries[0]).toMatchObject({ amount: 1800, projects: [{ projectId: 'writing', amount: 1800 }] });
+    expect(supporterTimeline([partial], owner, 'sauna').total).toBe(0);
+    for (const support of [
+      { ...split, refundedAmount: 2500 }, { ...split, disputed: true },
+      ...(['pending', 'failed', 'refunded', 'disputed'] as const).map((status) => ({ ...split, status })),
+    ]) expect(supporterTimeline([support], owner).entries).toEqual([]);
+  });
+  it('groups opted-in anonymous support without revealing identity, amount, or private notes', () => {
+    const anonymous: Support = { ...split, visibility: 'anonymous', announceAnonymously: true };
+    const feed = supporterTimeline([anonymous], owner);
+    expect(feed.entries).toEqual([{
+      visibility: 'anonymous', createdAt: sample.createdAt,
+      projects: [{ projectId: 'sauna' }, { projectId: 'writing' }],
+    }]);
+    expect(JSON.stringify(feed)).not.toMatch(/amount|2500|500|2000|bbbb|secret|NOTE|activity|supporter|picks/);
+    expect(supporterTimeline([{ ...anonymous, announceAnonymously: false }], owner).total).toBe(0);
+    expect(supporterTimeline([{ ...anonymous, activityId: undefined }], owner).total).toBe(0);
+    expect(supporterTimeline([{ ...anonymous, visibility: 'private' }], owner).total).toBe(0);
+    expect(supporterTimeline([{ ...split, supporterDid: undefined }], owner).total).toBe(0);
   });
 });

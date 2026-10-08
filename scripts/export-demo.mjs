@@ -6,7 +6,10 @@ import { createServer } from 'node:net';
 import { once } from 'node:events';
 import { DatabaseSync } from 'node:sqlite';
 import { load } from 'cheerio';
+import { tsImport } from 'tsx/esm/api';
 import { demoPath, demoPolicy, demoOrigin, isolatedEnvironment } from './static-demo.mjs';
+
+const { supporterTimeline } = await tsImport('../src/lib/support-timeline.ts', import.meta.url);
 
 const root = resolve(import.meta.dirname, '..');
 const output = join(root, 'site-dist');
@@ -152,8 +155,7 @@ try {
     ...['a','b','c','d','e','f'].map((letter) => `/recommend?did=did:plc:${letter.repeat(24)}`), receiptPath, shareRoute];
   for (const base of ['/', ...projects.map((project) => `/support/${project.id}`)]) {
     const id = base.startsWith('/support/') ? base.split('/').at(-1) : undefined;
-    const count = rows('support').filter((s) => s.visibility === 'public' || (s.visibility === 'anonymous' && s.announceAnonymously && s.activityId))
-      .flatMap((s) => s.allocations || [{ projectId: s.projectId }]).filter((part) => !id || part.projectId === id).length;
+    const count = supporterTimeline(rows('support'), 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', id).total;
     for (let page = 1; page < Math.ceil(count / 12); page++) publicRoutes.push(`${base}?tipsPage=${page}`);
   }
   for (const path of publicRoutes) await render(path, map(path, '/'));

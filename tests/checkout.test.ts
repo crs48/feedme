@@ -28,8 +28,9 @@ describe('allocated checkout requests', () => {
     expect((await run()).headers.get('location')).toBe('/thanks?id=request');
     expect(support('request')?.amount).toBe(3000);
     expect(supports().map((s) => s.amount)).toEqual([1800, 1200]);
-    expect(totals('one', false).amount).toBe(1800);
-    expect(totals('two', false).amount).toBe(1200);
+    expect(totals('one', false)).toEqual({ amount: 1800, count: 1 });
+    expect(totals('two', false)).toEqual({ amount: 1200, count: 1 });
+    expect(totals(undefined, false)).toEqual({ amount: 3000, count: 1 });
     expect(totals().amount).toBe(0);
   });
   it('reuses a repeated submission but rejects changes to an existing split', async () => {
@@ -63,7 +64,7 @@ describe('allocated checkout requests', () => {
     expect((await run({ visibility: 'public' })).headers.get('location')).toContain('Sign%20in');
     state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
     await run({ visibility: 'public', note: 'Private note' });
-    expect(totals().amount).toBe(3000);
+    expect(totals()).toEqual({ amount: 3000, count: 1 });
     expect(supports().every((s) => s.supporterDid === state.user?.did && s.note === 'Private note')).toBe(true);
   });
   it('sends exact per-project line items to one live checkout and keeps payment pending', async () => {

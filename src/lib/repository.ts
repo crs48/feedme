@@ -11,8 +11,11 @@ export const supports = () => listRecords<Support>(getDb(), 'support').flatMap(s
 export const payments = () => listRecords<Support>(getDb(), 'support');
 export const support = (id: string) => readRecord<Support>(getDb(), 'support', id);
 export const totals = (projectId?: string, publicOnly = true) => {
-  const records = supports().filter((s) => (!projectId || s.projectId === projectId) && (!publicOnly || s.visibility === 'public'));
-  return { amount: records.reduce((sum, s) => sum + netSupport(s), 0), count: records.filter((s) => netSupport(s) > 0).length };
+  const amounts = payments().filter((s) => !publicOnly || s.visibility === 'public')
+    .map((s) => projectId
+      ? supportParts(s).filter((part) => part.projectId === projectId).reduce((sum, part) => sum + netSupport(part), 0)
+      : netSupport(s));
+  return { amount: amounts.reduce((sum, amount) => sum + amount, 0), count: amounts.filter((amount) => amount > 0).length };
 };
 const queuePublic = (kind: string, id: string, value: object, collection = kind) => {
   putRecord(getDb(), kind, id, value);

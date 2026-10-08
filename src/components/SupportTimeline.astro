@@ -1,27 +1,132 @@
 ---
 import Icon from './Icon.astro';
 import Avatar from './Avatar.astro';
-import { demoPerson } from '../lib/demo-media';
 import { config } from '../lib/config';
-import { supports, project } from '../lib/repository';
+import { payments, project } from '../lib/repository';
+import { people } from '../lib/people';
 import { money } from '../lib/model';
-import { parseProjectUri } from '../lib/social-model';
 import { supporterTimeline } from '../lib/support-timeline';
 interface Props { projectId?: string; }
 const { projectId } = Astro.props;
-const feed = supporterTimeline(supports(), config().ownerDid, projectId, Number(Astro.url.searchParams.get('tipsPage')) || 0);
+const feed = supporterTimeline(payments(), config().ownerDid, projectId, Number(Astro.url.searchParams.get('tipsPage')) || 0);
+const supporters = await people(feed.entries.flatMap((entry) => entry.visibility === 'public' ? [entry.supporter] : []));
 const href = (page: number) => { const params = new URLSearchParams(Astro.url.search); params.set('tipsPage', String(page)); return `${Astro.url.pathname}?${params}#supporters`; };
 ---
 <section id="supporters" class="supporter-timeline mt-12" aria-label="Recent supporters">
   <div class="mb-6"><h2 class="section-title">Recent support</h2><p class="text-sm muted mt-2">{projectId ? 'The latest tips for this project.' : 'The latest tips across all my projects.'}</p></div>
-  <div class="panel">{feed.entries.length ? <ol>{feed.entries.map((entry) => { const target = parseProjectUri(entry.project); const p = target ? project(target.id) : undefined; const anonymous = entry.visibility === 'anonymous'; const person = !anonymous && config().demo ? demoPerson(entry.supporter!) : undefined; return <li class="tip-row"><>{anonymous ? <span class="tip-mark" aria-hidden="true"><Icon name="user" size={18}/></span> : <Avatar name={person?.name || 'Supporter'} src={person?.avatar}/>}</><div class="min-w-0 flex-1"><div class="flex flex-wrap justify-between gap-2"><strong class="text-sm">{anonymous ? 'Anonymous' : config().demo ? person?.name || 'Demo supporter' : <a href={`https://bsky.app/profile/${encodeURIComponent(entry.supporter!)}`} rel="noopener noreferrer" class="underline break-all">{entry.supporter}</a>}</strong>{!anonymous && <span class="text-sm font-semibold">{money(entry.amount!)}</span>}</div><p class="text-xs muted mt-1">Supported {p ? <a class="text-primary" href={`/support/${p.id}`}>{p.title}</a> : 'a project'}</p><time class="block text-xs muted mt-2" datetime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</time></div></li>; })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
+  <div class="panel">
+    {feed.entries.length ? <ol>{feed.entries.map((entry) => {
+      const person = entry.visibility === 'public' ? supporters.get(entry.supporter) : undefined;
+      const name = entry.visibility === 'anonymous' ? 'Anonymous' : person?.name || 'Supporter';
+      const profileUrl = entry.visibility === 'public' ? `https://bsky.app/profile/${encodeURIComponent(entry.supporter)}` : undefined;
+      const parts = entry.projects.map((part) => {
+        const p = project(part.projectId);
+        const url = p?.libcard ? p.libcard.url || '/' : p && ['active', 'complete'].includes(p.status) ? `/support/${p.id}` : undefined;
+        return { title: p?.title || 'A project', url, amount: 'amount' in part ? part.amount : undefined };
+      });
+      const amount = entry.visibility === 'public' ? projectId ? entry.projects.find((p) => p.projectId === projectId)?.amount : entry.amount : undefined;
+      return <li class="tip-row">
+        {profileUrl ? <a class="tip-avatar" href={profileUrl} aria-label={`${name} on Bluesky`} rel="noopener noreferrer"><Avatar name={name} src={person?.avatar}/></a> : <span class="tip-mark" aria-hidden="true"><Icon name="user" size={18}/></span>}
+        <div class="tip-body">
+          <div class="tip-heading">
+            <div class="tip-person">
+              <strong class="text-sm">{profileUrl ? <a href={profileUrl} rel="noopener noreferrer">{name}</a> : name}</strong>
+              {person?.handle && <a class="tip-handle" href={profileUrl} rel="noopener noreferrer">@{person.handle}</a>}
+            </div>
+            {amount !== undefined && <div class="tip-amount"><strong>{money(amount)}</strong>{projectId && entry.visibility === 'public' && amount !== entry.amount && <small>of a {money(entry.amount)} tip</small>}</div>}
+          </div>
+          <details class="tip-breakdown" data-tip-breakdown>
+            <summary aria-label={`Support breakdown: ${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`}>
+              <span>Supported {parts.length === 1 ? parts[0].title : `${parts.length} projects`}</span><span class="tip-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="tip-popover">
+              <div class="tip-popover-heading"><strong>Support breakdown</strong>{entry.visibility === 'public' && <span>{money(entry.amount)}</span>}</div>
+              <ul class="tip-parts" aria-label="Supported projects" tabindex="0">
+                {parts.map((part) => <li><span>{part.url ? <a href={part.url} rel="noopener noreferrer">{part.title}</a> : part.title}</span>{part.amount !== undefined && <strong>{money(part.amount)}</strong>}</li>)}
+              </ul>
+              <p>{entry.visibility === 'anonymous' ? 'This supporter chose to keep their amount hidden.' : 'One tip, shared across these projects. Amounts reflect any refunds.'}</p>
+            </div>
+          </details>
+          <time class="block text-xs muted" datetime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'UTC' })} UTC</time>
+        </div>
+      </li>;
+    })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
     {(feed.hasOlder || feed.hasNewer) && <nav aria-label="Supporter timeline pages" class="flex justify-between gap-5 mt-6 pt-5 border-t border-[#e3e8ee]">{feed.hasNewer ? <a class="button secondary" href={href(feed.page - 1)}>← Newer tips</a> : <span/>}{feed.hasOlder && <a class="button secondary" href={href(feed.page + 1)}>Older tips →</a>}</nav>}
   </div>
   <p class="text-xs muted mt-3">Public tips show the amount remaining after refunds. Anonymous entries appear only with permission; their identity and amount stay hidden. Private tips stay off this timeline.</p>
 </section>
+<script>
+  document.querySelectorAll<HTMLDetailsElement>('[data-tip-breakdown]').forEach((details) => {
+    const summary = details.querySelector('summary')!;
+    const popover = details.querySelector<HTMLElement>('.tip-popover')!;
+    let preview = false;
+    details.dataset.enhanced = '';
+    const place = () => {
+      const { top, bottom } = details.getBoundingClientRect();
+      const below = window.innerHeight - bottom;
+      details.dataset.side = below < popover.offsetHeight && top > below ? 'above' : 'below';
+    };
+    const close = () => { details.open = false; preview = false; };
+    details.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'mouse' || details.open) return;
+      preview = true; details.open = true; place();
+    });
+    details.addEventListener('pointerleave', () => {
+      if (preview && !details.contains(document.activeElement)) close();
+    });
+    details.addEventListener('focusout', () => {
+      requestAnimationFrame(() => {
+        if (preview && !details.matches(':hover') && !details.contains(document.activeElement)) close();
+      });
+    });
+    summary.addEventListener('click', (event) => {
+      // A click pins a hover preview, so touch and mouse use the same disclosure.
+      if (preview) { event.preventDefault(); preview = false; }
+    });
+    details.addEventListener('toggle', () => { if (details.open) place(); });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !details.open) return;
+      if (popover.contains(document.activeElement)) summary.focus();
+      close();
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && !details.contains(event.target)) close();
+    });
+  });
+</script>
 <style>
-  .tip-row { display:flex; align-items:flex-start; gap:12px; padding:19px 0; }
+  .tip-row { display:flex; align-items:flex-start; gap:12px; padding:20px 0; }
   .tip-row:first-child { padding-top:0; } .tip-row:last-child { padding-bottom:0; }
-  .tip-row + .tip-row { border-top:1px solid #e3e8ee; }
+  .tip-row + .tip-row { border-top:1px solid var(--color-border); }
+  .tip-avatar { flex-shrink:0; border-radius:50%; }
   .tip-mark { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; color:#596579; background:#f6f8fa; flex-shrink:0; }
+  .tip-body { flex:1; min-width:0; }
+  .tip-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:8px 16px; flex-wrap:wrap; }
+  .tip-person { min-width:0; overflow-wrap:anywhere; }
+  .tip-person a:hover { text-decoration:underline; }
+  .tip-handle { display:block; color:var(--color-muted); font-size:12px; margin-top:2px; }
+  .tip-amount { margin-left:auto; text-align:right; font-size:14px; white-space:nowrap; }
+  .tip-amount small { display:block; color:var(--color-muted); font-size:11px; }
+  .tip-breakdown { position:relative; margin-block:2px; }
+  .tip-breakdown summary { display:flex; align-items:center; gap:6px; width:fit-content; max-width:100%; min-height:44px; color:var(--color-primary); font-size:12px; cursor:pointer; list-style:none; border-radius:4px; }
+  .tip-breakdown summary::-webkit-details-marker { display:none; }
+  .tip-breakdown summary span:first-child { overflow-wrap:anywhere; }
+  .tip-chevron { font-size:16px; flex-shrink:0; transition:transform .15s; }
+  .tip-breakdown[open] .tip-chevron { transform:rotate(180deg); }
+  .tip-breakdown summary:hover span:first-child { text-decoration:underline; }
+  .tip-popover { background:white; border:1px solid var(--color-border); border-radius:12px; box-shadow:0 10px 36px #1a1f3618,0 2px 8px #1a1f360a; margin-bottom:12px; }
+  .tip-breakdown[data-enhanced] .tip-popover { position:absolute; z-index:20; top:100%; left:0; width:min(380px,100%); margin:0; }
+  .tip-breakdown[data-enhanced][data-side='above'] .tip-popover { top:auto; bottom:100%; }
+  .tip-popover-heading { display:flex; justify-content:space-between; gap:12px; padding:14px 16px; font-size:12px; border-bottom:1px solid var(--color-border); }
+  .tip-popover-heading span { white-space:nowrap; font-weight:600; }
+  .tip-parts { padding:4px 16px; max-height:min(320px,40vh); overflow-y:auto; overscroll-behavior:contain; }
+  .tip-parts li { display:flex; align-items:baseline; justify-content:space-between; gap:16px; padding-block:12px; font-size:12px; }
+  .tip-parts li + li { border-top:1px solid #f0f3f7; }
+  .tip-parts li > span { min-width:0; overflow-wrap:anywhere; }
+  .tip-parts a { color:var(--color-primary); }
+  .tip-parts a:hover { text-decoration:underline; }
+  .tip-parts strong { font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:500; }
+  .tip-popover > p { font-size:11px; color:var(--color-muted); padding:12px 16px; border-top:1px solid var(--color-border); line-height:1.5; }
+  .tip-breakdown summary:focus-visible, .tip-avatar:focus-visible, .tip-parts:focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; }
+  @media(prefers-reduced-motion:reduce) { .tip-chevron { transition:none; } }
 </style>
