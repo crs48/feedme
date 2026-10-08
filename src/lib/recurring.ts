@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { stripeRequestOptions } from './stripe-context';
 import type Stripe from 'stripe';
 import type { DatabaseSync } from 'node:sqlite';
 import { putRecord, readRecord } from './db';
@@ -89,7 +90,7 @@ export const applyBillingEvent = (db: DatabaseSync, event: Stripe.Event, ownerDi
 
 // Stripe's current API exposes invoice payments separately from the Invoice object.
 export const verifiedInvoicePayment = async (stripe: Stripe, invoice: Stripe.Invoice, account: string): Promise<InvoicePayment> => {
-  const options = { stripeAccount: account };
+  const options = stripeRequestOptions(account);
   const payments = await stripe.invoicePayments.list({ invoice: invoice.id, status: 'paid', limit: 100 }, options);
   const payment = payments.data[0];
   if (payments.has_more || payments.data.length !== 1 || payment.payment.type !== 'payment_intent' || stripeId(payment.invoice) !== invoice.id)
@@ -104,7 +105,7 @@ export const verifiedInvoicePayment = async (stripe: Stripe, invoice: Stripe.Inv
 };
 
 export const recurringRefundSupportId = async (stripe: Stripe, paymentIntentId: string, account: string) => {
-  const options = { stripeAccount: account };
+  const options = stripeRequestOptions(account);
   const payments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: paymentIntentId }, status: 'paid', limit: 100 }, options);
   if (!payments.data.length) return undefined;
   if (payments.has_more || payments.data.length !== 1) throw new Error('Ambiguous recurring payment.');

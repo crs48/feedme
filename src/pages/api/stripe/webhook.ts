@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { merchantEvent, stripeRequestOptions } from '../../../lib/stripe-context';
 import type Stripe from 'stripe';
 import { config } from '../../../lib/config';
 import { getDb, listRecords } from '../../../lib/db';
@@ -8,14 +9,16 @@ import { applyStripeEvent, connectedAccount, stripeClient } from '../../../lib/p
 
 export const POST: APIRoute = async ({ request }) => {
   const cfg = config();
-  if (cfg.demo || !cfg.stripeWebhookSecret || !connectedAccount()) return new Response('Webhook not configured', { status: 503 });
+  if (cfg.demo || !cfg.stripeKey || !cfg.stripeWebhookSecret || !connectedAccount()) return new Response('Webhook not configured', { status: 503 });
   let event;
   try {
     const body = await request.text();
     event = stripeClient().webhooks.constructEvent(body, request.headers.get('stripe-signature') || '', cfg.stripeWebhookSecret);
   } catch { return new Response('Invalid signature', { status: 400 }); }
-  if (event.account !== connectedAccount()) return Response.json({ ignored: true });
   try {
+    const normalized = merchantEvent(event, getDb(), connectedAccount()!);
+    if (!normalized) return Response.json({ ignored: true });
+    event = normalized;
     let supportIdHint: string | undefined;
     const stripe = stripeClient();
     const account = connectedAccount()!;
@@ -24,7 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
       billingContext.payment = await verifiedInvoicePayment(stripe, event.data.object as Stripe.Invoice, account);
     }
     if (['customer.subscription.created', 'customer.subscription.updated'].includes(event.type) && (event.data.object as Stripe.Subscription).metadata.feedme_support_id) {
-      billingContext.subscription = await stripe.subscriptions.retrieve((event.data.object as Stripe.Subscription).id, {}, { stripeAccount: account });
+      billingContext.subscription = await stripe.subscriptions.retrieve((event.data.object as Stripe.Subscription).id, {}, stripeRequestOptions(account));
     }
     if (['charge.refunded', 'charge.dispute.created', 'charge.dispute.closed'].includes(event.type)) {
       const object = event.data.object as Stripe.Charge | Stripe.Dispute;
@@ -32,7 +35,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (!paymentIntentId) return Response.json({ ignored: true });
       // Identify our payment even when a refund/dispute arrives before Checkout's event.
       // Other charges made directly by the creator are outside this application.
-      const intent = await stripeClient().paymentIntents.retrieve(paymentIntentId, {}, { stripeAccount: connectedAccount()! });
+      const intent = await stripeClient().paymentIntents.retrieve(paymentIntentId, {}, stripeRequestOptions(account));
       supportIdHint = listRecords<Support>(getDb(), 'support').find((support) => support.accountId === account && support.paymentIntentId === paymentIntentId)?.id
         || intent.metadata.feedme_support_id || await recurringRefundSupportId(stripe, paymentIntentId, account);
       if (!supportIdHint) return Response.json({ ignored: true });

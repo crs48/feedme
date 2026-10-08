@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite';
+import { stripeRequestOptions, stripeLiveMode, verifyStripeAccount } from './stripe-context';
 import type Stripe from 'stripe';
 import { config } from './config';
 import { getKv, listRecords, putRecord, readRecord, setKv } from './db';
@@ -12,11 +13,12 @@ export const reconcileStripe = async (db: DatabaseSync, client?: Stripe) => {
   const account = getKv<string>(db, 'app', 'stripe-account');
   const before = listRecords<Support>(db, 'support');
   if (!account) { if (before.length) throw new Error('Payments cannot be reconciled without a connected account.'); setKv(db, 'recovery', 'reconciled-at', new Date().toISOString()); return 'No Stripe account or payments to reconcile.'; }
-  const stripe = client || stripeClient(); const options = { stripeAccount: account }; const now = Math.floor(Date.now() / 1000);
-  await stripe.accounts.retrieve(account);
+  const stripe = client || stripeClient(); const options = stripeRequestOptions(account); const now = Math.floor(Date.now() / 1000);
+  await verifyStripeAccount(stripe, account, db, true);
   const seenSubscriptions = new Set<string>(); const seenInvoices = new Set<string>();
   let scanned = 0; const limit = () => { if (++scanned > MAX_RESOURCES) throw new Error('Stripe recovery exceeded the resource limit; no partial recovery may resume.'); };
   for await (const session of stripe.checkout.sessions.list({ limit: 100 }, options)) {
+    if (session.livemode !== stripeLiveMode()) throw new Error('Stripe recovery environment mismatch.');
     limit(); const id = session.metadata?.feedme_support_id; if (!id) continue;
     const root = readRecord<Support>(db, 'support', id);
     if (!root) throw new Error('Stripe contains a Feedme checkout whose allocation intent is missing from this recovery. Choose a newer backup or Habitat checkpoint.');

@@ -67,7 +67,7 @@ flowchart TD
 
 ## Decisions still needed
 
-- Keep Connect for `crs.tips`, or build the proposed own-account mode first? Existing deployments default to Connect until a deliberate migration is completed.
+- Own-account mode is implemented and selected for `crs.tips`; existing installations still default to Connect. Live credentials and real sandbox acceptance remain operational prerequisites.
 - Should coaching invoices remain in Stripe Dashboard initially, or be drafted inside Feedme? Dashboard is the proposed simplest start.
 - Confirm the seller's actual business location, customer markets, taxable offerings, tax registrations, and whether prices include tax. The word “tip” does not establish tax treatment, and test-account settings do not establish live registration status.
 - Confirm where restricted credentials will be stored for an isolated sandbox. Plugin authorization does not install credentials into a running Feedme server.
@@ -78,7 +78,7 @@ flowchart TD
 - [x] Review existing payment, invoice, event, and recovery code.
 - [x] Read official Stripe guidance and record phased recommendations.
 - [ ] Confirm account mode and sandbox credentials.
-- [ ] Implement account/environment binding and any selected own-account mode.
+- [x] Implement account/environment binding and optional own-account mode.
 - [ ] Establish Dashboard invoicing; add a separate private invoice ledger if requested.
 - [ ] Implement monetary invariants, recovery migration, and tax readiness.
 - [ ] Complete real sandbox acceptance before configuring production.
@@ -87,12 +87,12 @@ flowchart TD
 
 The review baseline passes `pnpm check` (231 files, no diagnostics), `pnpm test` (345 tests), and `pnpm build`. These results cover the current integration, not the proposed invoice/tax changes or a real Stripe payment. All 33 local links across these five plan files were checked.
 
-- [ ] Verify direct-to-own-account and Connect request/event isolation for supported modes.
+- [x] Unit-test direct-to-own-account and Connect request/event isolation for supported modes.
 - [ ] Exercise card success, decline, authentication, asynchronous payments, and cancellation.
 - [ ] Verify renewals, invoice credits, partial payments, refunds, disputes, and duplicate/out-of-order events.
 - [ ] Verify no tax, inclusive tax, exclusive tax, exemptions, missing registration, and missing location.
 - [ ] Restore private records and reconcile them with Stripe without changing historical public consent.
-- [ ] Run `pnpm check`, `pnpm test`, and `pnpm build` for implementation changes.
+- [x] Run `pnpm check` (234 files), `pnpm test` (357 tests), and `pnpm build` for the account-mode implementation.
 
 ## References
 

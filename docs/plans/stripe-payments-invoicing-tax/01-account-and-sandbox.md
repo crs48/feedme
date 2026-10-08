@@ -38,8 +38,8 @@ The operator stores `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in host secr
 
 [config.ts](../../../src/lib/config.ts), [payments.ts](../../../src/lib/payments.ts), [billing.ts](../../../src/lib/billing.ts), [recurring.ts](../../../src/lib/recurring.ts), [webhook.ts](../../../src/pages/api/stripe/webhook.ts), [stripe-setup.ts](../../../src/lib/stripe-setup.ts), and [recovery-stripe.ts](../../../src/lib/recovery-stripe.ts).
 
-- [ ] Confirm the chosen mode before changing server behavior.
+- [x] Configure optional own-account mode for crs.tips; retain Connect as the default for existing installations.
 - [ ] Verify restricted-key operations against the intended account in a sandbox.
-- [ ] Test wrong account, wrong mode, absent account, rotated credentials, and malformed signatures.
-- [ ] Confirm pending checkouts/renewals cannot be moved to a different account by changing configuration.
-- [ ] Update onboarding instructions and private recovery schema for the chosen mode.
+- [x] Unit-test wrong account, wrong mode, absent account, rotated credentials, and malformed signatures.
+- [x] Reject account/environment changes against the pinned database binding before checkout or portal access.
+- [x] Update onboarding instructions and private recovery schema for the chosen mode.

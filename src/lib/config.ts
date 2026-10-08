@@ -25,6 +25,12 @@ const tipAmountsFromEnv = () => {
 
 export const config = () => {
   const tipAmounts = tipAmountsFromEnv();
+  const stripeMode = process.env.STRIPE_MODE || 'connect';
+  if (!['connect', 'own-account'].includes(stripeMode)) throw new Error('STRIPE_MODE must be connect or own-account.');
+  const stripeAccountId = process.env.STRIPE_ACCOUNT_ID || '';
+  if (stripeMode === 'own-account' && !/^acct_[A-Za-z0-9]+$/.test(stripeAccountId)) throw new Error('Own-account mode requires STRIPE_ACCOUNT_ID.');
+  const stripeEnvironment = process.env.STRIPE_ENVIRONMENT || '';
+  if (stripeEnvironment && !['test', 'live'].includes(stripeEnvironment)) throw new Error('STRIPE_ENVIRONMENT must be test or live.');
   const demo = process.env.FEEDME_MODE !== 'live';
   const libcardDemoSource = process.env.LIBCARD_DEMO_SOURCE || 'fixture';
   if (!['fixture', 'github'].includes(libcardDemoSource)) throw new Error('LIBCARD_DEMO_SOURCE must be fixture or github.');
@@ -49,6 +55,7 @@ export const config = () => {
     directoryUrl: process.env.DIRECTORY_URL === 'off' ? '' : process.env.DIRECTORY_URL || 'https://feedme.fund/directory/v1.json',
     habitatUrl: process.env.HABITAT_URL || 'https://pear.habitat.network',
     stripeKey: process.env.STRIPE_SECRET_KEY || '',
+    stripeMode: stripeMode as 'connect' | 'own-account', stripeAccountId, stripeEnvironment,
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   };
 };

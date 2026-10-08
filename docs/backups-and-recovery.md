@@ -158,3 +158,7 @@ After restoring to a new address, open **Settings**, review the current PDS anno
 LibCard managed project metadata, local hiding/aspiration overrides, original payment picks, and the normalized last-good source snapshot are part of private recovery checkpoints and SQLite backups. Restore can serve that snapshot without reaching GitHub. Payment reference validation includes picked targets even when their cents rounded to zero. Ephemeral browser-bound review drafts and fetch-error status are not portable.
 
 Migration 2 adds tracking for the portable LibCard snapshot. Restore using this or a compatible newer version; older binaries refuse the newer database schema. Resuming recovery does not publish imported targets or their target-referencing acknowledgments to the public PDS. Existing native project publication and private receipt synchronization continue. See [LibCard recovery and contracts](libcard.md).
+
+### Stripe account isolation
+
+Private recovery includes the verified Stripe account ID, account mode (`connect` or `own-account`), and test/live environment. Restoring preserves that binding. Reconciliation checks the configured key against it before reading provider history; changing the key cannot migrate a sandbox ledger into live mode. Keep API and webhook secrets in host configuration, outside portable recovery records. See [Stripe setup](stripe-setup.md).
