@@ -59,12 +59,19 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   document.querySelectorAll<HTMLDetailsElement>('[data-tip-breakdown]').forEach((details) => {
     const summary = details.querySelector('summary')!;
     const popover = details.querySelector<HTMLElement>('.tip-popover')!;
+    const list = details.querySelector<HTMLElement>('.tip-parts')!;
     let preview = false;
     details.dataset.enhanced = '';
     const place = () => {
       const { top, bottom } = details.getBoundingClientRect();
-      const below = window.innerHeight - bottom;
-      details.dataset.side = below < popover.offsetHeight && top > below ? 'above' : 'below';
+      const below = window.innerHeight - bottom - 12;
+      const above = top - 12;
+      // Prefer opening below the name; scroll long lists inside the available
+      // space instead of letting the card extend beyond the viewport.
+      const side = below >= Math.min(popover.offsetHeight, 240) || below >= above ? 'below' : 'above';
+      const chrome = popover.offsetHeight - list.offsetHeight;
+      details.dataset.side = side;
+      details.style.setProperty('--tip-list-height', `${Math.max(0, (side === 'below' ? below : above) - chrome)}px`);
     };
     const close = () => { details.open = false; preview = false; };
     details.addEventListener('pointerenter', (event) => {
@@ -119,7 +126,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   .tip-breakdown[data-enhanced][data-side='above'] .tip-popover { top:auto; bottom:100%; }
   .tip-popover-heading { display:flex; justify-content:space-between; gap:12px; padding:14px 16px; font-size:12px; border-bottom:1px solid var(--color-border); }
   .tip-popover-heading span { white-space:nowrap; font-weight:600; }
-  .tip-parts { padding:4px 16px; max-height:min(320px,40vh); overflow-y:auto; overscroll-behavior:contain; }
+  .tip-parts { padding:4px 16px; max-height:min(320px,40vh,var(--tip-list-height,320px)); overflow-y:auto; overscroll-behavior:contain; }
   .tip-parts li { display:flex; align-items:baseline; justify-content:space-between; gap:16px; padding-block:12px; font-size:12px; }
   .tip-parts li + li { border-top:1px solid #f0f3f7; }
   .tip-parts li > span { min-width:0; overflow-wrap:anywhere; }
