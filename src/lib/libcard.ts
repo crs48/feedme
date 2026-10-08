@@ -4,7 +4,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import { config } from './config';
 import { getDb, getKv, listRecords, putRecord, readRecord, setKv, transaction } from './db';
 import { projectSchema, type Profile, type Project } from './model';
-import { LibcardImportError, libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource, type LibcardTargetMode } from './libcard-schema';
+import { LibcardImportError, libcardOptInError, libcardSnapshotSchema, parseLibcard, rawRoot, sourceKey, type LibcardSnapshot, type LibcardSource, type LibcardTargetMode } from './libcard-schema';
 import { libcardFixture } from './libcard-fixture';
 import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
@@ -137,7 +137,7 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
     return { attemptedAt };
   } catch (error) {
     const detail = error instanceof LibcardImportError ? error.message : error instanceof ZodError
-      ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. Check field types, unique target IDs, allowed URLs, and import limits.`
+      ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. ${error.issues.some(issue => issue.message === libcardOptInError) ? libcardOptInError : 'Check field types, unique target IDs, allowed URLs, and import limits.'}`
       : 'Check GitHub availability, YAML without aliases, unique target IDs, allowed URLs, and import limits.';
     const status = { attemptedAt, catalogVersion: 2 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
     setKv(db, 'libcard-refresh', key, status); return status;

@@ -10,21 +10,27 @@ const cfg = config();
 const snapshot = await loadLibcardSnapshot();
 const status = cfg.libcard ? getKv<RefreshStatus>(getDb(), 'libcard-refresh', sourceKey(cfg.libcard)) : undefined;
 const managed = projects(true).filter(p => p.libcard);
+const skipped = snapshot?.document.items.filter(item => item.feedme?.skip) || [];
+// A skip no longer carries the old target ID. Match archived records by their
+// source destination, keeping active duplicates and other repositories separate.
+const editable = managed.filter(p => p.libcard!.present || !snapshot || sourceKey(p.libcard!.source) !== sourceKey(snapshot.source)
+  || !skipped.some(item => item.kind === p.libcard!.kind && item.url === p.libcard!.url));
 ---
 {cfg.libcard && <section class="admin-card mb-6" id="libcard">
   <div class="admin-card-heading"><div><p class="eyebrow mb-2">From LibCard</p><h2>{cfg.libcard.repo}</h2></div><form method="post" action="/api/studio"><input type="hidden" name="action" value="libcard-refresh"/><input type="hidden" name="returnTo" value="/studio/projects"/><button class="button secondary">Refresh LibCard</button></form></div>
   <p class="admin-help">{cfg.demo && !cfg.libcardRemoteDemo ? 'Offline fixture · no GitHub requests' : `GitHub · ref: ${cfg.libcard.ref}`} · {managed.filter(p => p.status === 'active').length} live · {managed.filter(p => p.status === 'archived').length} archived</p>
-  <p class="admin-help">{cfg.libcardDefaultSupport === 'explicit' ? 'Only links with a feedme.id in LibCard accept picks.' : 'All links and socials accept picks by default, up to 99 plus you. Hide any target below to exclude it.'} Custom LibCard IDs and aspirations are optional.</p>
+  <p class="admin-help">{cfg.libcardDefaultSupport === 'explicit' ? 'Only links with a feedme.id in LibCard accept picks.' : 'Links and socials accept picks by default, up to 99 plus you. Hide any target below to exclude it.'} Items with feedme: &#123; skip: true &#125; stay off Feedme in either mode.</p>
   <p class="admin-help">Last fetch attempt: {status?.attemptedAt || snapshot?.checkedAt || 'Not yet'}<br/>Last good check: {snapshot?.checkedAt || 'Not yet'}</p>
   {snapshot && <p class="admin-help break-all">Content SHA-256: {snapshot.hash}{snapshot.etag && <><br/>ETag: {snapshot.etag}</>}</p>}
   {status?.error && <p class="admin-warning">{status.error}</p>}
   <p class="admin-help mt-4">Labels, links, and descriptions come from your repository. Local changes below never write back to LibCard. Hiding a target stops new picks; existing recurring gifts keep their original allocation until canceled.</p>
-  {cfg.libcardRemoteDemo && <p class="notice">Demo preview: all source links and socials can receive simulated picks. Goals without a source value use stable sample amounts, and displayed progress is illustrative. Set an aspiration below to preview your own goal; 0 hides it. No sample support is added to the payment ledger.</p>}
-  {managed.map(p => <article class="libcard-admin-row"><div><h3>{p.title}</h3><p class="admin-help">{p.summary}</p><p class="admin-help break-all">{p.id} · {p.libcard!.kind} · {p.status}{!p.libcard!.present && ' · removed from source'}{p.libcard!.url && <> · <a href={p.libcard!.url} rel="noopener noreferrer">{p.libcard!.url}</a></>}</p><p class="admin-help">Source aspiration: {p.libcard!.sourceAspiration ? money(p.libcard!.sourceAspiration) : 'None'}</p></div>
+  {cfg.libcardRemoteDemo && <p class="notice">Demo preview: source links and socials that are not skipped can receive simulated picks. Goals without a source value use stable sample amounts, and displayed progress is illustrative. Set an aspiration below to preview your own goal; 0 hides it. No sample support is added to the payment ledger.</p>}
+  {editable.map(p => <article class="libcard-admin-row"><div><h3>{p.title}</h3><p class="admin-help">{p.summary}</p><p class="admin-help break-all">{p.id} · {p.libcard!.kind} · {p.status}{!p.libcard!.present && ' · removed from source'}{p.libcard!.url && <> · <a href={p.libcard!.url} rel="noopener noreferrer">{p.libcard!.url}</a></>}</p><p class="admin-help">Source aspiration: {p.libcard!.sourceAspiration ? money(p.libcard!.sourceAspiration) : 'None'}</p></div>
     <form method="post" action="/api/studio"><input type="hidden" name="action" value="libcard-override"/><input type="hidden" name="id" value={p.id}/><input type="hidden" name="returnTo" value="/studio/projects"/>
       {p.id !== 'creator' && <label class="admin-help"><input type="checkbox" name="hidden" value="yes" checked={p.libcard!.hidden}/> Hide on Feedme</label>}
       <label class="field mt-3">Aspiration override (USD)<input type="number" name="aspiration" min="0" max="1000000" step="1" value={p.libcard!.aspirationOverride === undefined ? '' : p.libcard!.aspirationOverride / 100} placeholder="Use source value"/><span class="admin-help">Blank inherits; 0 removes the aspiration.{cfg.libcardRemoteDemo && sampleLibcardGoal(p) && ` Preview goal: ${money(sampleLibcardGoal(p)!.goal)}.`}</span></label><button class="button secondary">Save local settings</button>
     </form>
   </article>)}
+  {skipped.map(item => <article class="libcard-admin-row"><div><h3>{item.label}</h3><p class="admin-help break-all">{item.kind} · <a href={item.url} rel="noopener noreferrer">{item.url}</a></p><p class="admin-help">Managed in libcard.config.yaml. Existing recurring gifts keep their original picks until canceled.</p></div><div><strong class="text-sm">Skipped in LibCard</strong><p class="admin-help">Edit this item’s feedme settings in LibCard to allow picks again. Local hiding settings still apply.</p></div></article>)}
 </section>}
 <style>.libcard-admin-row { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:28px; padding:24px 0; border-top:1px solid var(--color-border); margin-top:16px; } @media(max-width:750px) { .libcard-admin-row { grid-template-columns:1fr; gap:12px; } }</style>

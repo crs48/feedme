@@ -1,0 +1,19 @@
+# Feedme regression fixture for the per-item skip contract in LIBCard main.
+profile:
+  name: Ada Example
+links:
+  - label: Card-only link
+    url: https://example.com/card-only-link
+    feedme: { skip: true }
+  - label: Always skipped link
+    url: https://example.com/always-skipped-link
+    feedme: { skip: true }
+socials:
+  - platform: instagram
+    label: Card-only social
+    url: https://instagram.com/card-only-social
+    feedme: { skip: true }
+  - platform: youtube
+    label: Always skipped social
+    url: https://youtube.com/@always-skipped-social
+    feedme: { skip: true }

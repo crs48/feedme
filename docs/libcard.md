@@ -13,7 +13,7 @@ LIBCARD_REF=main
 
 `LIBCARD_REF` is optional. Leave `LIBCARD_REPO` unset to keep the existing percentage-based project page. Disabling the feature retains imported records and historical payments; managed targets do not enter the native percentage selector.
 
-**All links and socials are selectable by default.** You do not need to edit each link in LibCard. To exclude an item, use **Dashboard → Projects → From LibCard → Hide on Feedme**. To keep the older behavior where only explicit `feedme.id` entries are selectable, set `LIBCARD_DEFAULT_SUPPORT=explicit` and restart. The default is `all`.
+**All links and socials are selectable by default, except items marked `feedme: { skip: true }` in LibCard.** You do not need to opt in each link. To exclude an item from its source, add that skip object to the link or social in `libcard.config.yaml`. You can also exclude a target locally using **Dashboard → Projects → From LibCard → Hide on Feedme**. To keep the older behavior where only explicit `feedme.id` entries are selectable, set `LIBCARD_DEFAULT_SUPPORT=explicit` and restart. The default is `all`; source skips apply in both modes.
 
 Try the built-in offline fixture without any credentials:
 
@@ -31,7 +31,7 @@ FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_H
 
 This reads the real name, avatar, bio, links, socials, icons, GitHub companion repositories, and first text block from `libcard.config.yaml`. Set `BLUESKY_HANDLE` to the matching creator for the demo’s displayed handle. Authentication remains fictional, and Stripe, Habitat, and AT Protocol writes remain simulated. The banner explicitly labels simulated tips.
 
-The real-source demo makes every link and social available to try with simulated picks (up to 99 plus the creator; additional links still appear as full rows). Stable `preview-…` IDs and `demoOnly` metadata distinguish these sample targets from live automatic `auto-…` IDs. The original source document is unchanged. Live mode never accepts demo-only targets.
+The real-source demo makes every non-skipped link and social available to try with simulated picks (up to 99 plus the creator; additional non-skipped links still appear as full rows). Stable `preview-…` IDs and `demoOnly` metadata distinguish these sample targets from live automatic `auto-…` IDs. The original source document is unchanged. Live mode never accepts demo-only targets.
 
 Every row displays its full source title and bundled icon, with a separate destination link and pick button. GitHub companion links and `star`/`stars` settings retain their meaning. `build` and `badge` counts are both fetched server-side from the public GitHub API and cached for six hours; Feedme does not load third-party badge images or transmit visitor data. Failed requests keep the last known count or show “—” when no count is available. Zero is a real count, never a fallback. Requests are deduplicated, limited to four concurrent workers and 99 repositories, with a four-second request timeout, eight-second batch deadline, and 64 KiB response cap. The checked timestamp appears in the badge tooltip. Icons are bundled from LibCard under its [MIT license](../licenses/LIBCard.txt).
 
@@ -41,7 +41,7 @@ The real-source demo uses `DATA_DIR/demo-libcard.sqlite`, separate from the offl
 
 In live mode, `pnpm start` checks for refresh work through the existing synchronization loop. The initial check runs within about 30 seconds, then the LibCard importer checks at most every 15 minutes. You can also use **Dashboard → Projects → From LibCard → Refresh LibCard**. When running a live development server without `pnpm start`, use the manual refresh or your authenticated `/api/sync` scheduler.
 
-## Optional custom IDs and aspirations
+## Optional custom IDs, aspirations, and skips
 
 Links already accept picks on Feedme. Add a nested `feedme` object when you want a custom ID, short explanation, or aspiration. The current LibCard client also uses these explicit IDs for its own “More of this” actions; automatic selection in Feedme does not change the separate LibCard client.
 
@@ -60,19 +60,29 @@ links:
       aspiration: 3000
   - label: Résumé
     url: https://example.com/resume.pdf
+    feedme: { skip: true }
 socials:
   - platform: x
     url: https://x.com/becomingbabyman
     feedme: { id: x, blurb: More of this voice. }
+  - platform: instagram
+    url: https://instagram.com/example
+    feedme: { skip: true }
 ```
 
 **LibCard compatibility:** the matching schema, tip links, and build-time public-statistics integration were implemented through `fed406d` and merged into LibCard’s `main` in [PR #67](https://github.com/crs48/LIBCard/pull/67) (`f20e1fd`). See its [integration guide](https://github.com/crs48/LIBCard/blob/main/docs/FEEDME.md). Upgrade to a version containing that work before adding nested `feedme` fields; older strict link/social schemas reject them. Code availability does not establish that the personal Feedme backend is deployed. See the [contract verification and crs.tips activation checklist](libcard-activation.md).
 
 Custom IDs are permanent lowercase slugs (letters, digits, hyphens, at most 64 characters; start with a letter or digit). One namespace covers links and socials; `creator` and `amount` are reserved. Up to 99 source targets are selectable. Explicit IDs take priority; remaining slots include other items in source order. Additional links remain visible without pick controls. Feedme adds the hundredth possible target, `creator`, labeled “Just {first name},” with no destination URL.
 
+**Per-item skip:** `feedme: { skip: true }` must be the entire nested object. Combining it with `id`, `blurb` (even an empty string), `aspiration` (even zero), or other fields is invalid and rejects the import. `skip: false` is allowed alongside a required valid `id`; for example, `feedme: { skip: false, id: presence }`. An empty `feedme: {}` or `feedme: { skip: false }` without an ID is invalid. Configurations without `skip` behave exactly as before.
+
+Skipped items remain ordinary links on the LibCard site. **LibCard’s own build treats them as untippable**, with no per-item tip action. Feedme excludes them from its catalog and visit entirely: no pick control, checkout selection, or `/api/public/libcard` target, and no use of the 99-source-target allowance. The synthesized `creator` target cannot be skipped. Use a LibCard version containing its merged per-item skip support and a Feedme version containing this importer change; the earlier integration in PR #67 alone does not provide skip support.
+
+If a live item becomes skipped, Feedme archives its managed project on the next successful refresh. Payment history and existing recurring gifts retain their original picks until canceled. A review containing a newly skipped target must be edited before a new payment can proceed. To un-skip an automatic target in `all` mode, remove its entire `feedme` object: the same kind and destination restore the same automatic ID. For a custom target (required in `explicit` mode), replace the skip object with the previous `feedme.id`. Reappearance preserves the creation date, aspiration override, and local hidden setting; locally hidden targets stay hidden.
+
 Automatic IDs are derived from the item kind and destination URL. Renaming or reordering a unique destination preserves its ID; changing the destination creates a new target and archives the old one. Repeated destinations receive distinct suffixes in source order. For long-lived references across destination changes or repeated entries, copy the existing ID shown in Studio into that item's `feedme.id` before editing it. Adding a different custom ID also creates a new target; historical tips always retain their original IDs.
 
-Résumé, phone, email, and social links are included in the default. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. In `explicit` mode, links without `feedme.id` stay visible without pick controls. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account, never to the destination of a link.
+Résumé, phone, email, and social links are included in the default unless skipped. HTTP(S), `mailto:`, `tel:`, and `sms:` destinations are allowed; executable/unsupported schemes fail import. In `explicit` mode, non-skipped links without `feedme.id` stay visible without pick controls. Aspirations are optional whole USD amounts; zero or omission means no live aspiration. The visit shows the dollar goal and progress from public support; receipts and shares retain their quiet aspiration labels. Money always goes to the same connected creator account, never to the destination of a link.
 
 Avatars must be HTTPS or relative paths beneath the repository’s `public/` directory. `/avatar.jpg` resolves to `https://raw.githubusercontent.com/your-name/your-libcard/main/public/avatar.jpg`. Invalid schemes, traversal and credential-bearing avatar URLs are dropped. Feedme uses the profile name, tagline, and location in the creator header. The first text block remains in the cached snapshot for compatibility but is not displayed above the pick controls. It does not scrape the website or import themes.
 
@@ -101,7 +111,7 @@ GitHub failures keep serving the last good snapshot. Before the first successful
 
 An upgrade or a change to `LIBCARD_DEFAULT_SUPPORT` reapplies the stored source atomically, without waiting for a GitHub change. This also works after restore or during an outage. Hidden state, aspirations, creation dates, explicit IDs, and payment references are preserved. Recovery pauses prevent catalog changes. If a new ID collides with a native project, the previous catalog stays available with a Studio diagnostic.
 
-Studio’s **From LibCard** panel shows source/ref, fetch status, revision, and live/archived targets. Labels, destinations and blurbs are read-only. You may hide targets locally or override their aspirations: blank inherits, zero removes, a whole-dollar value overrides. The creator cannot be hidden. Hiding also removes the item from Feedme’s public target list; it never edits the LibCard repository. Existing recurring gifts retain their original picks until canceled.
+Studio’s **From LibCard** panel shows source/ref, fetch status, revision, and live/archived targets. Source-skipped items appear as **Skipped in LibCard**, with read-only rows and no Hide/Unhide controls; change their skip setting in LibCard. For other targets, labels, destinations and blurbs are read-only. You may hide those targets locally or override their aspirations: blank inherits, zero removes, a whole-dollar value overrides. The creator cannot be hidden. Hiding also removes the item from Feedme’s public target list; it never edits the LibCard repository. Existing recurring gifts retain their original picks until canceled.
 
 Failed imports show a safe diagnostic in that panel. A native project collision names the conflicting target ID and asks you to choose another LibCard ID. Invalid consumed fields report their paths; malformed YAML and response-size failures have specific messages. Provider error bodies, source snippets, and native project titles are never included. The transaction retains the previous catalog and its checkout targets.
 
@@ -140,7 +150,7 @@ Stripe receives one creator line item for the full amount, including recurring g
 - `publicCount` counts distinct paid public identified payments that selected the target, not the number of picks.
 - `publicShareMillis` weights the accumulated raw counts, independently of dollars. Nine picks on one target and one on another produce 900/100, even if the second tip was larger. Values total exactly 1000 across live targets, or are all zero before eligible signal.
 - Private, anonymous, pending, failed, disputed, fully refunded, and legacy payments without original picks contribute nothing. Partial refunds retain the original picks while net value is positive. Each verified recurring invoice counts once; duplicate events do not add contributions.
-- Archived/hidden targets are omitted and remaining live weights are renormalized.
+- Archived, hidden, and source-skipped targets are omitted and remaining live weights are renormalized.
 
 No individual payment amounts, notes, identities, provider IDs, or source documents are returned. Successful GET/HEAD responses have a 60-second public cache; other session-aware pages remain private. Disabled mode returns 404. No successful import returns an uncached 503. Consumers fetch server-side during their builds.
 
@@ -150,7 +160,7 @@ Prefill uses dollars and integer counts:
 /checkout?amount=22&presence=1&x=3&creator=1
 ```
 
-Unknown, hidden, archived, repeated, noninteger, and out-of-range pick parameters are dropped. Invalid/repeated amounts use the configured default. If nothing valid remains, no target is implicitly selected. Posted forms instead reject invalid fields before review. When disabled, `/checkout` redirects to the normal homepage.
+Unknown, hidden, archived, source-skipped, repeated, noninteger, and out-of-range pick parameters are dropped. Invalid/repeated amounts use the configured default. If nothing valid remains, no target is implicitly selected. Posted forms instead reject invalid fields before review. When disabled, `/checkout` redirects to the normal homepage.
 
 ## LibCard integration (separate repository)
 
