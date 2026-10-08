@@ -171,26 +171,26 @@ const user = Astro.locals.user;
   .allocation-heading p { color: var(--color-muted); font-size: 14px; margin-top: 8px; }
   .allocation-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 14px 6px; font-size: 12px; color: var(--color-muted); }
   .allocation-tools > div { display: flex; gap: 16px; }
-  .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-percentage: 600; white-space: nowrap; }
-  .project-list { border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; }
+  .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .project-list { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
   .allocation-project { padding: 22px 24px 20px; }
   .allocation-project + .allocation-project { border-top: 1px solid var(--color-border); }
   .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
   .project-status { color: var(--color-muted); font-size: 12px; }
-  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-percentage: 650; line-height: 1.4; letter-spacing: -.02em; }
+  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-weight: 650; line-height: 1.4; letter-spacing: -.02em; }
   h3 a:hover { color: var(--color-primary); }
   h3 a svg { color: var(--color-muted); }
   .project-summary { font-size: 14px; line-height: 1.6; color: var(--color-muted); margin-top: 4px; }
   .project-funding { font-size: 12px; color: var(--color-muted); margin-top: 12px; }
-  .project-funding strong { font-percentage: 600; color: var(--color-ink); }
+  .project-funding strong { font-weight: 600; color: var(--color-ink); }
   .project-allocation { margin-top: 20px; }
   .allocation-label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
   .allocation-label label { color: var(--color-muted); font-size: 12px; }
-  .allocation-label output { color: var(--color-primary); font-size: 16px; font-percentage: 650; font-variant-numeric: tabular-nums; }
-  .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-percentage: 400; margin-left: 5px; }
+  .allocation-label output { color: var(--color-primary); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-weight: 400; margin-left: 5px; }
   /* Keep the track in place when the hint disappears during a drag. */
   .slider-hint-slot { position: relative; height: 38px; }
-  .slider-hint { position: absolute; left: 0; bottom: -6px; max-width: 100%; padding: 7px 11px; border-radius: 8px; background: var(--color-primary); color: white; font-size: 12px; font-percentage: 500; line-height: 1.4; box-shadow: 0 3px 10px #0866ff20; pointer-events: none; animation: slider-nudge 1.8s ease-in-out 2; }
+  .slider-hint { position: absolute; left: 0; bottom: -6px; max-width: 100%; padding: 7px 11px; border-radius: 8px; background: var(--color-primary); color: white; font-size: 12px; font-weight: 500; line-height: 1.4; box-shadow: 0 3px 10px #0866ff20; pointer-events: none; animation: slider-nudge 1.8s ease-in-out 2; }
   .slider-hint::after { content: ''; position: absolute; bottom: -4px; left: 7px; width: 8px; height: 8px; background: inherit; transform: rotate(45deg); }
   @keyframes slider-nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
   @media (prefers-reduced-motion: reduce) { .slider-hint { animation: none; } }
@@ -203,7 +203,7 @@ const user = Astro.locals.user;
   .slider-scale { display: flex; justify-content: space-between; margin-top: -3px; font-size: 11px; color: var(--color-muted); }
   .completed-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; font-size: 13px; color: var(--color-primary); margin-top: 10px; }
   .allocation-help { font-size: 12px; color: var(--color-muted); margin-top: 16px; }
-  .donation-panel { position: sticky; top: 24px; padding: 24px; border: 1px solid var(--color-border); border-radius: 14px; box-shadow: 0 4px 24px #1a1f3608; background: white; }
+  .donation-panel { position: sticky; top: 24px; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; box-shadow: var(--shadow-card); background: white; }
   .donation-panel h2 { font-size: 21px; }
   .donation-subtitle { font-size: 13px; color: var(--color-muted); margin-top: 5px; }
   .total-field { margin-block: 24px 12px; font-size: 13px; }
@@ -211,28 +211,28 @@ const user = Astro.locals.user;
   .total-input:focus-within { outline: 3px solid #0866ff26; border-color: var(--color-primary); }
   .total-input > span:first-child { font-size: 25px; color: var(--color-muted); }
   .total-input > span:last-child { font-size: 12px; color: var(--color-muted); }
-  .total-input input { min-height: 60px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 30px; font-percentage: 600; }
+  .total-input input { min-height: 44px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 24px; font-weight: 600; }
   .amount-presets { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-percentage: 600; }
+  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-weight: 600; }
   .amount-presets button[aria-pressed='true'] { color: var(--color-primary); border-color: var(--color-primary); background: #f2f7ff; }
   .split-summary { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
   .split-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--color-muted); margin-bottom: 10px; }
-  .split-heading h3 { color: var(--color-ink); font-size: 13px; font-percentage: 600; }
+  .split-heading h3 { color: var(--color-ink); font-size: 13px; font-weight: 600; }
   .split-summary li { display: flex; justify-content: space-between; gap: 16px; padding-block: 7px; font-size: 12px; line-height: 1.5; }
   .split-summary li span { color: var(--color-muted); }
-  .split-summary li strong { white-space: nowrap; font-percentage: 600; font-variant-numeric: tabular-nums; }
+  .split-summary li strong { white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
   .unallocated-row { display: flex; justify-content: space-between; gap: 12px; border-top: 1px dashed var(--color-border); margin-top: 8px; padding-top: 12px; font-size: 12px; color: var(--color-muted); }
   .unallocated-row strong { white-space: nowrap; font-weight: 600; }
   .unallocated-row [data-remaining-percentage] { margin-left: 4px; }
   .allocation-guidance { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--color-muted); }
   .allocation-error { font-size: 13px; color: #a12727; padding-block: 8px; }
   .support-options { margin-block: 16px; border-block: 1px solid var(--color-border); }
-  .support-options summary { padding-block: 12px; font-size: 13px; font-percentage: 500; }
-  .support-options summary > span { float: right; color: var(--color-muted); font-size: 12px; font-percentage: 400; }
+  .support-options summary { padding-block: 12px; font-size: 13px; font-weight: 500; }
+  .support-options summary > span { float: right; color: var(--color-muted); font-size: 12px; font-weight: 400; }
   .allocation-privacy { border: 0; padding: 0; margin: 4px 0 16px; }
   .allocation-privacy label, .anonymous-consent { display: flex; align-items: flex-start; gap: 8px; padding-block: 10px; cursor: pointer; }
   .allocation-privacy input, .anonymous-consent input { margin-top: 2px; }
-  .allocation-privacy strong { display: block; font-size: 13px; font-percentage: 500; }
+  .allocation-privacy strong { display: block; font-size: 13px; font-weight: 500; }
   .allocation-privacy small, .anonymous-consent { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
   .allocation-privacy label:has(input:disabled) { opacity: .6; cursor: not-allowed; }
   form:has(input[name='visibility']:checked:not([value='anonymous'])) .anonymous-consent { display: none; }
@@ -250,9 +250,9 @@ const user = Astro.locals.user;
   @media(max-width:800px) {
     .support-allocator { grid-template-columns: minmax(0,1fr); gap: 24px; }
     .donation-panel { display: contents; }
-    .donation-total { grid-row: 1; padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; }
+    .donation-total { grid-row: 1; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; }
     .allocation-projects { grid-row: 2; }
-    .donation-checkout { grid-row: 3; padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; scroll-margin-top: 20px; }
+    .donation-checkout { grid-row: 3; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; scroll-margin-top: 20px; }
     .split-summary { margin-top: 0; padding-top: 0; border: 0; }
     .allocation-mobile-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px max(20px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)); background: white; border-top: 1px solid var(--color-border); box-shadow: 0 -2px 16px #1a1f3608; }
     .allocation-mobile-bar > div { display: grid; line-height: 1.4; }

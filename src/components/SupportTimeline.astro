@@ -19,8 +19,8 @@ const [supporters, posts] = await Promise.all([
 const href = (page: number) => { const params = new URLSearchParams(Astro.url.search); params.set('tipsPage', String(page)); return `${Astro.url.pathname}?${params}#supporters`; };
 ---
 <section id="supporters" class="supporter-timeline mt-12" aria-label="Recent supporters">
-  <div class="mb-6"><h2 class="section-title">Recent support</h2><p class="text-sm muted mt-2">{projectId ? 'The latest tips for this project.' : 'The latest tips across all my projects.'}</p></div>
-  <div class="panel">
+  <div class="timeline-heading"><h2 class="section-title">Recent support</h2><p>{projectId ? 'The latest tips for this project.' : 'The latest tips across all my projects.'}</p></div>
+  <div class="timeline-body">
     {feed.entries.length ? <ol>{feed.entries.map((entry) => {
       const person = entry.visibility === 'public' ? supporters.get(entry.supporter) : undefined;
       const name = entry.visibility === 'anonymous' ? 'Anonymous' : person?.name || 'Supporter';
@@ -33,7 +33,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
       });
       const amount = entry.visibility === 'public' ? projectId ? entry.projects.find((p) => p.projectId === projectId)?.amount : entry.amount : undefined;
       return <li class="tip-row">
-        {profileUrl ? <a class="tip-avatar" href={profileUrl} aria-label={`${name} on Bluesky`} rel="noopener noreferrer"><Avatar name={name} src={person?.avatar}/></a> : <span class="tip-mark" aria-hidden="true"><Icon name="user" size={18}/></span>}
+        {profileUrl ? <a class="tip-avatar" href={profileUrl} aria-label={`${name} on Bluesky`} rel="noopener noreferrer"><Avatar name={name} src={person?.avatar} size={36}/></a> : <span class="tip-mark" aria-hidden="true"><Icon name="user" size={18}/></span>}
         <div class="tip-body">
           <div class="tip-heading">
             <div class="tip-person">
@@ -42,11 +42,11 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
             </div>
             {amount !== undefined && <div class="tip-amount"><strong>{money(amount)}</strong>{projectId && entry.visibility === 'public' && amount !== entry.amount && <small>of a {money(entry.amount)} tip</small>}</div>}
           </div>
-          {post && <div class="tip-post">
+          {post && <blockquote class="tip-post">
             {post.sensitive ? <p class="tip-post-warning">This post has a content warning. View it on Bluesky with your moderation settings.</p>
               : <p class="tip-post-text">{post.segments.map((segment) => segment.href ? <a href={segment.href} rel="noopener noreferrer ugc">{segment.text}</a> : segment.text)}</p>}
             <a class="tip-post-link" href={post.url} rel="noopener noreferrer">View on Bluesky <span aria-hidden="true">↗</span></a>
-          </div>}
+          </blockquote>}
           <details class="tip-breakdown" data-tip-breakdown>
             <summary aria-label={`Support breakdown: ${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`}>
               <span>Supported {parts.length === 1 ? parts[0].title : `${parts.length} projects`}</span><span class="tip-chevron" aria-hidden="true">⌄</span>
@@ -65,7 +65,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
     })}</ol> : <p class="text-sm muted py-3">The first public act of encouragement is still to come.</p>}
     {(feed.hasOlder || feed.hasNewer) && <nav aria-label="Supporter timeline pages" class="flex justify-between gap-5 mt-6 pt-5 border-t border-[#e3e8ee]">{feed.hasNewer ? <a class="button secondary" href={href(feed.page - 1)}>← Newer tips</a> : <span/>}{feed.hasOlder && <a class="button secondary" href={href(feed.page + 1)}>Older tips →</a>}</nav>}
   </div>
-  <p class="text-xs muted mt-3">Public tips show the amount remaining after refunds. Anonymous entries appear only with permission; their identity and amount stay hidden. Private tips stay off this timeline.</p>
+  <p class="timeline-privacy">Public tips show the amount remaining after refunds. Anonymous entries appear only with permission; their identity and amount stay hidden. Private tips stay off this timeline.</p>
 </section>
 <script>
   document.querySelectorAll<HTMLDetailsElement>('[data-tip-breakdown]').forEach((details) => {
@@ -114,19 +114,25 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   });
 </script>
 <style>
-  .tip-row { display:flex; align-items:flex-start; gap:12px; padding:20px 0; }
-  .tip-row:first-child { padding-top:0; } .tip-row:last-child { padding-bottom:0; }
+  .supporter-timeline { border:1px solid var(--color-border); border-radius:8px; box-shadow:var(--shadow-card); }
+  .timeline-heading { padding:14px 18px; background:#fafbfc; border-bottom:1px solid var(--color-border); border-radius:8px 8px 0 0; }
+  .timeline-heading h2 { font-size:14px; } .timeline-heading p { color:var(--color-muted); font-size:12px; margin-top:4px; }
+  .timeline-body > p, .timeline-body > nav { margin:0; padding:16px 18px; }
+  .timeline-privacy { font-size:11px; color:var(--color-muted); padding:12px 18px; border-top:1px solid var(--color-border); }
+
+  .tip-row { display:flex; align-items:flex-start; gap:12px; padding:16px 18px; }
+
   .tip-row + .tip-row { border-top:1px solid var(--color-border); }
   .tip-avatar { flex-shrink:0; border-radius:50%; }
-  .tip-mark { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; color:#596579; background:#f6f8fa; flex-shrink:0; }
+  .tip-mark { display:grid; place-items:center; width:36px; height:36px; border-radius:50%; color:#596579; background:#f6f8fa; flex-shrink:0; }
   .tip-body { flex:1; min-width:0; }
   .tip-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:8px 16px; flex-wrap:wrap; }
   .tip-person { min-width:0; overflow-wrap:anywhere; }
   .tip-person a:hover { text-decoration:underline; }
-  .tip-handle { display:block; color:var(--color-muted); font-size:12px; margin-top:2px; }
+  .tip-handle { display:inline-block; margin-left:8px; color:var(--color-muted); font-size:12px; margin-top:2px; }
   .tip-amount { margin-left:auto; text-align:right; font-size:14px; white-space:nowrap; }
   .tip-amount small { display:block; color:var(--color-muted); font-size:11px; }
-  .tip-post { margin-top:12px; }
+  .tip-post { margin-top:10px; padding:10px 14px 4px; background:#fafbfc; border-left:2px solid #dce3ed; border-radius:0 4px 4px 0; }
   .tip-post-text { white-space:pre-wrap; overflow-wrap:anywhere; font-size:14px; line-height:1.65; }
   .tip-post-text a, .tip-post-link { color:var(--color-primary); }
   .tip-post-text a:hover, .tip-post-link:hover { text-decoration:underline; }
@@ -139,7 +145,7 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   .tip-chevron { font-size:16px; flex-shrink:0; transition:transform .15s; }
   .tip-breakdown[open] .tip-chevron { transform:rotate(180deg); }
   .tip-breakdown summary:hover span:first-child { text-decoration:underline; }
-  .tip-popover { background:white; border:1px solid var(--color-border); border-radius:12px; box-shadow:0 10px 36px #1a1f3618,0 2px 8px #1a1f360a; margin-bottom:12px; }
+  .tip-popover { background:white; border:1px solid var(--color-border); border-radius:8px; box-shadow:0 10px 36px #1a1f3618,0 2px 8px #1a1f360a; margin-bottom:12px; }
   .tip-breakdown[data-enhanced] .tip-popover { position:absolute; z-index:20; top:100%; left:0; width:min(380px,100%); margin:0; }
   .tip-breakdown[data-enhanced][data-side='above'] .tip-popover { top:auto; bottom:100%; }
   .tip-popover-heading { display:flex; justify-content:space-between; gap:12px; padding:14px 16px; font-size:12px; border-bottom:1px solid var(--color-border); }
@@ -154,4 +160,10 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
   .tip-popover > p { font-size:11px; color:var(--color-muted); padding:12px 16px; border-top:1px solid var(--color-border); line-height:1.5; }
   .tip-breakdown summary:focus-visible, .tip-avatar:focus-visible, .tip-parts:focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; }
   @media(prefers-reduced-motion:reduce) { .tip-chevron { transition:none; } }
+  @media(max-width:600px) {
+    .tip-row { padding:16px 12px; gap:10px; }
+    .tip-handle { display:block; margin-left:0; }
+    .tip-breakdown[data-enhanced] .tip-popover { position:static; width:100%; margin-bottom:12px; box-shadow:none; }
+    .tip-parts { max-height:240px; }
+  }
 </style>

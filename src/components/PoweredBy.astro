@@ -2,11 +2,10 @@
 import BrandIcon from './BrandIcon.astro';
 ---
 <a class="powered-by" href="https://feedme.fund/" data-feedme-attribution>
-  <BrandIcon size={20}/><span>Powered by <strong>Feedme</strong></span>
+  <BrandIcon size={18}/><span>Powered by <strong>Feedme</strong></span>
 </a>
 <style>
-  .powered-by { position:fixed; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); z-index:10; display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:9px 13px; border:1px solid var(--color-border); border-radius:12px; background:white; color:var(--color-muted); box-shadow:0 2px 12px #1a1f3608; font-size:12px; white-space:nowrap; }
+  .powered-by { display:inline-flex; align-items:center; gap:7px; min-height:44px; margin-left:auto; color:var(--color-muted); font-size:12px; white-space:nowrap; }
   .powered-by strong { color:var(--color-ink); font-weight:600; }
-  .powered-by:hover { border-color:#bfd4f6; background:#f7faff; }
-  @media(max-width:800px) { .powered-by { position:static; align-self:flex-end; margin:12px 0 max(16px, env(safe-area-inset-bottom)); box-shadow:none; } }
+  .powered-by:hover { color:var(--color-primary); }
 </style>

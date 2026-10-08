@@ -3,17 +3,20 @@ import Layout from './Layout.astro';
 import Avatar from '../components/Avatar.astro';
 import { config } from '../lib/config';
 import { profile } from '../lib/repository';
+import { libcardProfile } from '../lib/libcard';
+import { refreshCreatorBluesky } from '../lib/creator-bluesky';
 import { demoPerson } from '../lib/demo-media';
 import '../styles/admin.css';
 interface Props { title: string; description?: string; }
 const { title, description } = Astro.props;
 const cfg = config();
-const p = profile();
-const navigation = [['Overview', '/studio'], ['Projects', '/studio/projects'], ['Payments', '/studio/payments'], ['Supporters', '/studio/supporters'], ['Updates', '/studio/updates'], ['Settings', '/studio/settings'], ['Data & backups', '/studio/data']];
+await refreshCreatorBluesky();
+const p = libcardProfile(profile());
+const navigation = [['Overview', '/studio'], ['Projects', '/studio/projects'], ['Payments', '/studio/payments'], ['Supporters', '/studio/supporters'], ['Updates', '/studio/updates'], ['Stripe', '/studio/stripe'], ['Settings', '/studio/settings'], ['Data & backups', '/studio/data']];
 ---
 <Layout title={`${title} · Dashboard`} noindex>
   <div class="shell admin-shell">
-    <div class="admin-account"><div class="admin-person"><Avatar name={p.name} src={cfg.demo ? demoPerson(cfg.ownerDid)?.avatar : p.avatar} size={36}/><div><strong>{p.name}</strong><span class="admin-caption">Creator dashboard <span aria-hidden="true">·</span> Private</span></div></div><div class="admin-actions"><a href="/" class="admin-link">View site ↗</a><form method="post" action="/auth/logout"><button class="admin-link">Sign out</button></form></div></div>
+    <div class="admin-account"><div class="admin-person"><Avatar name={p.name} src={cfg.demo && !cfg.libcardRemoteDemo ? demoPerson(cfg.ownerDid)?.avatar : p.avatar} size={36}/><div><strong>{p.name}</strong><span class="admin-caption">Creator dashboard <span aria-hidden="true">·</span> Private</span></div></div><div class="admin-actions"><a href="/" class="admin-link">View site ↗</a><form method="post" action="/auth/logout"><button class="admin-link">Sign out</button></form></div></div>
     <nav class="admin-nav" aria-label="Administration">{navigation.map(([name, href]) => <a href={href} aria-current={(href === '/studio' ? Astro.url.pathname === href : Astro.url.pathname.startsWith(href)) ? 'page' : undefined}>{name}</a>)}</nav>
     <header class="admin-heading"><div><h1 class="display">{title}</h1>{description && <p>{description}</p>}</div><slot name="actions"/></header>
     {cfg.demo && <p class="admin-demo"><span class="status-pill">Demo workspace</span> Sample data. No real payments or Bluesky posts.</p>}
