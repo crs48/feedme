@@ -16,6 +16,14 @@ This is the isolated payment-testing counterpart to [crs.tips](crs-tips.md), usi
 | Suggested amounts | `$11`, `$44`, `$111`, `$222` |
 | Health | `/api/health`, expected `mode: "sandbox"` |
 
+## Deployment status
+
+The sandbox-capable application deployed successfully on 2026-10-07 (Railway deployment `49133f92-a93d-4b3d-af04-ddb7f6391e60`, commit `7a32ae8`, subsequently merged into `main` in PR #10). The service now tracks `main` with **Wait for CI** enabled.
+
+A [read-only preview](https://crs-tips-test-sandbox.up.railway.app/) is available while DNS is pending. Its health check reports sandbox mode; the real LibCard import contains 28 selectable targets, a $44 default, and zero public payment signal. The discovery declaration returns 404 and responses carry noindex headers. Forms and OAuth use the canonical `test.crs.tips` origin, so use that address for sign-in and payment testing after DNS activation.
+
+DNS ownership, the sandbox API key/webhook, creator sign-in, and payment acceptance are still pending. The public preview does not prove payment readiness.
+
 ## DNS
 
 In Vercel → Domains → crs.tips → DNS Records, add these records. Leave production's apex ALIAS and other records unchanged.
@@ -32,7 +40,7 @@ Railway must verify the records and issue a valid certificate before sign-in or 
 - [x] Create an empty Railway environment and service, without copying production.
 - [x] Attach a separate persistent volume and generate independent encryption keys.
 - [x] Configure `FEEDME_MODE=sandbox`, `STRIPE_MODE=own-account`, `STRIPE_ENVIRONMENT=test`, the sandbox account ID, public URL, and LibCard source.
-- [ ] Deploy the sandbox-capable application and verify its health/banner.
+- [x] Deploy the sandbox-capable application and verify its health/banner.
 - [ ] Add DNS records and verify HTTPS at `test.crs.tips`.
 - [ ] Save the dedicated sandbox restricted key in this service's `STRIPE_SECRET_KEY` variable.
 - [ ] Configure the sandbox webhook and save its signing secret.
