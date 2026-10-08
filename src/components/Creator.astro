@@ -7,16 +7,20 @@ import { demoPerson } from '../lib/demo-media';
 import { isAdmin } from '../lib/auth';
 import { profile } from '../lib/repository';
 import { config } from '../lib/config';
+import { cachedCreatorBluesky, refreshCreatorBluesky } from '../lib/creator-bluesky';
+await refreshCreatorBluesky();
 const p = libcardProfile(profile());
+const blueskyActor = cachedCreatorBluesky()?.did || (!config().demo && config().ownerDid) || p.handle;
+const blueskyUrl = blueskyActor ? `https://bsky.app/profile/${encodeURIComponent(blueskyActor)}` : undefined;
 const current = Astro.url.pathname;
 ---
 <section class="creator shell">
   <div class="creator-cover" aria-hidden="true"></div>
   <div class="creator-info">
     <div class="creator-avatar"><Avatar name={p.name} src={config().demo && !config().libcardRemoteDemo ? demoPerson(config().ownerDid)?.avatar : p.avatar} size={80}/></div>
-    <div class="min-w-0"><h1 class="display creator-name">{p.name}</h1><div class="handle">{p.handle ? `@${p.handle}` : 'Independent creator'}</div></div>
+    <div class="min-w-0"><h1 class="display creator-name">{p.name}</h1><div class="handle">{p.handle && blueskyUrl ? <a href={blueskyUrl} rel="noopener noreferrer" aria-label={`@${p.handle} on Bluesky`}>@{p.handle}</a> : 'Independent creator'}</div></div>
   </div>
-  <div class="creator-bio"><p>{p.bio}</p><div class="creator-meta">{p.location && <span><Icon name="location" size={14}/>{p.location}</span>}{p.website && <a href={p.website} rel="noopener noreferrer">Website ↗</a>}</div></div>
+  <div class="creator-bio">{p.bio && <p>{p.bio}</p>}<div class="creator-meta">{p.location && <span><Icon name="location" size={14}/>{p.location}</span>}{p.website && <a href={p.website} rel="noopener noreferrer">Website ↗</a>}</div></div>
   <div class="creator-follow">{isAdmin(Astro.locals.user) ? <a href="/studio/settings" class="button secondary social">Edit profile</a> : <FollowButton kind="creator" subject={config().ownerDid} title={p.name}/>}</div>
 </section>
 <div class="shell mb-5">{Astro.locals.user?.did !== config().ownerDid && <a class="text-sm font-medium text-blue-600" href={`/recommend?did=${encodeURIComponent(config().ownerDid)}`}>Recommend this creator ↗</a>}</div>
@@ -33,7 +37,9 @@ const current = Astro.url.pathname;
   .creator-avatar { width: 88px; height: 88px; border: 4px solid white; border-radius: 50%; flex-shrink: 0; background: white; }
   .creator-name { font-size: 28px; line-height: 1.2; font-weight: 700; }
   .handle { color: var(--color-muted); font-size: 14px; margin-top: 5px; overflow-wrap: anywhere; }
+  .handle a:hover { text-decoration: underline; }
   .creator-bio { grid-column: 1; font-size: 15px; line-height: 1.65; max-width: 620px; margin-top: 16px; }
+  .creator-bio > p { white-space: pre-line; overflow-wrap: anywhere; }
   .creator-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin-top: 8px; font-size: 13px; color: var(--color-muted); }
   .creator-meta > * { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; }
   .creator-meta a { min-height: 44px; }
