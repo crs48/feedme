@@ -197,7 +197,7 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     expect(libcardSnapshot()?.document.items.every(i => !i.feedme)).toBe(true);
     expect(libcardTargets().slice(1).every(p => p.libcard?.demoOnly)).toBe(true);
     const base = { name: 'Native', handle: 'native.example', bio: '', location: '', website: '' };
-    expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: 'Building xNet', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
+    expect(libcardProfile(base)).toMatchObject({ name: 'Christopher Smothers', handle: 'crs.land', bio: '', avatar: 'https://raw.githubusercontent.com/test/card/main/public/avatar.jpg' });
     expect(base.name).toBe('Native');
     state.remoteDemo = false;
     expect(libcardProfile(base).handle).toBe('native.example');

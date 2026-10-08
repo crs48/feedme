@@ -8,6 +8,7 @@ import { LibcardImportError, libcardSnapshotSchema, parseLibcard, rawRoot, sourc
 import { libcardFixture } from './libcard-fixture';
 import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
+import { cachedCreatorBluesky } from './creator-bluesky';
 
 export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -84,11 +85,14 @@ export const libcardTargets = (snapshot = libcardSnapshot()) => {
 };
 export const libcardProfile = (base: Profile, snapshot = libcardSnapshot()): Profile => {
   const cfg = config();
-  // This is presentation only. Demo authentication still uses a fictional DID.
-  const handle = cfg.libcardRemoteDemo ? (cfg.identities.owner.startsWith('did:') ? '' : cfg.identities.owner) : base.handle;
+  const bluesky = cachedCreatorBluesky();
+  const configuredHandle = cfg.identities.owner.startsWith('did:') ? '' : cfg.identities.owner;
+  // LibCard describes the catalog. The bio and handle belong to Bluesky, even
+  // when its current bio is empty. Never substitute the card's tagline.
   return snapshot ? {
-    ...base, handle, name: snapshot.document.profile.name, bio: snapshot.document.profile.tagline,
-    location: snapshot.document.profile.location, avatar: snapshot.document.profile.avatar,
+    ...base, handle: bluesky?.handle ?? (cfg.libcardRemoteDemo ? configuredHandle : base.handle || configuredHandle),
+    name: bluesky?.name ?? snapshot.document.profile.name, bio: bluesky?.bio ?? base.bio,
+    location: snapshot.document.profile.location, avatar: bluesky ? bluesky.avatar : snapshot.document.profile.avatar,
   } : base;
 };
 export const overrideLibcard = (db: DatabaseSync, id: string, hidden: boolean, aspiration?: number) => {
