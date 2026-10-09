@@ -14,7 +14,7 @@ const title = creator ? `No preference — just ${creatorName}` : social ? socia
 ---
 <article class:list={['pick-row', { 'pick-social': social, 'pick-creator': creator }]} data-pick-row={p.id} data-pick-title={title} data-selected={String(count > 0)}>
   {!social && <div class="pick-icon" aria-hidden="true"><LibcardIcon name={item?.icon || (creator ? 'heart' : 'link')} size={creator ? 20 : 16}/></div>}
-  <div class="pick-copy"><h3>{p.libcard?.url ? <a class="pick-title" href={p.libcard.url} rel="noopener noreferrer">{social && <LibcardIcon name={item?.icon || 'link'} size={14}/>}<span>{title}</span></a> : title}</h3>
+  <div class="pick-copy"><h3>{p.libcard?.url ? <a class="pick-title" href={p.libcard.url} target="_blank" rel="noopener noreferrer">{social && <LibcardIcon name={item?.icon || 'link'} size={14}/>}<span>{title}</span></a> : title}</h3>
     {creator ? <p>Skip the list. They decide where it helps most.</p> : p.summary && <p>{p.summary}</p>}
     {item && !social && <div class="pick-details"><span class="pick-destination">{item.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>{config().libcardShowGithubStars !== false && <LibcardGithub item={item} compact/>}</div>}
     <LibcardGoal project={p} publicAmount={publicAmount} compact/>

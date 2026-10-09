@@ -27,7 +27,7 @@ const user = Astro.locals.user;
     <noscript><p class="notice">Each slider runs from 0% to 100% of your total. Set the percentages to add up to exactly 100% before continuing. Your dollar breakdown will appear at checkout.</p></noscript>
     <div class="project-list">{projects.map((p) => { const t = totals(p.id); return <article class="allocation-project" data-project={p.id}>
       <div class="project-topline"><span class="tag">{p.category}</span><span class="project-status">{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
-      <h3><a href={`/support/${p.id}`}>{p.title}<Icon name="arrow" size={16}/></a></h3>
+      <h3><a href={`/support/${p.id}`} target="_blank" rel="noopener noreferrer">{p.title}<Icon name="arrow" size={16}/></a></h3>
       <p class="project-summary">{p.summary}</p>
       <p class="project-funding"><strong>{money(t.amount)}</strong> public support{p.target > 0 && <> · {money(p.target)} aspiration</>}</p>
       <AspirationProgress amount={t.amount} target={p.target}/>
@@ -36,7 +36,7 @@ const user = Astro.locals.user;
         {p.id === active[0]?.id && <div class="slider-hint-slot" data-enhanced hidden><span id="allocation-nudge" class="slider-hint" data-slider-hint role="tooltip" hidden>Move a slider to start</span></div>}
         <input class="project-slider" type="range" name={`percentage:${p.id}`} id={`percentage-${p.id}`} min="0" max="100" step="1" value="0" data-percentage={p.id} aria-label={`Share for ${p.title}`} aria-describedby="allocation-help" />
         <div class="slider-scale" aria-hidden="true"><span>0%</span><span>100%</span></div>
-      </div> : <a class="completed-link" href={`/support/${p.id}`}>View project <Icon name="arrow" size={14}/></a>}
+      </div> : <a class="completed-link" href={`/support/${p.id}`} target="_blank" rel="noopener noreferrer">View project <Icon name="arrow" size={14}/></a>}
     </article>; })}</div>
     {!projects.length && <div class="panel"><h3 class="section-title mb-3">The first project is on its way.</h3><p class="muted text-sm">This creator is getting ready to share their work.</p></div>}
     <p id="allocation-help" class="allocation-help">Sliders share a 100% limit. Lower one to make room for another, or move a single slider to 100% to give it everything. Every tip goes to {creatorName}, regardless of a project’s progress.</p>
