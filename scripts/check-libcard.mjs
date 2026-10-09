@@ -58,6 +58,8 @@ try {
   assert.equal(prefilled.get(automatic[0]),'2');
   assert.ok([...initial].filter(([key]) => key.startsWith('pick:')).every(([,v]) => v === '0'));
   const publicBefore = await (await request('/api/public/libcard')).json();
+  const automaticTarget = publicBefore.targets.find(p => p.id === automatic[0].slice(5));
+  assert.ok(automaticTarget);
   assert.ok(publicBefore.targets.every(p => p.publicCount === 0 && p.publicShareMillis === 0));
   initial.set('intent','all'); initial.set('note','fixture-private-note');
   const equal = fields(await page('/checkout', initial));
@@ -101,7 +103,7 @@ try {
   automaticReview.set(automatic[0], '1'); automaticReview.set('intent', 'review');
   const autoPosted = await request('/api/checkout/review', automaticReview); assert.equal(autoPosted.status,303);
   const autoReviewUrl = autoPosted.headers.get('location');
-  const autoReview = await page(autoReviewUrl); assert.match(autoReview.text(), /Résumé/);
+  const autoReview = await page(autoReviewUrl); assert.ok(autoReview.text().includes(automaticTarget.label));
   await request('/api/studio',{action:'libcard-override',id:automatic[0].slice(5),hidden:'yes',aspiration:'',returnTo:'/studio/projects'});
   assert.ok(!fields(await page('/')).has(automatic[0]));
   assert.ok(!(await (await request('/api/public/libcard')).json()).targets.some(p => p.id === automatic[0].slice(5)));
