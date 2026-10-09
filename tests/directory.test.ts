@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { boundedDirectoryReader, collectDirectory, observeCreator } from '../src/lib/directory-collector';
-import { DAY, directorySnapshotSchema, publicDirectoryCreators, type DirectoryCandidate } from '../src/lib/directory-model';
+import { DAY, directoryAvatarSchema, directorySnapshotSchema, publicDirectoryCreators, type DirectoryCandidate } from '../src/lib/directory-model';
 import { profileUri, type PublicReader } from '../src/lib/public-identity';
 import { PublicHttpError } from '../src/lib/public-network';
 const did = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa', second = 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb';
 const time = '2026-10-02T12:00:00.000Z';
+const avatar = `https://cdn.bsky.app/img/avatar/plain/${did}/bafkreiexample`;
 const marker = (owner = did) => ({ uri: profileUri(owner), cid: 'bafyreiprofile', value: { $type: 'fund.feedme.profile', name: 'Example Creator', handle: 'spoof.example', bio: 'A public introduction.', location: '', website: '', feedmeUrl: 'https://creator.example', discoverable: true, privateNote: 'DO NOT EXPORT' } });
 const transport: PublicReader = async (input) => {
   const url = new URL(input); const owner = url.searchParams.get('repo') || url.searchParams.get('actor') || did;
@@ -28,6 +29,38 @@ describe('public creator directory', () => {
   it('does not display a handle without reciprocal identity resolution', async () => {
     const result = await observe(async (url, options) => url.includes('resolveHandle') ? { did: second } : transport(url, options));
     expect(result.creator?.handle).toBeUndefined(); expect(result.creator?.url).toBeDefined();
+  });
+  it('imports the current Bluesky avatar through the public snapshot and retained state', async () => {
+    const read: PublicReader = async (url, options) => url.includes('getProfile')
+      ? { did, handle: 'creator.example', avatar, privateNote: 'DO NOT EXPORT' } : transport(url, options);
+    const { state, snapshot } = await collectDirectory({ read, now: new Date(time) });
+    expect(snapshot.creators[0].avatar).toBe(avatar);
+    expect(state.candidates[0].creator?.avatar).toBe(avatar);
+    expect(directorySnapshotSchema.parse(snapshot)).toEqual(snapshot);
+    expect(JSON.stringify(snapshot)).not.toContain('DO NOT EXPORT');
+    const unavailable = await observe(async () => { throw new Error('Offline'); }, state.candidates[0]);
+    expect(unavailable.creator?.avatar).toBe(avatar);
+    // A successful refresh with no avatar clears the old image, rather than
+    // keeping a picture the creator has removed from Bluesky.
+    expect((await observe(transport, state.candidates[0])).creator?.avatar).toBeUndefined();
+  });
+  it('keeps old snapshots and missing, unsafe, or labeled avatars on the initial fallback', async () => {
+    const first = await observe();
+    expect(first.creator?.avatar).toBeUndefined();
+    for (const source of [undefined, '', 'https://images.example/avatar.jpg', 'https://cdn.bsky.app.evil.example/img/avatar/plain/x/y', 'https://user:pass@cdn.bsky.app/img/avatar/plain/x/y', 'http://cdn.bsky.app/img/avatar/plain/x/y', 'https://cdn.bsky.app/img/avatar/plain/x/y.svg', 'https://cdn.bsky.app/img/avatar/plain/x/y?redirect=evil', 'data:image/svg+xml,evil', 'javascript:alert(1)']) {
+      expect(directoryAvatarSchema.safeParse(source).success).toBe(false);
+      const result = await observe(async (url, options) => url.includes('getProfile') ? { did, handle: 'creator.example', avatar: source } : transport(url, options));
+      expect(result.creator?.siteStatus).toBe('reachable');
+      expect(result.creator?.avatar).toBeUndefined();
+    }
+    expect(directoryAvatarSchema.parse(`${avatar}@jpeg`)).toBe(`${avatar}@jpeg`);
+    const labeled = await observe(async (url, options) => url.includes('getProfile') ? { did, handle: 'creator.example', avatar, labels: [{ val: '!warn' }] } : transport(url, options));
+    expect(labeled.creator?.avatar).toBeUndefined();
+    expect(labeled.creator?.siteStatus).toBe('reachable');
+    const mismatch = await observe(async (url, options) => url.includes('getProfile') ? { did: second, handle: 'creator.example', avatar } : transport(url, options));
+    expect(mismatch.creator).toBeUndefined();
+    const advertised = await observe(async (url, options) => url.includes('getRecord') ? { ...marker(), value: { ...marker().value, avatar } } : transport(url, options));
+    expect(advertised.creator?.avatar).toBeUndefined();
   });
   it('withdraws opt-outs and missing records, including during a relay outage', async () => {
     const first = await collectDirectory({ read: transport, now: new Date(time) });

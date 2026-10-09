@@ -27,6 +27,8 @@ pnpm directory:collect --previous output/directory/state.json
 
 The collector also accepts `--relay`, `--policy`, and `--output`. Outputs under ignored `output/` are schema-validated public JSON, not application backups. Do not point these options at a creator's private data directory. Missing prior state starts cold; malformed state fails the build rather than silently replacing it.
 
+Directory avatars come from the same DID-matched Bluesky profile used for public moderation checks, and refresh on each successful scan. The optional `avatar` field accepts only Bluesky's HTTPS CDN avatar endpoint. Cards retain initials beneath the image, including when an image is missing, blocked, or fails to load. Both the initial page and search results use the same snapshot. The fictional `/demo/` stays offline and uses local sample avatars.
+
 Open http://127.0.0.1:4322. `site-dist/` is the only deployable Pages artifact. The normal `pnpm dev`, `pnpm build`, and `pnpm start` commands still run the self-hosted app.
 
 The landing page ships no application JavaScript. Demo screens retain the app's small UI enhancements plus a separate browser controller. It intercepts forms, filters fictional financial records with the same domain functions as the server, and stores selected edits in `sessionStorage`. Reset clears this tab's changes. Without JavaScript, all screens can be read and forms are disabled. Provider connections and media imports remain disabled. Local project edits have a text preview; public project pages and the shared PNG remain fixed examples. Follows and posts are local previews, not a replacement for the live social feed.

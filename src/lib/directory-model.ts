@@ -8,9 +8,11 @@ export const DAY = 86_400_000;
 export const originSchema = z.string().max(2048).refine((value) => { try { return publicOriginUrl(value) === value; } catch { return false; } }, 'Invalid public origin');
 const timestamp = z.iso.datetime();
 const directoryDid = didSchema.max(512);
+// Only Bluesky's raster avatar endpoint is embedded on the public directory.
+export const directoryAvatarSchema = z.string().max(2048).regex(/^https:\/\/cdn\.bsky\.app\/img\/avatar(?:_thumbnail)?\/plain\/[A-Za-z0-9:._%\-]+\/[A-Za-z0-9]+(?:@(?:jpeg|png|webp))?$/, 'Invalid Bluesky avatar URL');
 export const directoryCreatorSchema = z.object({
   did: directoryDid, handle: z.string().regex(/^[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/).max(253).optional(),
-  name: z.string().min(1).max(80), bio: z.string().max(500), url: originSchema.optional(),
+  name: z.string().min(1).max(80), bio: z.string().max(500), avatar: directoryAvatarSchema.optional(), url: originSchema.optional(),
   profileUri: z.string().max(1024), profileCid: z.string().min(1).max(256),
   advertisementCheckedAt: timestamp, siteCheckedAt: timestamp, lastVerifiedAt: timestamp.optional(),
   siteStatus: z.enum(['reachable', 'unreachable', 'unknown']),

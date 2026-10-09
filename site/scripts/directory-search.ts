@@ -1,4 +1,4 @@
-type Card = { name: string; handle?: string; did: string; bio: string; url?: string; lastVerifiedAt?: string; siteStatus: string };
+import type { DirectoryCreator as Card } from '../../src/lib/directory-model';
 const data = document.querySelector('#directory-search-data')?.textContent;
 const form = document.querySelector<HTMLFormElement>('[data-directory-search]');
 const grid = document.querySelector<HTMLElement>('[data-directory-grid]');
@@ -16,13 +16,20 @@ if (data && form && grid && input) {
   const element = (tag: string, className: string, text = '') => { const node = document.createElement(tag); node.className = className; node.textContent = text; return node; };
   const link = (text: string, href: string, className: string) => { const node = document.createElement('a'); node.textContent = text; node.href = href; node.className = className; node.rel = 'noopener noreferrer'; return node; };
   const render = (c: Card) => {
-    const card = element('article', 'directory-card'); const top = element('div', 'directory-card-top');
+    const card = element('article', 'directory-card'); card.dataset.creatorDid = c.did;
+    const top = element('div', 'directory-card-top');
     const age = c.lastVerifiedAt ? Date.now() - Date.parse(c.lastVerifiedAt) : Infinity;
     const recent = age >= -300_000 && age <= 2 * DAY;
     const available = c.siteStatus === 'reachable' && recent;
     const avatar = element('span', 'directory-avatar', Array.from(c.name.trim())[0]?.toUpperCase() || ''); avatar.setAttribute('aria-hidden', 'true');
+    if (c.avatar) {
+      const image = element('span', 'directory-avatar-image');
+      image.style.backgroundImage = `url(${JSON.stringify(c.avatar)})`;
+      avatar.append(image);
+    }
     top.append(avatar, element('span', `directory-status${available ? '' : ' unavailable'}`, available ? 'Website checked' : c.siteStatus === 'unreachable' ? 'Currently unreachable' : 'Needs a fresh check'));
-    card.append(top, element('h3', '', c.name), link(c.handle ? `@${c.handle}` : 'View AT Protocol account ↗', `https://bsky.app/profile/${encodeURIComponent(c.did)}`, 'directory-handle'), element('p', 'directory-bio', c.bio));
+    // DIDs are validated when the snapshot is built; Bluesky expects literal colons.
+    card.append(top, element('h3', '', c.name), link(c.handle ? `@${c.handle}` : 'View AT Protocol account ↗', `https://bsky.app/profile/${c.did}`, 'directory-handle'), element('p', 'directory-bio', c.bio));
     const bottom = element('div', 'directory-card-bottom');
     bottom.append(c.url && available ? link('Visit Feedme ↗', c.url, 'button secondary') : element('span', 'directory-no-link', 'Website link withheld until rechecked.'));
     if (c.lastVerifiedAt) bottom.append(element('small', '', `Last verified ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }).format(new Date(c.lastVerifiedAt))} UTC`));

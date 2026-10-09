@@ -60,11 +60,25 @@ assert(Buffer.byteLength(directorySource) <= 2_000_000, 'Directory snapshot is t
 const directory = JSON.parse(directorySource);
 assert.equal(directory.schemaVersion, 1);
 assert.deepEqual(Object.keys(directory).sort(), ['creators', 'generatedAt', 'schemaVersion', 'source']);
-const creatorFields = new Set(['did', 'handle', 'name', 'bio', 'url', 'profileUri', 'profileCid', 'advertisementCheckedAt', 'siteCheckedAt', 'lastVerifiedAt', 'siteStatus']);
+const creatorFields = new Set(['did', 'handle', 'name', 'bio', 'avatar', 'url', 'profileUri', 'profileCid', 'advertisementCheckedAt', 'siteCheckedAt', 'lastVerifiedAt', 'siteStatus']);
 for (const creator of directory.creators) {
   assert(Object.keys(creator).every(key => creatorFields.has(key)), 'Unexpected field in public directory.');
   assert.equal(creator.profileUri, `at://${creator.did}/fund.feedme.profile/self`);
   assert(!creator.url || (creator.siteStatus === 'reachable' && creator.lastVerifiedAt), 'Unverified directory link.');
+  if (creator.avatar) assert(/^https:\/\/cdn\.bsky\.app\/img\/avatar(?:_thumbnail)?\/plain\/[A-Za-z0-9:._%\-]+\/[A-Za-z0-9]+(?:@(?:jpeg|png|webp))?$/.test(creator.avatar), 'Untrusted directory avatar.');
+}
+// Real-directory avatars are decorative CDN backgrounds, matching the app's
+// initials fallback. No remote resources are added to the fictional demo.
+for (const file of html.filter(file => file.startsWith(join(root, 'creators/')))) {
+  const $ = load(await readFile(file, 'utf8'));
+  $('[data-creator-did]').each((_, card) => {
+    const creator = directory.creators.find(c => c.did === $(card).attr('data-creator-did'));
+    assert(creator, 'Directory card has no public snapshot entry.');
+    const image = $(card).find('.directory-avatar-image');
+    assert.equal(image.length, creator.avatar ? 1 : 0, 'Directory card lost its avatar.');
+    if (creator.avatar) assert.equal(image.attr('style'), `background-image:url(${JSON.stringify(creator.avatar)})`, 'Directory avatar does not match the public snapshot.');
+    assert.equal($(card).find('.directory-handle').attr('href'), `https://bsky.app/profile/${creator.did}`);
+  });
 }
 assert.equal(png.subarray(1,4).toString(), 'PNG'); assert.equal(png.readUInt32BE(16), 1200); assert.equal(png.readUInt32BE(20), 630);
 assert((await stat(join(root, 'index.html'))).size < 50_000, 'Keep the landing page small.');

@@ -3,7 +3,7 @@ import { didSchema, NS } from './model';
 import { graphPersonSchema, visiblePerson } from './discovery-model';
 import { creatorFromRecord, profileUri, resolvePublicIdentity, siteDeclaration, xrpcUrl, type PublicReader } from './public-identity';
 import { publicJson, PublicHttpError } from './public-network';
-import { DIRECTORY_RELAY, candidateSchema, directoryCreatorSchema, directoryPolicySchema, directorySnapshotSchema, directoryStateSchema, publicDirectoryCreators, type DirectoryCandidate, type DirectoryState } from './directory-model';
+import { DIRECTORY_RELAY, candidateSchema, directoryAvatarSchema, directoryCreatorSchema, directoryPolicySchema, directorySnapshotSchema, directoryStateSchema, publicDirectoryCreators, type DirectoryCandidate, type DirectoryState } from './directory-model';
 
 const appview = 'https://public.api.bsky.app';
 const missing = (error: unknown) => error instanceof PublicHttpError && error.code === 'RecordNotFound';
@@ -29,7 +29,10 @@ export const observeCreator = async (did: string, read: PublicReader, now: strin
         if (resolved.did === did && directoryCreatorSchema.shape.handle.safeParse(person.handle).success) handle = person.handle;
       } catch { /* A missing display handle does not erase a verified DID. */ }
     }
-    const common = { did, handle, name: creator.name, bio: creator.bio, profileUri: profileUri(did), profileCid: cid, advertisementCheckedAt: now, siteCheckedAt: now };
+    // Use the DID-matched public profile, never an arbitrary image from the
+    // advertisement. Warning labels keep the listing's existing initial fallback.
+    const avatar = person.labels?.some(label => !label.neg) ? undefined : directoryAvatarSchema.safeParse(person.avatar).data;
+    const common = { did, handle, name: creator.name, bio: creator.bio, avatar, profileUri: profileUri(did), profileCid: cid, advertisementCheckedAt: now, siteCheckedAt: now };
     let declaration: unknown;
     try { declaration = await read(new URL('/.well-known/feedme', creator.url).href, { maxBytes: 65_536 }); }
     catch {

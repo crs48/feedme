@@ -24,7 +24,7 @@ Implemented `scripts/collect-directory.ts`, public-only `src/lib/directory-*.ts`
 
 Run network collection only in the trusted official Pages workflow, with no creator OAuth, Habitat, Stripe, backup, or app-database credentials. Keep network collection separate from `pnpm build:site`; ordinary builds and pull-request CI consume a validated fixture or explicit snapshot and never crawl the network. Do not weaken `scripts/demo-offline.mjs` or the exporter's clean temporary database/environment boundary.
 
-The current checker rejects remote image resources across the whole artifact. Preserve the fictional demo's offline rules. For real directory avatars, either use local initials initially or add a separate constrained build-time media pipeline: source current Bluesky avatar URLs, validate network destinations, cap download/decode dimensions and bytes, transcode to a safe local raster, and fall back on failure. Never copy an arbitrary user-provided SVG into the site or loosen all artifact checks to permit remote resources. Extend checks specifically for the new real-data routes.
+The fictional demo's offline resource rules remain unchanged. Real directory cards use the current DID-matched Bluesky profile's avatar as a decorative background, with an initial underneath for missing or failed images. The snapshot only accepts Bluesky's HTTPS CDN avatar endpoint; arbitrary image hosts, credentials, query strings, and SVG paths are excluded. The artifact checker verifies each directory avatar against that allowlisted snapshot. This avoids a separate download/transcode pipeline; a visitor needs CDN access to see photos. Older snapshots without avatars continue to render initials.
 
 ## Refresh, persistence, and failure
 
