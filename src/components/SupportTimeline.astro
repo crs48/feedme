@@ -74,6 +74,9 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
     const popover = details.querySelector<HTMLElement>('.tip-popover')!;
     const list = details.querySelector<HTMLElement>('.tip-parts')!;
     let preview = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cancelClose = () => clearTimeout(timer);
+    const hovered = () => summary.matches(':hover') || popover.matches(':hover');
     details.dataset.enhanced = '';
     const place = () => {
       const { top, bottom } = details.getBoundingClientRect();
@@ -86,22 +89,30 @@ const href = (page: number) => { const params = new URLSearchParams(Astro.url.se
       details.dataset.side = side;
       details.style.setProperty('--tip-list-height', `${Math.max(0, (side === 'below' ? below : above) - chrome)}px`);
     };
-    const close = () => { details.open = false; preview = false; };
-    details.addEventListener('pointerenter', (event) => {
+    const close = () => { cancelClose(); details.open = false; preview = false; };
+    const closePreview = () => {
+      if (preview && !hovered() && !details.contains(document.activeElement)) close();
+    };
+    // Only the fitted label opens a preview, never the empty space in its row.
+    summary.addEventListener('pointerenter', (event) => {
+      cancelClose();
       if (event.pointerType !== 'mouse' || details.open) return;
       preview = true; details.open = true; place();
     });
-    details.addEventListener('pointerleave', () => {
-      if (preview && !details.contains(document.activeElement)) close();
-    });
-    details.addEventListener('focusout', () => {
-      requestAnimationFrame(() => {
-        if (preview && !details.matches(':hover') && !details.contains(document.activeElement)) close();
+    [summary, popover].forEach((element) => {
+      element.addEventListener('pointerleave', () => {
+        cancelClose();
+        // Allow moving from the label into the panel without closing it.
+        if (preview) timer = setTimeout(closePreview, 160);
       });
+    });
+    popover.addEventListener('pointerenter', cancelClose);
+    details.addEventListener('focusout', () => {
+      requestAnimationFrame(closePreview);
     });
     summary.addEventListener('click', (event) => {
       // A click pins a hover preview, so touch and mouse use the same disclosure.
-      if (preview) { event.preventDefault(); preview = false; }
+      if (preview) { event.preventDefault(); preview = false; cancelClose(); }
     });
     details.addEventListener('toggle', () => { if (details.open) place(); });
     document.addEventListener('keydown', (event) => {
