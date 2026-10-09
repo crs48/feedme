@@ -1,10 +1,63 @@
 ---
 import Site from '../layouts/Site.astro';
+import setupPrompt from '../../docs/agent-setup-prompt.md?raw';
 ---
-<Site title="Make Feedme your own — setup guide"><article class="guide wrap"><p class="eyebrow">From a little curiosity to your own corner</p><h1>Make Feedme your own.</h1><p>The website at <strong>feedme.fund</strong> is a static product demo. Your own Feedme is a small Node app: it handles sign-in, verified payments, and private records on your server.</p><p class="guide-warning"><strong>Work in progress.</strong> Explore freely with demo data. Before accepting real money, finish the live acceptance checklist for your Stripe, AT Protocol, and Habitat accounts. Provider integrations have automated coverage; that is not a substitute for real test-mode transactions.</p><h2>1. Take it for a spin</h2><p><a href="/demo/">Explore the public demo</a> or <a href="/demo/studio/">look inside the creator dashboard</a>. No account or credit card needed. The static demo keeps supported interactions in your current browser tab; nothing is sent to Stripe or Bluesky.</p><h2>2. Make a copy</h2><p><a href="https://github.com/crs48/feedme/generate">Use the GitHub template</a>. Install Node 24 LTS and pnpm 10.11.1, then run:</p><pre><code>git clone https://github.com/YOUR-NAME/YOUR-REPO.git
+<Site title="Make Feedme your own — setup guide"><article class="guide wrap"><p class="eyebrow">From a little curiosity to your own corner</p><h1>Make Feedme your own.</h1><p>The website at <strong>feedme.fund</strong> is a static product demo. Your own Feedme is a small Node app: it handles sign-in, verified payments, and private records on your server.</p><p class="guide-warning"><strong>Alpha software.</strong> Feedme works, but use it at your own risk. Explore freely with demo data. Before accepting real money, finish the live acceptance checklist for your Stripe, AT Protocol, and Habitat accounts. Provider integrations have automated coverage; that is not a substitute for real test-mode transactions.</p>
+<section class="agent-setup" aria-labelledby="agent-setup-title">
+  <p class="eyebrow">One prompt. A guided setup.</p>
+  <h2 id="agent-setup-title">Let your AI agent help.</h2>
+  <p>Paste this into Codex, Claude, or your preferred agent. It follows our setup guide to connect your hosting, Bluesky, Habitat, and Stripe—and tells you exactly when to open your browser and what to do next.</p>
+  <div class="setup-steps" aria-label="Setup stages"><span>1. Choose your home</span><span>2. Connect your accounts</span><span>3. Test, then go live</span></div>
+  <label for="agent-setup-prompt">Your setup prompt</label>
+  <textarea id="agent-setup-prompt" rows="10" readonly spellcheck="false" aria-describedby="agent-setup-help">{setupPrompt}</textarea>
+  <div class="setup-prompt-actions">
+    <button class="button" type="button" data-copy-setup hidden>Copy setup prompt</button>
+    <a class="button secondary" href="/setup-prompt.md" download="feedme-setup-prompt.md">Download prompt ↓</a>
+    <a href="https://github.com/crs48/feedme/blob/main/docs/agent-setup.md">Read the agent guide ↗</a>
+  </div>
+  <p class="setup-copy-status" role="status" aria-live="polite" data-copy-status></p>
+  <p id="agent-setup-help" class="setup-prompt-help">You can also select and copy the text above. Your agent handles what it can; you sign in, choose hosting costs, and complete Stripe verification. Enter secret keys directly in your host’s settings, never in the chat.</p>
+</section>
+<h2>Prefer to set it up yourself?</h2><p>The same steps work without an AI agent. Start with a demo, test the real connections in an isolated sandbox, then create your production site.</p>
+<h2>1. Take it for a spin</h2><p><a href="/demo/">Explore the public demo</a> or <a href="/demo/studio/">look inside the creator dashboard</a>. No account or credit card needed. The static demo keeps supported interactions in your current browser tab; nothing is sent to Stripe or Bluesky.</p><h2>2. Make a copy</h2><p><a href="https://github.com/crs48/feedme/generate">Use the GitHub template</a>. Install Node 24 LTS and pnpm 10.11.1, then run:</p><pre><code>git clone https://github.com/YOUR-NAME/YOUR-REPO.git
 cd YOUR-REPO
 pnpm install
 cp .env.example .env
 pnpm dev</code></pre><p>Open <code>http://127.0.0.1:4321</code>. This starts a local demo with sample projects and a working dashboard.</p><h2>3. Set your identity</h2><p>In your environment, replace the default creator handle with your own:</p><pre><code>BLUESKY_HANDLE=you.bsky.social
 # Optional additional administrators
-ADMIN_ACCOUNTS=friend.bsky.social</code></pre><p>That handle identifies the creator and administrator. In live mode it is verified and pinned to a permanent DID. You can import your Bluesky name, avatar, and bio from Settings.</p><h2>4. Choose a home</h2><p>Run one Node server with a persistent disk. A VPS with Docker Compose works; managed hosts can run the included Dockerfile. GitHub Pages hosts this demo, not the payment app.</p><table><thead><tr><th>Option</th><th>What is included</th></tr></thead><tbody><tr><td>Render</td><td>Blueprint with persistent storage</td></tr><tr><td>Railway</td><td>Docker configuration and guided volume/domain setup</td></tr><tr><td>VPS / Docker</td><td>Docker Compose and reverse-proxy instructions</td></tr><tr><td>Fly.io, Coolify, Dokploy</td><td>Deployment configuration or step-by-step guides</td></tr></tbody></table><p><a href="https://github.com/crs48/feedme/blob/main/docs/hosting.md">Read the full hosting guide →</a></p><h2>5. Connect and verify</h2><ol><li>Set a public HTTPS URL and persistent data directory. Generate and safely back up your encryption key.</li><li>Sign in with your configured creator account. Create Habitat private storage from Settings.</li><li>Configure Stripe Connect in test mode, complete hosted onboarding, and register the signed webhook endpoint.</li><li>Test one-time and recurring payments, failed payments, refunds, cancellations, privacy choices, and public record synchronization.</li><li>Switch to live credentials only after the acceptance checklist passes.</li></ol><p><a href="https://github.com/crs48/feedme/blob/main/docs/hosting.md#live-acceptance-checklist">Open the live acceptance checklist →</a></p><h2>Bring your LibCard, too</h2><p>Already share your work on LibCard? Turn the links and socials you choose into places to direct a tip. The card stays on its own host; Feedme handles the giving.</p><p><a href="/libcard/">See how the integration works</a>, then follow the <a href="/libcard/setup/">LibCard connection guide</a>. This is optional: native projects and percentage sliders remain available when LibCard mode is off.</p><h2>Build on it</h2><p>Feedme is MIT licensed. The stack is TypeScript, Astro, Tailwind CSS, and pnpm, with ordinary HTML forms and small browser enhancements. Fork it, shape it for your community, or help improve the original.</p><div class="hero-actions"><a class="button" href="https://github.com/crs48/feedme" style="color:white">View the source ↗</a><a class="button secondary" href="/demo/">Back to the demo</a></div></article></Site>
+ADMIN_ACCOUNTS=friend.bsky.social</code></pre><p>That handle identifies the creator and administrator. In live mode it is verified and pinned to a permanent DID. You can import your Bluesky name, avatar, and bio from Settings.</p><h2>4. Choose a home</h2><p>Run one Node server with a persistent disk. A VPS with Docker Compose works; managed hosts can run the included Dockerfile. GitHub Pages hosts this demo, not the payment app.</p><table><thead><tr><th>Option</th><th>What is included</th></tr></thead><tbody><tr><td>Render</td><td>Blueprint with persistent storage</td></tr><tr><td>Railway</td><td>Docker configuration and guided volume/domain setup</td></tr><tr><td>VPS / Docker</td><td>Docker Compose and reverse-proxy instructions</td></tr><tr><td>Fly.io, Coolify, Dokploy</td><td>Deployment configuration or step-by-step guides</td></tr></tbody></table><p><a href="https://github.com/crs48/feedme/blob/main/docs/hosting.md">Read the full hosting guide →</a></p><h2>5. Connect and verify</h2><ol><li>Set a public HTTPS URL and persistent data directory. Generate and safely back up your encryption key.</li><li>Sign in with your configured creator account. Create Habitat private storage from Settings.</li><li>Use an isolated Stripe sandbox with its own disk, keys, and Habitat space. For a personal site, choose Stripe own-account mode; Connect is also available. Register the signed webhook endpoint shown in your dashboard.</li><li>Test one-time and recurring payments, failed payments, refunds, cancellations, privacy choices, and public record synchronization.</li><li>Once the sandbox checks pass, create a separate production instance with live credentials and complete Stripe’s account verification. Keep test and live data separate.</li></ol><p><a href="https://github.com/crs48/feedme/blob/main/docs/stripe-setup.md">Stripe setup and permissions</a> · <a href="https://github.com/crs48/feedme/blob/main/docs/hosting.md#live-acceptance-checklist">Live acceptance checklist →</a></p><h2>Bring your LibCard, too</h2><p>Already share your work on LibCard? Turn the links and socials you choose into places to direct a tip. The card stays on its own host; Feedme handles the giving.</p><p><a href="/libcard/">See how the integration works</a>, then follow the <a href="/libcard/setup/">LibCard connection guide</a>. This is optional: native projects and percentage sliders remain available when LibCard mode is off.</p><h2>Build on it</h2><p>Feedme is MIT licensed. The stack is TypeScript, Astro, Tailwind CSS, and pnpm, with ordinary HTML forms and small browser enhancements. Fork it, shape it for your community, or help improve the original.</p><div class="hero-actions"><a class="button" href="https://github.com/crs48/feedme" style="color:white">View the source ↗</a><a class="button secondary" href="/demo/">Back to the demo</a></div></article></Site>
+
+<script>
+  const copyButton = document.querySelector<HTMLButtonElement>('[data-copy-setup]');
+  const prompt = document.querySelector<HTMLTextAreaElement>('#agent-setup-prompt');
+  const status = document.querySelector<HTMLElement>('[data-copy-status]');
+  if (copyButton && prompt && status) {
+    copyButton.hidden = false;
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(prompt.value);
+        status.textContent = 'Copied. Paste it into your AI agent to get started.';
+      } catch {
+        prompt.focus();
+        prompt.select();
+        status.textContent = 'Text selected. Copy it with your keyboard or browser menu.';
+      }
+    });
+  }
+</script>
+<style>
+  .agent-setup { margin-block: 28px 40px; padding: 28px; border: 1px solid var(--color-border); border-radius: 10px; box-shadow: var(--shadow-card); }
+  .agent-setup .eyebrow { color: var(--color-primary); margin: 0 0 8px; }
+  .agent-setup h2 { margin: 0 0 12px; font-size: 26px; }
+  .setup-steps { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 20px 0; color: var(--color-muted); font-size: 12px; }
+  .agent-setup label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
+  .agent-setup textarea { display: block; box-sizing: border-box; width: 100%; min-height: 180px; resize: vertical; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface); padding: 16px; color: var(--color-ink); font: 12px/1.7 ui-monospace, monospace; }
+  .agent-setup textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  .setup-prompt-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; font-size: 13px; }
+  .setup-prompt-actions .button { min-height: 44px; }
+  .setup-prompt-actions .button:not(.secondary) { color: white; }
+  .setup-prompt-actions [hidden] { display: none; }
+  .agent-setup .setup-copy-status { min-height: 20px; margin: 10px 0 0; font-size: 12px; color: var(--color-primary); }
+  .agent-setup .setup-prompt-help { margin-bottom: 0; font-size: 12px; }
+  @media (max-width: 600px) { .agent-setup { padding: 20px; } .setup-prompt-actions .button { width: 100%; justify-content: center; } }
+</style>

@@ -1,6 +1,8 @@
 # Hosting and first-run setup
 
-The quickest preview is a single Node process. A real instance also needs HTTPS, a persistent data directory, a Habitat-backed identity connection, and a Stripe Connect platform configuration. No external database is required for the first release.
+The quickest preview is a single Node process. A real instance also needs HTTPS, a persistent data directory, a Habitat-backed identity connection, and a configured Stripe account. Personal sites can use their own Stripe account; Connect is optional. No external database is required for the first release.
+
+For guided setup with Codex, Claude, or another assistant, use the [copyable prompt](agent-setup-prompt.md) and [agent runbook](agent-setup.md). They cover browser handoffs, sandbox/production isolation, and verification gates.
 
 The [README deployment buttons](../README.md#host-it) cover Render, Railway, Fly.io, Coolify, Dokploy, Docker Compose, and a disposable Koyeb demo. Render has a checked-in Blueprint; Railway currently has guided setup and a template recipe. No hosted instance is provisioned just by adding these files to the repository.
 
@@ -49,8 +51,11 @@ Use `http://127.0.0.1:4321` consistently, including in `PUBLIC_URL`. The applica
 | `DATA_ENCRYPTION_KEY` | 64 hex characters, generated once and backed up separately |
 | `DATA_DIR` | Persistent writable directory; `/data` in the supplied deployment configurations |
 | `HABITAT_URL` | Trusted Habitat host; defaults to `https://pear.habitat.network` |
-| `STRIPE_SECRET_KEY` | Connect platform secret key; use a test key first |
-| `STRIPE_WEBHOOK_SECRET` | Signing secret for this Connect webhook endpoint |
+| `STRIPE_MODE` | `own-account` for a personal Stripe account, or `connect` for a platform (default) |
+| `STRIPE_ACCOUNT_ID` | Required in own-account mode; the Stripe account owning the key |
+| `STRIPE_ENVIRONMENT` | `live` for production; use `test` only in a separate sandbox deployment |
+| `STRIPE_SECRET_KEY` | Dedicated server key with the [required permissions](stripe-setup.md), matching the deployment's account/environment |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for this deployment's webhook endpoint and account scope |
 | `HOST` | `0.0.0.0` in containers; loopback behind a host reverse proxy |
 | `PORT` | `4321` or the hosting platform’s assigned port |
 | `SYNC_SECRET` | Optional stable random 32+ character bearer token for an external scheduler |
@@ -84,14 +89,14 @@ Habitat’s own service can be self-hosted separately. Feedme is TypeScript and 
 
 Use **Dashboard → Settings → Set up Stripe** for a guided checklist, exact webhook URL, required events, and Stripe account readiness. The [Stripe setup guide](stripe-setup.md) explains credentials, restricted-key permissions, and separate sandbox/production deployments.
 
-1. Configure your Stripe platform for Connect and use **test mode** credentials first, in an isolated sandbox deployment with its own data directory.
-2. In **Dashboard → Settings → Set up Stripe**, choose **Set up payouts with Stripe**. Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
-3. Register `https://support.example.com/api/stripe/webhook` as a **connected-account** event destination using API version `2026-08-26.dahlia` (matching the installed Stripe SDK) and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+1. Start in an isolated [sandbox deployment](sandbox.md) with its own disk, keys and private Habitat space. For a personal site set `STRIPE_MODE=own-account`, `STRIPE_ACCOUNT_ID` to the account owning the sandbox key, and `STRIPE_ENVIRONMENT=test`. A platform can choose `connect` instead.
+2. For own-account, verify that account's readiness in Stripe and **Dashboard → Settings → Set up Stripe**. For Connect, choose **Set up payouts with Stripe** there; Feedme creates a Standard connected account with an idempotency key and redirects to Stripe-hosted onboarding. Banking and identity-verification details stay on Stripe.
+3. Register `https://support.example.com/api/stripe/webhook` as a **Your account** event destination for own-account, or a **Connected accounts** destination for Connect. Use the API version shown in Studio (matching the installed SDK) and copy that endpoint's signing secret into `STRIPE_WEBHOOK_SECRET`.
 4. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`, **`invoice.paid`, `invoice.payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`**. Existing installations must add the invoice and subscription events before offering recurring support.
-5. Enable eligible payment methods on the connected account. Checkout selects methods dynamically; card wallets such as Apple Pay and Google Pay depend on account, currency, device, and Stripe eligibility. Feedme does not promise every method on every checkout.
+5. Enable eligible payment methods on the receiving account. Checkout selects methods dynamically; card wallets such as Apple Pay and Google Pay depend on account, currency, device, and Stripe eligibility. Feedme does not promise every method on every checkout.
 6. Follow the acceptance checklist below in an isolated sandbox deployment, then configure live credentials, onboarding, and a live webhook on the production deployment. Keep their data directories separate: changing keys does not migrate a saved test connected account or its payment ledger.
 
-Checkout verifies both `charges_enabled` and `payouts_enabled`. Feedme makes direct charges to the connected account and sets no application fee. Stripe processing and applicable Billing fees still apply. Refunds and disputes are managed from Stripe’s dashboard; webhooks update Feedme. The current release offers USD one-time, monthly, and yearly support. Before opening the first recurring Checkout, Feedme creates a connected-account Customer Portal configuration with invoice history, payment-method updates, cancellation at the end of the period, and email login enabled. See [recurring support](recurring-support.md) for accounting and recovery details.
+Checkout verifies both `charges_enabled` and `payouts_enabled`. Payments belong to the creator's own account, or use direct charges on the connected account in Connect mode. Feedme sets no application fee; Stripe processing and applicable Billing fees still apply. Refunds and disputes are managed from Stripe’s dashboard; webhooks update Feedme. The current release offers USD one-time, monthly, and yearly support. Before opening the first recurring Checkout, Feedme creates a Customer Portal configuration on the receiving account with invoice history, payment-method updates, cancellation at the end of the period, and email login enabled. See [recurring support](recurring-support.md) for accounting and recovery details.
 
 Stripe supports [stablecoin payments](https://docs.stripe.com/payments/stablecoin-payments) subject to eligibility. Bitcoin requires a separate future integration. Do not advertise Bitcoin as a Stripe checkout option.
 

@@ -14,3 +14,4 @@ test-results/
 
 .playwright-cli/
 output/
+.feedme-setup.md

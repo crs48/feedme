@@ -63,6 +63,11 @@ for (const route of ['demo', 'demo/checkout']) {
 }
 const review = load(await readFile(join(root, 'demo/checkout/review/index.html'), 'utf8'));
 assert.equal(review('[data-demo-review] [data-demo-confirm]').length, 1, 'Missing simulated review confirmation.');
+const setupPrompt = await readFile(resolve(import.meta.dirname, '../docs/agent-setup-prompt.md'), 'utf8');
+const setup = load(await readFile(join(root, 'get-started/index.html'), 'utf8'));
+assert.equal(setup('#agent-setup-prompt[readonly]').val(), setupPrompt, 'Setup prompt must remain readable without JavaScript and match the repository guide.');
+assert.equal(await readFile(join(root, 'setup-prompt.md'), 'utf8'), setupPrompt, 'Downloaded setup prompt drifted from the copyable version.');
+assert.equal(setup('a[download][href="/setup-prompt.md"]').length, 1, 'Missing downloadable setup prompt.');
 const png = await readFile(join(root, 'demo/share/sample.png'));
 assert(all.has(join(root, 'creators/index.html')), 'Missing real creator directory.');
 const directorySource = await readFile(join(root, 'directory/v1.json'), 'utf8');
