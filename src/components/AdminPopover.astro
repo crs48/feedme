@@ -1,0 +1,13 @@
+---
+interface Props { label: string; title: string; total?: string; iconOnly?: boolean; }
+const { label, title, total, iconOnly = false } = Astro.props;
+---
+<details class:list={['admin-popover', { 'admin-popover-action': iconOnly }]} data-admin-popover>
+  <summary aria-label={label} title={iconOnly ? title : undefined}>
+    <span class:list={{ 'sr-only': iconOnly }}>{label}</span><span aria-hidden="true" class="admin-popover-chevron">{iconOnly ? '•••' : '⌄'}</span>
+  </summary>
+  <div class="admin-popover-panel" role="region" aria-label={title}>
+    <div class="admin-popover-heading"><strong>{title}</strong>{total && <span>{total}</span>}</div>
+    <div class="admin-popover-content" tabindex="0"><slot/></div>
+  </div>
+</details>

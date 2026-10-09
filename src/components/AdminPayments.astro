@@ -1,5 +1,7 @@
 ---
 import Avatar from './Avatar.astro';
+import AdminPopover from './AdminPopover.astro';
+import AdminProjectBreakdown from './AdminProjectBreakdown.astro';
 import { people } from '../lib/people';
 import { money, netSupport, supportParts, type Project, type Support } from '../lib/model';
 import { displayDate, paymentDate } from '../lib/analytics';
@@ -7,9 +9,19 @@ interface Props { records: Support[]; projects: Project[]; }
 const { records, projects } = Astro.props;
 const profiles = await people(records.flatMap((s) => s.visibility !== 'anonymous' && s.supporterDid ? [s.supporterDid] : []));
 ---
-{records.length ? <div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Supporter / payment</th><th>Project</th><th>Status</th><th class="numeric">Net support</th></tr></thead><tbody>{records.map((s) => {
+{records.length ? <div class="admin-table-scroll" tabindex="0" aria-label="Payments"><table class="admin-table admin-ledger"><thead><tr><th>Supporter</th><th>Allocation</th><th>Status</th><th class="numeric">Net support</th><th><span class="sr-only">Details</span></th></tr></thead><tbody>{records.map((s) => {
   const person = s.visibility !== 'anonymous' && s.supporterDid ? profiles.get(s.supporterDid) : undefined;
   const name = s.visibility === 'anonymous' ? 'Anonymous' : person?.name || s.supporterDid || 'Guest';
   const parts = supportParts(s);
-  return <tr><td><div class="admin-person"><Avatar name={name} src={person?.avatar} size={32}/><div><span class="break-all">{name}</span><span class="admin-caption">{displayDate(paymentDate(s))} · {s.visibility}</span></div></div><details><summary>Payment details</summary><p>ID: {s.id}</p>{s.visibility !== 'anonymous' && s.supporterDid && <p>DID: {s.supporterDid}</p>}<p>Gross: {money(s.amount)} · Refunded: {money(s.refundedAmount)}<br/>{s.frequency === 'monthly' ? 'Monthly subscription' : s.frequency === 'yearly' ? 'Yearly subscription' : 'One-time tip'}</p>{s.note && <p><strong>Private note</strong><br/>{s.note}</p>}{s.disputed && <p>This payment is disputed and excluded from earnings.</p>}</details></td><td>{parts.map((part) => <div class="mb-1"><a class="admin-link" href={`/studio/projects/${part.projectId}`}>{projects.find((p) => p.id === part.projectId)?.title || part.projectId}</a>{parts.length > 1 && <span class="admin-caption">{money(netSupport(part))} net</span>}</div>)}</td><td><span class="status-pill" data-status={s.status}>{s.status}</span></td><td class="numeric"><strong>{money(netSupport(s))}</strong><span class="admin-caption">{s.frequency === 'monthly' ? 'monthly' : s.frequency === 'yearly' ? 'yearly' : 'one time'}</span></td></tr>;
+  return <tr>
+    <td><div class="admin-person"><Avatar name={name} src={person?.avatar} size={32}/><div><strong class="admin-person-name">{name}</strong><span class="admin-caption">{displayDate(paymentDate(s))} · {s.visibility}</span></div></div></td>
+    <td><AdminProjectBreakdown parts={parts.map(part => ({ projectId: part.projectId, amount: netSupport(part) }))} projects={projects} total={netSupport(s)}/></td>
+    <td><span class="status-pill" data-status={s.disputed ? 'disputed' : s.status}>{s.disputed ? 'disputed' : s.status}</span></td>
+    <td class="numeric"><strong>{money(netSupport(s))}</strong><span class="admin-caption">{s.frequency === 'monthly' ? 'monthly' : s.frequency === 'yearly' ? 'yearly' : 'one time'}</span></td>
+    <td class="admin-row-action"><AdminPopover label={`Payment details for ${name}, ${displayDate(paymentDate(s))}`} title="Payment details" total={money(netSupport(s))} iconOnly>
+      <dl class="admin-detail-list"><div><dt>Gross</dt><dd>{money(s.amount)}</dd></div><div><dt>Refunded</dt><dd>{money(s.refundedAmount)}</dd></div><div><dt>Frequency</dt><dd>{s.frequency === 'monthly' ? 'Monthly' : s.frequency === 'yearly' ? 'Yearly' : 'One time'}</dd></div><div><dt>Visibility</dt><dd>{s.visibility}</dd></div><div class="admin-detail-id"><dt>Payment ID</dt><dd>{s.id}</dd></div>{s.visibility !== 'anonymous' && s.supporterDid && <div class="admin-detail-id"><dt>Supporter DID</dt><dd>{s.supporterDid}</dd></div>}</dl>
+      {s.note && <div class="admin-detail-note"><strong>Private note</strong><p>{s.note}</p></div>}
+      {s.disputed && <p class="admin-popover-note">Disputed payments are excluded from earnings.</p>}
+    </AdminPopover></td>
+  </tr>;
 })}</tbody></table></div> : <p class="admin-empty">No payments match these filters. Confirmed support will appear here after payment verification.</p>}

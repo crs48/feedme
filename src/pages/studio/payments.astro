@@ -12,8 +12,7 @@ const stats = summarizePayments(records);
 const pagination = reportPage(records, Astro.url.searchParams);
 ---
 <AdminLayout title="Payments" description="Every tip and recurring payment, with its original allocation and visibility.">
-  <a slot="actions" class="button secondary" href={`/api/admin/export?${error ? '' : Astro.url.searchParams}`}>Export CSV ↓</a>
-  <p class="mb-5"><a class="admin-link" href="/studio/stripe">Stripe setup & payment readiness →</a></p>
+  <div slot="actions" class="admin-actions"><a class="admin-link" href="/studio/stripe">Stripe settings</a><a class="button secondary" href={`/api/admin/export?${error ? '' : Astro.url.searchParams}`}>Export CSV ↓</a></div>
   {error && <p class="notice error">{error}</p>}
   <AdminFilters query={query} projects={list} detailed/>
   <section class="admin-card"><div class="admin-card-heading"><h2>{records.length} payments <span class="muted">· {money(stats.net)} net</span></h2><span class="admin-help">{query.project ? 'Amounts show the selected project’s share' : 'Split payments count once'}</span></div><AdminPayments records={pagination.items} projects={list}/><nav class="admin-pagination" aria-label="Payment pages"><span>{pagination.page > 1 && <a class="admin-link" href={pagination.previous}>← Newer</a>}</span><span>Page {pagination.page} of {pagination.pages}</span><span>{pagination.page < pagination.pages && <a class="admin-link" href={pagination.next}>Older →</a>}</span></nav></section>

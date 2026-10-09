@@ -1,0 +1,19 @@
+---
+import AdminPopover from './AdminPopover.astro';
+import { money, type Project } from '../lib/model';
+interface Props {
+  parts: { projectId: string; amount: number }[];
+  projects: Project[];
+  total: number;
+  title?: string;
+  caption?: string;
+}
+const { parts, projects, total, title = 'Support breakdown', caption = 'Net support after refunds and disputes.' } = Astro.props;
+const entries = parts.map(part => ({ ...part, project: projects.find(p => p.id === part.projectId) }));
+---
+<AdminPopover label={`${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`} title={title} total={money(total)}>
+  <ul class="admin-breakdown-list" aria-label="Supported projects">
+    {entries.map(({ projectId, project, amount }) => <li><span>{project ? <a href={project.libcard ? '/studio/projects#libcard' : `/studio/projects/${projectId}`}>{project.title}</a> : projectId}</span><strong>{money(amount)}</strong></li>)}
+  </ul>
+  <p class="admin-popover-note">{caption}</p>
+</AdminPopover>
