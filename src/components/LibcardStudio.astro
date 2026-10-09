@@ -32,7 +32,7 @@ const editable = managed.filter(p => p.libcard!.present || !snapshot || sourceKe
       <label class="field mt-3">Aspiration override (USD)<input type="number" name="aspiration" min="0" max="1000000" step="1" value={p.libcard!.aspirationOverride === undefined ? '' : p.libcard!.aspirationOverride / 100} placeholder="Use source value"/><span class="admin-help">Blank inherits; 0 removes the aspiration.{cfg.libcardRemoteDemo && sampleLibcardGoal(p) && ` Preview goal: ${money(sampleLibcardGoal(p)!.goal)}.`}</span></label><button class="button secondary">Save local settings</button>
     </form>
     </div></details>)}
-  {skipped.map(item => <article class="libcard-admin-skipped"><div><h3>{item.label}</h3><p class="admin-help">{item.kind} · Managed in libcard.config.yaml</p></div><span class="status-pill">Skipped in LibCard</span></article>)}
+  {skipped.map(item => <article class="libcard-admin-skipped"><div><h3><a href={item.url} target="_blank" rel="noopener noreferrer">{item.label} ↗</a></h3><p class="admin-help">{item.kind} · Managed in libcard.config.yaml</p></div><span class="status-pill">Skipped in LibCard</span></article>)}
   </div>
   {skipped.length > 0 && <p class="admin-help mt-3">Skipped items are read-only here. Edit their feedme settings in LibCard to allow picks again; local hiding settings still apply. Existing recurring gifts keep their original picks until canceled.</p>}
 </section>}

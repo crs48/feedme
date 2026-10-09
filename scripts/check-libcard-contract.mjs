@@ -79,7 +79,7 @@ for (const scenario of ['ready', 'ready-all', 'disabled', 'unavailable']) {
     assert.equal(studio.headers.get('cache-control'), 'private, no-store');
     const $ = load(await studio.text()); assert.match($('#libcard').text(), /Target ID nervous-system belongs to a native project\. Choose a different LibCard ID\./);
     assert.match($('#libcard').text(), /last good snapshot is unchanged/);
-    const skippedRows = $('#libcard .libcard-admin-row').filter((_, el) => $(el).text().includes('Skipped in LibCard'));
+    const skippedRows = $('#libcard .libcard-admin-skipped').filter((_, el) => $(el).text().includes('Skipped in LibCard'));
     assert.equal(skippedRows.length, 4); assert.equal(skippedRows.find('form,input,button').length, 0);
     for (const url of skippedUrls) assert.equal(skippedRows.find(`a[href="${url}"]`).length, 1);
     assert.equal($('#libcard input[name="id"][value="skipped-link"],#libcard input[name="id"][value="skipped-social"]').length, 0);
