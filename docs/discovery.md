@@ -43,7 +43,7 @@ This release queries the existing relay and public repositories directly; it doe
 
 ## The public creator directory
 
-[feedme.fund/creators/](https://feedme.fund/creators/) lists real, discoverable creators. The separate `/demo/discover/` community remains fictional. Static cards and pagination work without JavaScript; a small enhancement searches names, handles, and websites across all pages. Initials keep directory cards independent of remote image hosts.
+[feedme.fund/creators/](https://feedme.fund/creators/) lists real, discoverable creators. The separate `/demo/discover/` community remains fictional. Static cards and pagination work without JavaScript; a small enhancement searches names, handles, and websites across all pages. Avatars come from each creator's DID-matched Bluesky profile and use only its HTTPS CDN avatar endpoint. Initials remain as a fallback for missing, labeled, or unavailable images; the fictional demo still uses local images.
 
 The [nightly collector](../scripts/collect-directory.ts) enumerates candidate DIDs from the relay, rechecks previously known accounts, and accepts optional DID-only [bootstrap hints](../directory/README.md). It resolves each current PDS, reads `fund.feedme.profile/self`, checks public Bluesky moderation, verifies current handles in both directions, and fetches the matching website declaration. No creator’s database, private Habitat space, graph, or payment data is read.
 
