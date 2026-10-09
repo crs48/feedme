@@ -20,13 +20,13 @@ const title = creator ? `No preference — just ${creatorName}` : social ? socia
     <LibcardGoal project={p} publicAmount={publicAmount} compact/>
   </div>
   <div class="pick-choice">
-    <output data-pick-share aria-live="off">{share}</output>
+    <noscript><output>{share}</output></noscript>
     <label data-pick-input-label for={`pick-${p.id}`}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input/>
     <div class="pick-controls" data-pick-controls hidden>
       <button type="button" class="pick-start" data-pick-start aria-label={`Add a pick to ${p.title}`}><span aria-hidden="true">+{!social && ' Pick'}</span></button>
       <div class="pick-stepper" data-pick-stepper hidden>
         <button type="button" data-pick-remove aria-label={`Remove one pick from ${p.title}`}><span aria-hidden="true">−</span></button>
-        <output data-pick-count aria-live="off">{count}</output>
+        <div class="pick-tally"><output data-pick-count aria-live="off">{count}</output><output data-pick-share aria-live="off">{share}</output></div>
         <button type="button" data-pick-add aria-label={`Add a pick to ${p.title}`}><span aria-hidden="true">+</span></button>
       </div>
     </div>
