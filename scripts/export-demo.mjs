@@ -143,6 +143,11 @@ try {
     });
     $('img[src]').each((_, element) => $(element).attr('src', map($(element).attr('src'), path)));
     $('body').prepend(toolbar);
+    const demoLinks = $('.static-demo-bar nav a');
+    const currentDemoLink = demoLinks.toArray().map(element => $(element).attr('href'))
+      .filter(href => target === href || (href !== '/demo/' && target.startsWith(href)))
+      .sort((a, b) => b.length - a.length)[0];
+    demoLinks.filter((_, element) => $(element).attr('href') === currentDemoLink).attr('aria-current', 'page');
     $('[data-share-url]').attr('value', `${demoOrigin}/demo/share/sample/`);
     $('.support-share').prepend('<p class="static-sample-note">Example public card · the fixed 50% / 30% / 20% split below illustrates link previews.</p>');
     $('.creator-card-actions .button').text('Meet this creator →');

@@ -166,27 +166,27 @@ const user = Astro.locals.user;
 </script>
 <style>
   [hidden] { display: none !important; }
-  .support-allocator { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(0,1fr); align-items: start; gap: 40px; margin-top: 32px; }
+  .support-allocator { display:grid; grid-template-columns:minmax(0,1fr) 340px; align-items:start; gap:32px; margin-top:28px; }
   .allocation-projects { min-width: 0; }
-  .allocation-heading p { color: var(--color-muted); font-size: 14px; margin-top: 8px; }
+  .allocation-heading p { color:var(--color-muted); font-size:13px; margin-top:4px; }
   .allocation-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 14px 6px; font-size: 12px; color: var(--color-muted); }
   .allocation-tools > div { display: flex; gap: 16px; }
   .allocation-tools button { min-height: 44px; color: var(--color-primary); font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .project-list { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
-  .allocation-project { padding: 22px 24px 20px; }
+  .project-list { border:1px solid var(--color-border); border-radius:8px; overflow:hidden; box-shadow:var(--shadow-card); }
+  .allocation-project { padding:16px 18px; }
   .allocation-project + .allocation-project { border-top: 1px solid var(--color-border); }
   .project-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
   .project-status { color: var(--color-muted); font-size: 12px; }
-  h3 a { display: inline-flex; align-items: center; gap: 10px; min-height: 36px; font-size: 18px; font-weight: 650; line-height: 1.4; letter-spacing: -.02em; }
+  h3 a { display:inline-flex; align-items:center; gap:8px; min-height:32px; font-size:15px; font-weight:500; line-height:1.4; letter-spacing:-.015em; }
   h3 a:hover { color: var(--color-primary); }
   h3 a svg { color: var(--color-muted); }
-  .project-summary { font-size: 14px; line-height: 1.6; color: var(--color-muted); margin-top: 4px; }
+  .project-summary { font-size:13px; line-height:1.6; color:var(--color-muted); margin-top:2px; }
   .project-funding { font-size: 12px; color: var(--color-muted); margin-top: 12px; }
   .project-funding strong { font-weight: 600; color: var(--color-ink); }
-  .project-allocation { margin-top: 20px; }
+  .project-allocation { margin-top:16px; }
   .allocation-label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
   .allocation-label label { color: var(--color-muted); font-size: 12px; }
-  .allocation-label output { color: var(--color-primary); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .allocation-label output { color:var(--color-primary); font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
   .allocation-label output :global(span) { color: var(--color-muted); font-size: 12px; font-weight: 400; margin-left: 5px; }
   /* Keep the track in place when the hint disappears during a drag. */
   .slider-hint-slot { position: relative; height: 38px; }
@@ -203,19 +203,19 @@ const user = Astro.locals.user;
   .slider-scale { display: flex; justify-content: space-between; margin-top: -3px; font-size: 11px; color: var(--color-muted); }
   .completed-link { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; font-size: 13px; color: var(--color-primary); margin-top: 10px; }
   .allocation-help { font-size: 12px; color: var(--color-muted); margin-top: 16px; }
-  .donation-panel { position: sticky; top: 24px; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; box-shadow: var(--shadow-card); background: white; }
-  .donation-panel h2 { font-size: 21px; }
-  .donation-subtitle { font-size: 13px; color: var(--color-muted); margin-top: 5px; }
-  .total-field { margin-block: 24px 12px; font-size: 13px; }
-  .total-input { display: flex; align-items: center; gap: 10px; border: 1px solid #c0c8d2; border-radius: 6px; padding-inline: 14px; }
+  .donation-panel { position:sticky; top:16px; padding:20px; border:1px solid var(--color-border); border-radius:8px; box-shadow:var(--shadow-panel); background:white; }
+  .donation-panel h2 { font-size:16px; font-weight:600; letter-spacing:-.02em; }
+  .donation-subtitle { font-size:13px; color:var(--color-muted); margin-top:2px; }
+  .total-field { margin-block:16px 8px; font-size:13px; }
+  .total-input { display:flex; align-items:center; gap:6px; border:1px solid var(--color-control); border-radius:6px; padding-inline:12px; box-shadow:var(--shadow-card); }
   .total-input:focus-within { outline: 3px solid #0866ff26; border-color: var(--color-primary); }
-  .total-input > span:first-child { font-size: 25px; color: var(--color-muted); }
+  .total-input > span:first-child { font-size:13px; color:var(--color-caption); }
   .total-input > span:last-child { font-size: 12px; color: var(--color-muted); }
-  .total-input input { min-height: 44px; border: 0; padding-inline: 0; box-shadow: none; outline: none; font-size: 24px; font-weight: 600; }
-  .amount-presets { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
-  .amount-presets button { min-height: 44px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 13px; font-weight: 600; }
-  .amount-presets button[aria-pressed='true'] { color: var(--color-primary); border-color: var(--color-primary); background: #f2f7ff; }
-  .split-summary { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+  .total-input input { min-height:44px; border:0; padding-inline:0; box-shadow:none; outline:none; font-size:18px; font-weight:500; }
+  .amount-presets { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .amount-presets button { min-height:40px; border:1px solid var(--color-control); border-radius:6px; font-size:14px; font-weight:500; box-shadow:var(--shadow-card); }
+  .amount-presets button[aria-pressed='true'] { color:var(--color-primary); border-color:var(--color-primary); background:var(--color-selected); box-shadow:inset 0 0 0 1px var(--color-primary); }
+  .split-summary { margin-top:18px; padding-top:12px; border-top:1px solid var(--color-border); }
   .split-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--color-muted); margin-bottom: 10px; }
   .split-heading h3 { color: var(--color-ink); font-size: 13px; font-weight: 600; }
   .split-summary li { display: flex; justify-content: space-between; gap: 16px; padding-block: 7px; font-size: 12px; line-height: 1.5; }
@@ -242,16 +242,18 @@ const user = Astro.locals.user;
   .note-field textarea { margin-top: 8px; }
   .checkout-total { display: flex; justify-content: space-between; gap: 16px; margin-block: 20px 16px; font-size: 14px; }
   .checkout-total strong { font-size: 18px; font-variant-numeric: tabular-nums; }
-  .allocation-submit { min-height: 48px; }
+  .allocation-submit { min-height:44px; }
   .checkout-caption { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; color: var(--color-muted); margin-top: 12px; text-align: center; }
+  .allocation-submit:disabled { background:#a3acb9; opacity:1; }
   .allocation-disclosure { color: var(--color-muted); font-size: 12px; margin-top: 16px; }
   .allocation-mobile-bar { display: none; }
-  @media(max-width:1000px) { .support-allocator { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 24px; } .donation-panel { padding: 20px; } .allocation-project { padding-inline: 20px; } }
-  @media(max-width:800px) {
+
+  @media(max-width:900px) {
     .support-allocator { grid-template-columns: minmax(0,1fr); gap: 24px; }
     .donation-panel { display: contents; }
     .donation-total { grid-row: 1; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; }
     .allocation-projects { grid-row: 2; }
+    .amount-presets button { min-height:44px; }
     .donation-checkout { grid-row: 3; padding: 20px; border: 1px solid var(--color-border); border-radius: 8px; scroll-margin-top: 20px; }
     .split-summary { margin-top: 0; padding-top: 0; border: 0; }
     .allocation-mobile-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px max(20px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom)); background: white; border-top: 1px solid var(--color-border); box-shadow: 0 -2px 16px #1a1f3608; }
