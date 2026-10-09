@@ -9,7 +9,8 @@ describe('public demo build boundaries', () => {
       OWNER_DID: 'did:web:real.example', NODE_OPTIONS: '--import=untrusted.mjs',
     });
     expect(env).toEqual({ PATH: '/bin', NODE_ENV: 'production', FEEDME_MODE: 'demo', DATA_DIR: '/tmp/fresh-fixtures',
-      PUBLIC_URL: 'http://127.0.0.1:4567', HOST: '127.0.0.1', PORT: '4567', BLUESKY_HANDLE: 'alex.example.com', TIP_AMOUNTS: '11,22,44,88' });
+      PUBLIC_URL: 'http://127.0.0.1:4567', HOST: '127.0.0.1', PORT: '4567', BLUESKY_HANDLE: 'alex.example.com', TIP_AMOUNTS: '11,22,44,88',
+      LIBCARD_REPO: 'example/libcard', LIBCARD_DEMO_SOURCE: 'fixture', LIBCARD_DEFAULT_SUPPORT: 'all' });
   });
   it('blocks forms and network requests even before the demo controller loads', () => {
     expect(demoPolicy).toContain("form-action 'none'");
@@ -21,6 +22,8 @@ describe('public demo build boundaries', () => {
     ['/', '/demo/'], ['/support/sauna#story', '/demo/support/sauna/#story'],
     ['/discover?view=extended', '/demo/discover/extended/'], ['/following?view=people', '/demo/following/people/'],
     ['/thanks?id=receipt-secret', '/demo/thanks/'], ['/share/opaque', '/demo/share/sample/'],
+    ['/checkout?creator=1&presence=3&amount=44', '/demo/checkout/?creator=1&presence=3&amount=44'],
+    ['/checkout/review?token=receipt-secret', '/demo/checkout/review/'],
     ['/share/opaque.png', '/demo/share/sample.png'], ['/auth/login?returnTo=/studio', '/demo/login/'],
     ['/api/admin/export', '#demo-export'], ['/api/stripe/webhook', '/get-started/'],
     ['/demo/avatars/12.jpg', '/demo/avatars/12.jpg'], ['/_astro/site.css', '/_astro/site.css'],

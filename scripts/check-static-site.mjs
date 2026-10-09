@@ -27,7 +27,7 @@ for (const file of html) {
   const demo = $('body').is('[data-static-demo]');
   if (demo) {
     assert.equal($('meta[http-equiv="Content-Security-Policy"]').attr('content'), demoPolicy, `Missing offline CSP: ${relative}`);
-    assert.equal($('input[name=requestId]').length, 0, `Server form token leaked: ${relative}`);
+    assert.equal($('input[name=requestId],input[name=reviewId],input[name=editReview]').length, 0, `Server form token leaked: ${relative}`);
     assert.equal($('script:not([src]):not([type="application/json"])').length, 0, `Inline executable script: ${relative}`);
     $('form').each((_, form) => {
       assert.equal($(form).attr('action'), '#demo-notice');
@@ -52,7 +52,17 @@ for (const file of html) {
     assert(url.origin === 'https://feedme.fund' && exists(url), `Missing responsive image: ${url}`);
   }));
 }
-for (const route of ['', 'get-started/', 'libcard/', 'libcard/setup/', 'demo/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
+for (const route of ['', 'get-started/', 'libcard/', 'libcard/setup/', 'demo/', 'demo/checkout/', 'demo/checkout/review/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
+for (const route of ['demo', 'demo/checkout']) {
+  const $ = load(await readFile(join(root, route, 'index.html'), 'utf8'));
+  assert.equal($('[data-pick-visit][data-demo-action="/api/checkout/review"]').length, 1, 'Demo must use the real pick/review form.');
+  assert.equal($('input[type=range]').length, 0, 'Legacy sliders must not replace the pick demo.');
+  assert($('[data-pick-input]').length > 1 && $('[data-pick-start]').length === $('[data-pick-input]').length, 'Missing pick controls.');
+  assert($('[data-pick-input]').toArray().every(input => $(input).val() === '0'), 'Demo picks must start at zero.');
+  assert($('.pick-socials').length && $('[data-pick-group="ready"]').length, 'Missing grouped links or social picks.');
+}
+const review = load(await readFile(join(root, 'demo/checkout/review/index.html'), 'utf8'));
+assert.equal(review('[data-demo-review] [data-demo-confirm]').length, 1, 'Missing simulated review confirmation.');
 const png = await readFile(join(root, 'demo/share/sample.png'));
 assert(all.has(join(root, 'creators/index.html')), 'Missing real creator directory.');
 const directorySource = await readFile(join(root, 'directory/v1.json'), 'utf8');

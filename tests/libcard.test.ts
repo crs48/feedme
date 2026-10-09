@@ -303,8 +303,10 @@ socials: [{platform: bluesky, url: 'https://bsky.app/profile/crs.land'}]`;
     expect(libcardSnapshot()?.document.items).toHaveLength(2);
   });
   it('upgrades version-two snapshots without a stale ETag so status groups can be imported', async () => {
-    const old = { ...snapshot(), catalogVersion: 2 as const, etag: '"old"' }; importLibcard(state.db!, old);
-    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture.replace('label: Presence', 'label: Presence\n    icon: heart\n    status: ready')));
+    const old = { ...snapshot(), catalogVersion: 2 as const, etag: '"old"' };
+    old.document.items = old.document.items.map(({ icon: _icon, status: _status, ...item }) => item);
+    importLibcard(state.db!, old);
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(libcardFixture));
     await refreshLibcard(true, fetcher);
     expect(fetcher.mock.calls[0][1]?.headers).toEqual({});
     expect(libcardSnapshot()?.document.items[0]).toMatchObject({ icon: 'heart', status: 'ready' });

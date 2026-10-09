@@ -55,7 +55,8 @@ try {
   const put = (kind, value) => db.prepare('INSERT OR REPLACE INTO records VALUES (?,?,?)').run(kind, value.id || 'self', JSON.stringify(value));
   const fixtureToday = Date.parse(`${new Date().toISOString().slice(0, 10)}T12:00:00Z`);
   const daysAgo = (days) => new Date(fixtureToday - days * 86400_000).toISOString();
-  const projects = rows('project').map((project) => ({ ...project, createdAt: daysAgo(95) }));
+  const projects = rows('project').filter(project => !project.libcard).map((project) => ({ ...project, createdAt: daysAgo(95) }));
+  const managed = rows('project').filter(project => project.libcard);
   // Show the beyond-aspiration state as well as works in progress.
   projects.find((project) => project.id === 'field-notes').target = 15000;
   projects.forEach((project) => put('project', project));
@@ -64,7 +65,8 @@ try {
   }
   const seed = rows('support')[0];
   for (let index = 0; index < 12; index++) {
-    put('support', { ...seed, id: `fictional-${index}`, projectId: projects[index % 3].id,
+    put('support', { ...seed, id: `fictional-${index}`, projectId: ['presence', 'xnet', 'pirate-age'][index % 3],
+      picks: [{ projectId: ['presence', 'xnet', 'pirate-age'][index % 3], count: 1 }],
       amount: [1100, 2200, 4400, 8800][index % 4], createdAt: daysAgo(index + 1), paidAt: daysAgo(index + 1),
       visibility: index % 3 === 0 ? 'anonymous' : index % 3 === 1 ? 'private' : 'public',
       supporterDid: index % 3 === 0 ? undefined : seed.supporterDid,
@@ -83,10 +85,15 @@ try {
   await request('/auth/demo', { role: 'supporter' });
   // Exercise the app's real demo checkout to render a legitimate fictional receipt + share card.
   const home = load(await (await request('/')).text());
-  const checkout = await request('/api/checkout', {
+  const reviewed = await request('/api/checkout/review', {
     requestId: home('input[name=requestId]').attr('value'), amount: '22', frequency: 'monthly', visibility: 'public',
-    'percentage:backyard-sauna': '50', 'percentage:open-source': '30', 'percentage:field-notes': '20',
+    ...Object.fromEntries(managed.map(p => [`pick:${p.id}`, String(({ presence: 5, xnet: 3, 'pirate-age': 2 })[p.id] || 0)])),
+    note: 'A fictional note of encouragement.', intent: 'review',
   });
+  const reviewPath = reviewed.headers.get('location');
+  if (!reviewPath?.startsWith('/checkout/review?token=')) throw new Error(`Demo review failed: ${reviewPath}`);
+  const reviewToken = new URL(reviewPath, origin).searchParams.get('token');
+  const checkout = await request('/api/checkout', { reviewId: reviewToken });
   const receiptPath = checkout.headers.get('location');
   if (!receiptPath?.startsWith('/thanks?id=')) throw new Error(`Demo checkout failed: ${receiptPath}`);
   const receipt = await (await request(receiptPath)).text();
@@ -107,12 +114,25 @@ try {
   if (!runtimeAssets.includes('<script')) throw new Error('Missing compiled demo controller.');
   const pick = (value, fields) => Object.fromEntries(fields.filter((key) => value[key] !== undefined).map((key) => [key, value[key]]));
   const data = {
-    projects: rows('project').map((p) => pick(p, ['id','title','summary','description','category','kind','status','color','target','image','link','createdAt'])),
+    projects: rows('project').map((p) => ({ ...pick(p, ['id','title','summary','description','category','kind','status','color','target','image','link','createdAt']),
+      ...(p.libcard ? { libcard: pick(p.libcard, ['kind','url','present','hidden','sourceAspiration','aspirationOverride']) } : {}) })),
     payments: rows('support').map((s) => ({ ...pick(s, ['id','projectId','amount','currency','visibility','supporterDid','note','status','refundedAmount','disputed','createdAt','paidAt','frequency','recurringRootId']),
-      ...(s.allocations ? { allocations: s.allocations.map((part) => pick(part, ['projectId','amount'])) } : {}) })),
+      ...(s.allocations ? { allocations: s.allocations.map((part) => pick(part, ['projectId','amount'])) } : {}),
+      ...(s.picks ? { picks: s.picks.map(p => pick(p, ['projectId','count'])) } : {}) })),
     subscriptions: rows('subscription').map((s) => pick(s, ['id','status','cancelAtPeriodEnd'])),
+    sampleGift: { amount: 2200, frequency: 'monthly', visibility: 'public', note: 'A fictional note of encouragement.', announceAnonymously: false,
+      picks: [{ projectId: 'presence', count: 5 }, { projectId: 'xnet', count: 3 }, { projectId: 'pirate-age', count: 2 }],
+      allocations: [{ projectId: 'presence', amount: 1100 }, { projectId: 'xnet', amount: 660 }, { projectId: 'pirate-age', amount: 440 }] },
   };
-  const map = (href, base) => demoPath(href, base, origin);
+  const map = (href, base) => {
+    const url = new URL(href || '', new URL(base, origin));
+    const id = url.pathname.split('/').at(-1);
+    if (url.origin === origin && managed.some(p => p.id === id)) {
+      if (url.pathname.startsWith('/support/')) return `/demo/checkout/?${new URLSearchParams({ [id]: '1' })}`;
+      if (url.pathname.startsWith('/studio/projects/')) return '/demo/studio/projects/#libcard';
+    }
+    return demoPath(href, base, origin);
+  };
   const toolbar = `<aside class="static-demo-bar" aria-label="Demo navigation"><div><a class="demo-product" href="/">← Feedme</a><span>Interactive demo <span class="demo-status-dot"></span></span><a href="/get-started/">Set up your own ↗</a></div><nav aria-label="Demo screens"><a href="/demo/">Creator page</a><a href="/demo/updates/">Updates</a><a href="/demo/discover/">Discover</a><a href="/demo/studio/">Dashboard</a><a href="/demo/studio/projects/">Projects</a><a href="/demo/studio/settings/">Settings</a><a href="/demo/login/">Sign in</a><button type="button" data-demo-reset>Reset demo</button></nav><p>Fictional people and payments. Nothing is charged or published. Edits stay in this browser tab.</p></aside><div id="demo-notice" class="demo-toast" role="status" tabindex="-1" hidden></div><noscript><p class="demo-noscript">Browse every screen without JavaScript. Enable it to try simulated tips and local edits.</p></noscript>`;
   const render = async (path, target, admin = false) => {
     const response = await request(path);
@@ -123,7 +143,19 @@ try {
     $('head').append(runtimeAssets);
     $('.demo-strip').remove();
     $('body').attr('data-static-demo', '').attr('data-demo-screen', path.split('?')[0]);
-    $('input[name=requestId]').remove();
+    $('input[name=requestId],input[name=reviewId],input[name=editReview]').remove();
+    $('[data-pick-visit] .pick-after').text('Review the exact split next, then confirm a simulated gift. No card details or charges.');
+    if (path.startsWith('/checkout/review')) {
+      $('.review-card').attr('data-demo-review', '');
+      $('.review-card > .text-lg').attr('data-demo-review-amount', '');
+      $('.review-card > .muted.text-sm.mt-2').attr('data-demo-review-frequency', '');
+      $('.review-card > ul').attr('data-demo-review-parts', '');
+      $('.review-card > .mb-5').attr('data-demo-review-note', '');
+      $('.review-card > .muted.text-sm.mb-4').attr('data-demo-review-privacy', '');
+      $('.review-card > p.notice').attr('data-demo-review-recurring', '');
+      $('.review-card form[action="/api/checkout"]').attr('data-demo-confirm', '').find('button').text('Confirm demo gift');
+      $('.review-card > p.text-xs.mt-2').text('Demo only. No Stripe checkout opens and nothing is charged.');
+    }
     $('form').each((_, element) => {
       const form = $(element), action = form.attr('action') || path.split('?')[0];
       form.attr('data-demo-action', action).attr('data-demo-method', form.attr('method') || 'get').attr('action', '#demo-notice').attr('method', 'get');
@@ -155,13 +187,14 @@ try {
     if (admin) $('.admin-demo').text('Studio preview · all supporter identities, notes, and payment records below are fictional.');
     if (path.startsWith('/thanks')) {
       $('h2').filter((_, el) => $(el).text() === 'Your support breakdown').parent().attr('data-demo-breakdown', '');
+      $('h2').filter((_, el) => $(el).text() === 'Your public message').text('Example public message').parent().attr('data-demo-public-message', '');
       $('h1').next('p').text('This is a simulated tip. No money changed hands and no payment will recur.');
     }
     $('head').append(`<script type="application/json" id="demo-data">${JSON.stringify(data).replaceAll('<', '\\u003c')}</script>`);
     const staticPath = target.split(/[?#]/)[0];
     await save(`${staticPath.replace(/^\//, '')}index.html`, $.html());
   };
-  const publicRoutes = ['/', '/updates', '/circle', '/following', '/following?view=people', '/discover', '/recommendations', '/login', '/billing', '/about', '/privacy', '/protocol',
+  const publicRoutes = ['/', '/checkout', reviewPath, '/updates', '/circle', '/following', '/following?view=people', '/discover', '/recommendations', '/login', '/billing', '/about', '/privacy', '/protocol',
     ...projects.map((project) => `/support/${project.id}`), ...['network','mutuals','following','followers','extended','explore'].map((view) => `/discover?view=${view}`),
     ...['a','b','c','d','e','f'].map((letter) => `/recommend?did=did:plc:${letter.repeat(24)}`), receiptPath, shareRoute];
   for (const base of ['/', ...projects.map((project) => `/support/${project.id}`)]) {
@@ -171,7 +204,7 @@ try {
   }
   for (const path of publicRoutes) await render(path, map(path, '/'));
   await request('/auth/demo', {});
-  for (const path of ['/studio', '/studio/projects', '/studio/projects/new', ...rows('project').map((project) => `/studio/projects/${project.id}`), '/studio/payments', '/studio/supporters', '/studio/updates', '/studio/settings', '/studio/stripe', '/studio/data']) {
+  for (const path of ['/studio', '/studio/projects', '/studio/projects/new', ...rows('project').filter(p => !p.libcard).map((project) => `/studio/projects/${project.id}`), '/studio/payments', '/studio/supporters', '/studio/updates', '/studio/settings', '/studio/stripe', '/studio/data']) {
     await render(path, map(path, '/'), true);
   }
   // Lexicons are checked-in schemas, never the public/private records described by them.

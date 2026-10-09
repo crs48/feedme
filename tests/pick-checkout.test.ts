@@ -50,7 +50,7 @@ describe('browser-bound pick checkout', () => {
     const id = await review({ 'pick:creator': '0', [`pick:${target.id}`]: '3' });
     await checkoutPost(ctx({ reviewId: id }));
     expect(readRecord<Support>(state.db!, 'support', id)).toMatchObject({ amount: 2200, picks: [{ projectId: target.id, count: 3 }], status: 'pending' });
-    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Morgan', amount: 2200 }]);
+    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Rivers', amount: 2200 }]);
     const next = await review({ 'pick:creator': '0', [`pick:${target.id}`]: '1' });
     overrideLibcard(state.db!, target.id, true);
     expect((await checkoutPost(ctx({ reviewId: next }))).headers.get('location')).toContain('no%20longer');
@@ -73,7 +73,7 @@ describe('browser-bound pick checkout', () => {
     const payment = readRecord<Support>(state.db!, 'support', id)!;
     expect(payment).toMatchObject({ amount: 2200, frequency: 'monthly', visibility: 'anonymous', status: 'pending', note: 'Private encouragement', picks: [{ projectId: 'creator', count: 1 }, { projectId: 'presence', count: 3 }] });
     expect(payment.allocations?.map(p => p.amount)).toEqual([550,1650]);
-    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Morgan', amount: 2200 }]);
+    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Rivers', amount: 2200 }]);
     await checkoutPost(ctx({ reviewId: id })); expect(state.checkout).toHaveBeenCalledTimes(1);
   });
   it('binds sign-in to the original browser and review, with private data absent from return URLs', async () => {

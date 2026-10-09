@@ -6,6 +6,7 @@ export const isolatedEnvironment = (dataDir, port, env = process.env) => ({
   PATH: env.PATH || '', NODE_ENV: 'production', FEEDME_MODE: 'demo',
   DATA_DIR: dataDir, PUBLIC_URL: `http://127.0.0.1:${port}`, HOST: '127.0.0.1', PORT: String(port),
   BLUESKY_HANDLE: 'alex.example.com', TIP_AMOUNTS: '11,22,44,88',
+  LIBCARD_REPO: 'example/libcard', LIBCARD_DEMO_SOURCE: 'fixture', LIBCARD_DEFAULT_SUPPORT: 'all',
 });
 export const demoPath = (input, base = '/', origin = demoOrigin) => {
   if (!input || input.startsWith('#') || /^(mailto:|tel:|data:)/.test(input)) return input;
@@ -26,6 +27,8 @@ export const demoPath = (input, base = '/', origin = demoOrigin) => {
   if (path.startsWith('/auth/')) return '/demo/login/';
   if (path.startsWith('/api/')) return '/get-started/';
   if (path === '/thanks' || path.startsWith('/share/')) return path === '/thanks' ? '/demo/thanks/' : '/demo/share/sample/';
+  if (path === '/checkout/review') return '/demo/checkout/review/';
+  if (path === '/checkout') return `/demo/checkout/${url.search}${url.hash}`;
   if (path === '/discover') return `/demo/discover/${url.searchParams.get('view') ? `${url.searchParams.get('view')}/` : ''}`;
   if (path === '/following') return url.searchParams.get('view') === 'people' ? '/demo/following/people/' : '/demo/following/';
   if (path === '/recommend') return `/demo/recommend/${url.searchParams.get('did')?.split(':').at(-1) || 'dddddddddddddddddddddddd'}/`;
