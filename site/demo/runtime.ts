@@ -3,11 +3,14 @@ import { money, netSupport, supportParts, type Project, type Support } from '../
 import { reportQuery, selectedPayments, summarizePayments, earningsSeries, projectPerformance, supporterPerformance, recurringSummary, paymentsCsv, displayDate, paymentDate } from '../../src/lib/analytics';
 import type { Subscription } from '../../src/lib/recurring';
 import { initAdminPopovers } from '../../src/lib/admin-popovers';
+import { enhancePickVisits } from '../../src/scripts/pick-visit';
+import { prefillPicks, splitUnits, type Pick } from '../../src/lib/picks';
+import { demoPickGift } from './pick-flow';
 
-type Tip = { amount: number; frequency: string; visibility: string; allocations: { projectId: string; amount: number }[] };
-type State = { projects?: Record<string, Project>; forms?: Record<string, Record<string, string>>; follows?: Record<string, boolean>; tip?: Tip; stopped?: boolean };
-const key = 'feedme-static-demo-v1';
-const fixture = JSON.parse(document.getElementById('demo-data')?.textContent || '{}') as { projects: Project[]; payments: Support[]; subscriptions: Subscription[] };
+type Tip = { amount: number; frequency: string; visibility: string; allocations: { projectId: string; amount: number }[]; picks?: Pick[]; note?: string; announceAnonymously?: boolean };
+type State = { projects?: Record<string, Project>; forms?: Record<string, Record<string, string>>; follows?: Record<string, boolean>; draft?: Tip; tip?: Tip; stopped?: boolean };
+const key = 'feedme-static-demo-v2';
+const fixture = JSON.parse(document.getElementById('demo-data')?.textContent || '{}') as { projects: Project[]; payments: Support[]; subscriptions: Subscription[]; sampleGift: Tip };
 const screen = document.body.dataset.demoScreen || '/';
 let state: State = {};
 try { state = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch { /* Browsing works with storage blocked. */ }
@@ -17,7 +20,8 @@ const element = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 const field = (form: HTMLFormElement, name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
 const formValues = (form: HTMLFormElement) => Object.fromEntries([...new FormData(form)].map(([name, value]) => [name, String(value)]));
 const projects = () => fixture.projects.map((p) => state.projects?.[p.id] || p).concat(Object.values(state.projects || {}).filter((p) => !fixture.projects.some((seed) => seed.id === p.id)));
-const projectEditUrl = (id: string) => fixture.projects.some((p) => p.id === id) ? `/demo/studio/projects/${id}/` : `/demo/studio/projects/new/?draft=${encodeURIComponent(id)}`;
+const projectEditUrl = (id: string) => fixture.projects.find(p => p.id === id)?.libcard ? '/demo/studio/projects/#libcard' : fixture.projects.some((p) => p.id === id) ? `/demo/studio/projects/${id}/` : `/demo/studio/projects/new/?draft=${encodeURIComponent(id)}`;
+const projectVisitUrl = (id: string) => fixture.projects.find(p => p.id === id)?.libcard ? `/demo/checkout/?${new URLSearchParams({ [id]: '1' })}` : `/demo/support/${id}/`;
 const projectName = (id: string) => projects().find((p) => p.id === id)?.title || id;
 const link = (text: string, href: string) => { const node = element('a', text, 'admin-link'); node.href = href; return node; };
 const cardHeading = (title: string, ...details: Node[]) => {
@@ -135,7 +139,7 @@ const applyReport = (form: HTMLFormElement) => {
 const renderProjects = () => {
   const list = document.querySelector('.admin-project-row')?.parentElement; if (!list || screen !== '/studio/projects') return;
   list.replaceChildren();
-  projects().forEach((p) => {
+  projects().filter(p => !p.libcard).forEach((p) => {
     const row = element('article', '', 'admin-project-row'); row.dataset.projectId = p.id;
     const body = element('div'), badge = element('span', p.status === 'active' ? 'published' : p.status, 'status-pill'); badge.dataset.status = p.status;
     const heading = element('h2'); heading.append(link(p.title, projectEditUrl(p.id)));
@@ -169,13 +173,57 @@ if (fixture.projects) {
     }
     form.querySelector<HTMLFieldSetElement>('[data-demo-controls]')?.removeAttribute('disabled');
   });
+  document.querySelectorAll<HTMLFormElement>('[data-pick-visit]').forEach(form => {
+    const inputs = [...form.querySelectorAll<HTMLInputElement>('[data-pick-input]')];
+    const params = new URLSearchParams(location.search);
+    // An explicit shared link takes precedence over a draft from this tab.
+    const gift = params.size ? prefillPicks(params, inputs.map(input => input.name.slice(5)), Number(field(form, 'amount')!.value) * 100) : state.draft;
+    if (gift) {
+      field(form, 'amount')!.value = (gift.amount / 100).toFixed(2);
+      inputs.forEach(input => input.value = String(gift.picks?.find(p => p.projectId === input.name.slice(5))?.count || 0));
+      if ('frequency' in gift) {
+        form.querySelectorAll<HTMLInputElement>('[name=frequency]').forEach(input => input.checked = input.value === gift.frequency);
+        field(form, 'visibility')!.value = gift.visibility;
+        field(form, 'note')!.value = gift.note || '';
+        (field(form, 'announceAnonymously') as HTMLInputElement).checked = Boolean(gift.announceAnonymously);
+        const options = form.querySelector<HTMLDetailsElement>('.pick-options');
+        if (options && (gift.note || gift.announceAnonymously)) options.open = true;
+      }
+    }
+  });
+  enhancePickVisits();
+  if (screen === '/checkout/review') {
+    const gift = state.draft || fixture.sampleGift;
+    const review = document.querySelector<HTMLElement>('[data-demo-review]');
+    if (review && gift) {
+      const text = (selector: string, value: string) => { review.querySelector(selector)!.textContent = value; };
+      text('[data-demo-review-amount]', `${money(gift.amount)} to Alex Rivers`);
+      text('[data-demo-review-frequency]', `${gift.frequency === 'once' ? 'One-time' : gift.frequency === 'monthly' ? 'Monthly' : 'Yearly'} · ${gift.visibility}`);
+      const shares = new Map(gift.picks?.length ? splitUnits(1000, gift.picks).map(p => [p.projectId, p.amount / 10]) : []);
+      const list = review.querySelector('[data-demo-review-parts]')!;
+      list.replaceChildren(...gift.allocations.map(part => {
+        const row = element('li', '', 'border-b border-border py-4 text-sm');
+        const heading = element('div', '', 'flex justify-between gap-4'); heading.append(element('strong', projectName(part.projectId)), element('span', money(part.amount)));
+        const count = gift.picks?.find(p => p.projectId === part.projectId)?.count || 1;
+        const goal = projects().find(p => p.id === part.projectId)?.target;
+        row.append(heading, element('p', `${count} ${count === 1 ? 'pick' : 'picks'} · ${shares.get(part.projectId) || 0}%${goal ? ` · ${money(goal)} aspiration` : ''}`, 'muted mt-2'));
+        return row;
+      }));
+      const note = review.querySelector<HTMLElement>('[data-demo-review-note]')!; note.hidden = !gift.note;
+      note.querySelector('p:last-child')!.textContent = gift.note || '';
+      text('[data-demo-review-privacy]', gift.visibility === 'public' ? 'In a live gift, your name, amount, and picks are public. Your note stays private.' : gift.visibility === 'private' ? 'In a live gift, your name and note are shared only with the creator.' : gift.announceAnonymously ? 'In a live gift, an anonymous thank-you can appear without your amount.' : 'Your gift stays off the public timeline.');
+      const recurring = review.querySelector<HTMLElement>('[data-demo-review-recurring]')!; recurring.hidden = gift.frequency === 'once';
+      recurring.textContent = `On a live site, ${money(gift.amount)} repeats ${gift.frequency} until canceled. This demo takes no payments.`;
+    }
+  }
   if (projectForm) { const id = draftId || field(projectForm, 'id')?.value; const p = id ? state.projects?.[id] : undefined; if (p) showDraft(p); }
   if (state.projects) renderProjects();
   const filter = document.querySelector<HTMLFormElement>('.admin-filters:has(select[name="range"])'); if (filter) { restore(filter, Object.fromEntries(new URLSearchParams(location.search))); applyReport(filter); }
   if (state.tip && screen === '/thanks') {
     const block = document.querySelector('[data-demo-breakdown]');
-    if (block) { const list = element('ul'); state.tip.allocations.forEach((part) => { const row = element('li', '', 'demo-tip-row'); row.append(link(projectName(part.projectId), `/demo/support/${part.projectId}/`), element('strong', money(part.amount))); list.append(row); }); block.replaceChildren(element('h2', 'Your simulated support breakdown', 'section-title'), list, element('p', `Total: ${money(state.tip.amount)} · ${state.tip.frequency}`, 'demo-tip-total')); }
+    if (block) { const list = element('ul'); const shares = new Map(state.tip.picks?.length ? splitUnits(1000, state.tip.picks).map(p => [p.projectId, p.amount / 10]) : []); state.tip.allocations.forEach((part) => { const row = element('li', '', 'demo-tip-row'), name = element('span'); name.append(link(projectName(part.projectId), projectVisitUrl(part.projectId))); const count = state.tip!.picks?.find(p => p.projectId === part.projectId)?.count; if (count) name.append(element('small', `${count} ${count === 1 ? 'pick' : 'picks'} · ${shares.get(part.projectId)}%`, 'admin-caption')); row.append(name, element('strong', money(part.amount))); list.append(row); }); block.replaceChildren(element('h2', 'Your simulated support breakdown', 'section-title'), list, element('p', `Total: ${money(state.tip.amount)} · ${state.tip.frequency}`, 'demo-tip-total')); }
     const card = document.querySelector<HTMLElement>('.support-share'); if (card && state.tip.visibility !== 'public') card.hidden = true;
+    const publicMessage = document.querySelector<HTMLElement>('[data-demo-public-message]'); if (publicMessage && state.tip.visibility !== 'public') publicMessage.hidden = true;
     const publicForm = document.querySelector<HTMLFormElement>('form:has(input[name="action"][value="post"])'); if (publicForm && state.tip.visibility !== 'public') publicForm.closest('.panel')?.setAttribute('hidden', '');
     document.querySelectorAll('.billing-heading').forEach((node) => { const title = node.querySelector('h2'); if (title) title.textContent = `${money(state.tip!.amount)} · ${state.tip!.frequency}`; });
     document.querySelectorAll('.panel').forEach((node) => { if (node.querySelector('.eyebrow')?.textContent?.includes('Monthly support')) (node as HTMLElement).hidden = true; });
@@ -189,6 +237,19 @@ document.addEventListener('submit', (event) => {
   event.preventDefault(); event.stopImmediatePropagation();
   const values = formValues(form), action = values.action, endpoint = form.dataset.demoAction;
   try {
+    if (endpoint === '/api/checkout/review') {
+      const ids = [...form.querySelectorAll<HTMLInputElement>('[data-pick-input]')].map(input => input.name.slice(5));
+      state.draft = demoPickGift(new FormData(form), ids);
+      if (save()) location.assign('/demo/checkout/review/'); return;
+    }
+    if (endpoint === '/checkout' && screen === '/checkout/review') {
+      state.draft ||= fixture.sampleGift;
+      if (save()) location.assign('/demo/checkout/'); return;
+    }
+    if (form.hasAttribute('data-demo-confirm')) {
+      state.tip = state.draft || fixture.sampleGift;
+      if (save()) location.assign('/demo/thanks/'); return;
+    }
     if (endpoint === '/api/checkout') {
       const amount = Math.round(Number(values.amount) * 100);
       const allocation = values.projectId ? [{ projectId: values.projectId, percentage: 100 }] : Object.entries(values).filter(([name]) => name.startsWith('percentage:')).map(([name, value]) => ({ projectId: name.slice(11), percentage: Number(value) }));

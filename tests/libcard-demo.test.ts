@@ -42,7 +42,7 @@ describe('real-source LibCard demo configuration', () => {
       expect(read('fixture')).toEqual(fictional);
       expect(readdirSync(dir)).toEqual(expect.arrayContaining(['demo.sqlite', 'demo-libcard.sqlite']));
       const isolated = isolatedEnvironment(dir, 4321, { ...process.env, LIBCARD_REPO: 'crs48/LIBCard', LIBCARD_DEMO_SOURCE: 'github' });
-      expect(isolated).not.toHaveProperty('LIBCARD_REPO'); expect(isolated).not.toHaveProperty('LIBCARD_DEMO_SOURCE');
+      expect(isolated).toMatchObject({ LIBCARD_REPO: 'example/libcard', LIBCARD_DEMO_SOURCE: 'fixture', LIBCARD_DEFAULT_SUPPORT: 'all' });
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 });

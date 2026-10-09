@@ -20,7 +20,7 @@ for (const scenario of ['ready', 'ready-all', 'disabled', 'unavailable']) {
     const port = reservation.address().port; await new Promise(done => reservation.close(done));
     const transport = `http://127.0.0.1:${port}`;
     const env = { ...isolatedEnvironment(dir, port), PUBLIC_URL: canonical, TIP_AMOUNTS: '11,5.05,44,88', LIBCARD_DEFAULT_SUPPORT: scenario === 'ready-all' ? 'all' : 'explicit',
-      ...(scenario === 'disabled' ? {} : { LIBCARD_REPO: 'crs48/LIBCard' }),
+      LIBCARD_REPO: scenario === 'disabled' ? '' : 'crs48/LIBCard',
       ...(scenario === 'unavailable' ? { LIBCARD_DEMO_SOURCE: 'github' } : {}),
     };
     if (scenario.startsWith('ready')) {

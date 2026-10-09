@@ -8,6 +8,8 @@ const cents = (value: string) => {
 };
 const dollars = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: amount % 100 ? 2 : 0 }).format(amount / 100);
 export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement>('[data-pick-visit]').forEach(form => {
+  if (form.dataset.pickEnhanced) return;
+  form.dataset.pickEnhanced = 'true';
   const rows = [...form.querySelectorAll<HTMLElement>('[data-pick-row]')];
   const inputs = rows.map(row => row.querySelector<HTMLInputElement>('[data-pick-input]')!);
   const amount = form.querySelector<HTMLInputElement>('[data-pick-total]')!;

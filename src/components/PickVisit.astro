@@ -76,5 +76,5 @@ const summary = total ? `${total} picks across ${values.picks.length} ${values.p
 </>}
 <script>
   import { enhancePickVisits } from '../scripts/pick-visit';
-  enhancePickVisits();
+  if (!document.body.hasAttribute('data-static-demo')) enhancePickVisits();
 </script>

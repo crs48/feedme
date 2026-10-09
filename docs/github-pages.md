@@ -33,6 +33,8 @@ Open http://127.0.0.1:4322. `site-dist/` is the only deployable Pages artifact. 
 
 The landing page ships no application JavaScript. Demo screens retain the app's small UI enhancements plus a separate browser controller. It intercepts forms, filters fictional financial records with the same domain functions as the server, and stores selected edits in `sessionStorage`. Reset clears this tab's changes. Without JavaScript, all screens can be read and forms are disabled. Provider connections and media imports remain disabled. Local project edits have a text preview; public project pages and the shared PNG remain fixed examples. Follows and posts are local previews, not a replacement for the live social feed.
 
+The public demo enables LibCard with a bundled fictional catalog. `/demo/` and `/demo/checkout/` render the same `PickVisit` and plus/minus controls as live LibCard instances, including grouped links, social chips, derived percentages, amount presets, and one-time/monthly/yearly choices. Picks begin at zero. A simulated review at `/demo/checkout/review/` preserves picks, amount, frequency, visibility, and the note when editing, then shows the matching simulated receipt. Confirmation never opens Stripe. The exporter exercises the app's actual pick review and checkout to generate its sample screens; it never fetches the configured live LibCard. Native project pages and editing remain available elsewhere in the demo.
+
 ## Isolation boundaries
 
 ```mermaid
@@ -50,7 +52,7 @@ flowchart TD
   Check --> Publish[Upload site-dist only]
 ```
 
-The exporter cannot select an existing database or live origin. A preload guard rejects outbound `fetch` calls in the temporary demo server. It logs in to fictional demo accounts and exercises the real demo checkout to create the sample receipt and public card. The temporary database is removed afterward. No `.env`, sessions, SQLite files, OAuth keys, or server bundle are copied to the artifact. The client data is an explicit projection of controlled fixtures. On the static demo, CSP blocks network fetches, form submissions, and remote embeds. Inputs are rendered with `textContent`, and typed private tip notes are not saved or posted.
+The exporter cannot select an existing database or live origin. A preload guard rejects outbound `fetch` calls in the temporary demo server. It logs in to fictional demo accounts and exercises the real demo checkout to create the sample receipt and public card. The temporary database is removed afterward. No `.env`, sessions, SQLite files, OAuth keys, or server bundle are copied to the artifact. The client data is an explicit projection of controlled fixtures. On the static demo, CSP blocks network fetches, form submissions, and remote embeds. Inputs are rendered with `textContent`. Draft notes stay in this tab's session storage to support review/edit, and are cleared by Reset demo; they are never sent to a server or placed in URLs.
 
 ## Official deployment
 
