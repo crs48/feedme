@@ -24,3 +24,7 @@ const navigation = [['Overview', '/studio'], ['Projects', '/studio/projects'], [
     <p class="admin-footnote">USD · Dates use UTC. Earnings reflect confirmed payments after refunds and disputes, before Stripe fees. They are not bank payouts. Refunds adjust the original payment period.</p>
   </div>
 </Layout>
+<script>
+  import { initAdminPopovers } from '../lib/admin-popovers';
+  if (!document.body.hasAttribute('data-static-demo')) initAdminPopovers();
+</script>

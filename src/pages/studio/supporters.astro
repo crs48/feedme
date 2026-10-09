@@ -3,7 +3,8 @@ import { blueskyProfileUrl } from '../../lib/bluesky-url';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminFilters from '../../components/AdminFilters.astro';
 import Avatar from '../../components/Avatar.astro';
-import { adminReport, selectedPayments, supporterPerformance, summarizePayments, reportPage, displayDate } from '../../lib/analytics';
+import AdminProjectBreakdown from '../../components/AdminProjectBreakdown.astro';
+import { adminReport, selectedPayments, supporterPerformance, summarizePayments, projectPerformance, reportPage, displayDate } from '../../lib/analytics';
 import { payments, projects } from '../../lib/repository';
 import { people } from '../../lib/people';
 import { money } from '../../lib/model';
@@ -17,6 +18,19 @@ const anonymous = summarizePayments(records.filter((s) => s.visibility === 'anon
 ---
 <AdminLayout title="Supporters" description="The people making your work possible, with privacy choices respected.">
   {error && <p class="notice error">{error}</p>}<AdminFilters query={query} projects={list}/>
-  <section class="admin-card"><div class="admin-card-heading"><h2>{supporters.length} named supporters</h2><span class="admin-help">Ranked by net support in this period</span></div>{pagination.items.length ? <div class="admin-table-scroll"><table class="admin-table"><thead><tr><th>Supporter</th><th>Projects supported</th><th>First / latest in period</th><th class="numeric">Net support</th></tr></thead><tbody>{pagination.items.map((s) => { const p = profiles.get(s.did); return <tr><td><div class="admin-person"><Avatar name={p?.name || s.did} src={p?.avatar} size={36}/><div><a class="admin-link break-all" href={blueskyProfileUrl(s.did)} rel="noopener noreferrer">{p?.name || s.did}</a>{p?.handle && <span class="admin-caption">@{p.handle}</span>}</div></div><a class="admin-link mt-2" href={`/studio/payments?range=${query.range}&from=${query.from}&to=${query.to}&project=${encodeURIComponent(query.project)}&q=${encodeURIComponent(s.did)}`}>View payments →</a></td><td>{s.projects.map((id) => <span class="admin-caption">{list.find((p) => p.id === id)?.title || id}</span>)}</td><td>{displayDate(s.first)}<span class="admin-caption">Latest {displayDate(s.last)}</span></td><td class="numeric"><strong>{money(s.net)}</strong><span class="admin-caption">{s.count} payments</span></td></tr>; })}</tbody></table></div> : <p class="admin-empty">No named supporters in this period yet. Named public and private tips appear here once confirmed.</p>}<nav class="admin-pagination" aria-label="Supporter pages"><span>{pagination.page > 1 && <a class="admin-link" href={pagination.previous}>← Previous</a>}</span><span>Page {pagination.page} of {pagination.pages}</span><span>{pagination.page < pagination.pages && <a class="admin-link" href={pagination.next}>Next →</a>}</span></nav></section>
+  <section class="admin-card">
+    <div class="admin-card-heading"><h2>{supporters.length} named supporters</h2><span class="admin-help">Ranked by net support in this period</span></div>
+    {pagination.items.length ? <div class="admin-table-scroll" tabindex="0" aria-label="Supporters"><table class="admin-table admin-ledger"><thead><tr><th>Supporter</th><th>Allocation</th><th>Latest support</th><th class="numeric">Net support</th></tr></thead><tbody>{pagination.items.map((s) => {
+      const p = profiles.get(s.did);
+      const parts = projectPerformance(records.filter(record => record.visibility !== 'anonymous' && record.supporterDid === s.did), list).filter(part => s.projects.includes(part.id)).map(part => ({ projectId: part.id, amount: part.net }));
+      return <tr>
+        <td><div class="admin-person"><Avatar name={p?.name || s.did} src={p?.avatar} size={32}/><div><a class="admin-person-name" href={blueskyProfileUrl(s.did)} target="_blank" rel="noopener noreferrer">{p?.name || s.did}</a>{p?.handle && <span class="admin-caption">@{p.handle}</span>}</div></div></td>
+        <td><AdminProjectBreakdown parts={parts} projects={list} total={s.net} title="Projects supported" caption="Net support in the selected period."/></td>
+        <td><span class="admin-date">{displayDate(s.last)}</span><span class="admin-caption">Since {displayDate(s.first)}</span></td>
+        <td class="numeric"><strong>{money(s.net)}</strong><a class="admin-caption admin-payment-count" href={`/studio/payments?range=${query.range}&from=${query.from}&to=${query.to}&project=${encodeURIComponent(query.project)}&status=paid&q=${encodeURIComponent(s.did)}`}>{s.count} {s.count === 1 ? 'payment' : 'payments'} <span aria-hidden="true">↗</span></a></td>
+      </tr>;
+    })}</tbody></table></div> : <p class="admin-empty">No named supporters in this period yet. Named public and private tips appear here once confirmed.</p>}
+    <nav class="admin-pagination" aria-label="Supporter pages"><span>{pagination.page > 1 && <a class="admin-link" href={pagination.previous}>← Previous</a>}</span><span>Page {pagination.page} of {pagination.pages}</span><span>{pagination.page < pagination.pages && <a class="admin-link" href={pagination.next}>Next →</a>}</span></nav>
+  </section>
   <section class="admin-card"><div class="admin-person"><Avatar name="Anonymous" size={36}/><div><h2>Anonymous & guest support</h2><p class="admin-help">{anonymous.anonymousPayments} tips · {money(anonymous.net)} net support</p></div></div><p class="admin-help mt-4">These tips are counted as payments, not unique people. No attempt is made to connect anonymous payments to an AT Protocol identity. Private named supporters are visible here only to administrators.</p></section>
 </AdminLayout>

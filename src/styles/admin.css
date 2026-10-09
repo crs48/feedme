@@ -46,7 +46,7 @@
 .admin-card p + form { margin-top:16px; }
 .admin-card .field { font-size:13px; gap:6px; }
 .admin-card :is(input:not([type=checkbox]):not([type=radio]),textarea,select) { font-size:14px; }
-.admin-table-scroll { overflow-x:auto; max-width:100%; }
+.admin-table-scroll { position:relative; overflow-x:auto; max-width:100%; }
 .admin-table { width:100%; text-align:left; font-size:13px; border-collapse:collapse; }
 .admin-table th { color:var(--color-muted); background:var(--color-surface); font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; padding:10px 12px; }
 .admin-table td { border-top:1px solid var(--color-border); padding:12px; vertical-align:top; }
@@ -55,6 +55,50 @@
 .admin-table .admin-link { min-height:24px; }
 .admin-table summary { min-height:32px; font-size:12px; color:var(--color-muted); padding-top:4px; }
 .admin-table details p { font-size:12px; margin-top:8px; white-space:pre-wrap; max-width:340px; overflow-wrap:anywhere; }
+.admin-ledger td { vertical-align:middle; padding-block:12px; }
+.admin-ledger .admin-person { gap:10px; }
+.admin-avatar-placeholder { width:32px; height:32px; display:grid; place-items:center; flex-shrink:0; border-radius:50%; background:var(--color-control-rail); color:var(--color-muted); font-size:12px; }
+.admin-person-name { display:block; max-width:260px; font-size:13px; font-weight:500; color:var(--color-ink); overflow-wrap:anywhere; }
+a.admin-person-name:hover { color:var(--color-primary); text-decoration:underline; }
+.admin-ledger .admin-caption { font-size:11px; line-height:1.5; }
+.admin-ledger .admin-date { white-space:nowrap; }
+.admin-ledger .numeric > strong { font-weight:600; }
+.admin-payment-count { color:var(--color-muted); }
+.admin-payment-count:hover { color:var(--color-primary); text-decoration:underline; }
+.admin-table .admin-row-action { width:44px; padding-inline:4px; }
+.admin-popover { width:fit-content; }
+.admin-popover > summary { display:flex; align-items:center; gap:8px; min-height:32px; padding:4px 8px; border:1px solid transparent; border-radius:5px; color:var(--color-muted); font-size:12px; line-height:1.4; white-space:nowrap; cursor:pointer; list-style:none; }
+.admin-popover > summary::-webkit-details-marker { display:none; }
+.admin-popover > summary:hover,.admin-popover[open] > summary { background:var(--color-selected); border-color:var(--color-selected-border); color:var(--color-primary); }
+.admin-popover > summary:focus-visible,.admin-popover-content:focus-visible,.admin-table-scroll:focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+.admin-popover-chevron { font-size:14px; line-height:1; }
+.admin-popover-action > summary { min-width:32px; justify-content:center; letter-spacing:1px; }
+.admin-popover-panel { width:340px; max-width:calc(100vw - 24px); background:white; color:var(--color-ink); border:1px solid var(--color-border); border-radius:8px; padding:0; box-shadow:0 10px 36px #1a1f3618,0 2px 8px #1a1f360a; font-size:13px; text-align:left; white-space:normal; margin:8px 0; }
+.admin-popover[data-enhanced] .admin-popover-panel { position:fixed; inset:auto; margin:0; overflow:hidden; }
+.admin-popover-panel:popover-open { display:flex; flex-direction:column; }
+.admin-popover-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 16px; border-bottom:1px solid var(--color-border); background:var(--color-surface); flex-shrink:0; }
+.admin-popover-heading strong { font-size:12px; font-weight:600; }
+.admin-popover-heading > span { font-size:12px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.admin-popover-content { overflow:auto; overscroll-behavior:contain; min-height:0; }
+.admin-breakdown-list { list-style:none; margin:0; padding:4px 16px; }
+.admin-breakdown-list li { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding:12px 0; border-bottom:1px solid var(--color-border); line-height:1.5; }
+.admin-breakdown-list li:last-child { border-bottom:0; }
+.admin-breakdown-list li > span { min-width:0; overflow-wrap:anywhere; }
+.admin-breakdown-list a { color:var(--color-ink); }
+.admin-breakdown-list a:hover { color:var(--color-primary); text-decoration:underline; }
+.admin-breakdown-list strong { font-size:12px; font-weight:500; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.admin-popover-panel .admin-popover-note { margin:0; padding:12px 16px; border-top:1px solid var(--color-border); font-size:11px; line-height:1.6; color:var(--color-muted); max-width:none; }
+.admin-detail-list { padding:8px 16px; }
+.admin-detail-list > div { display:flex; justify-content:space-between; gap:16px; padding:6px 0; font-size:12px; }
+.admin-detail-list dt { color:var(--color-muted); }
+.admin-detail-list dd { text-align:right; font-variant-numeric:tabular-nums; }
+.admin-detail-list .admin-detail-id { display:block; border-top:1px solid var(--color-border); margin-top:8px; padding-top:10px; }
+.admin-detail-id dd { text-align:left; overflow-wrap:anywhere; margin-top:3px; font-size:11px; font-family:monospace; }
+.admin-detail-note { padding:12px 16px; border-top:1px solid var(--color-border); font-size:12px; }
+.admin-detail-note strong { font-weight:500; }
+.admin-popover-panel .admin-detail-note p { margin-top:6px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+.admin-more > summary { min-height:40px; padding-block:8px; font-size:12px; color:var(--color-muted); cursor:pointer; }
+.admin-more > summary:hover { color:var(--color-primary); }
 .admin-empty { font-size:13px; color:var(--color-muted); padding:24px 0; line-height:1.7; }
 .admin-stat-line { display:flex; justify-content:space-between; gap:16px; padding:10px 0; font-size:13px; border-bottom:1px solid var(--color-border); }
 .admin-stat-line:last-child { border:0; }
@@ -107,4 +151,9 @@
   .admin-summary { display:flex; flex-direction:column; }
   .admin-summary > .admin-kpis { order:-1; }
   .admin-chart { height:170px; }
+  .admin-popover > summary { min-height:44px; }
+  .admin-popover-action > summary { min-width:44px; }
+  .admin-ledger .admin-person { min-width:150px; }
+  .admin-ledger td { padding:10px 8px; }
+  .admin-payment-count { display:inline-flex; align-items:center; min-height:28px; }
 }

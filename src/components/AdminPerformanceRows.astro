@@ -1,0 +1,6 @@
+---
+import { money } from '../lib/model';
+interface Props { projects: {id: string; title: string; net: number; count: number}[]; total: number; }
+const { projects, total } = Astro.props;
+---
+{projects.map(p => <div class="admin-progress-row"><div><a class="admin-link" href={`/studio/projects/${p.id}`}>{p.title}</a><strong>{money(p.net)}</strong></div><div class="progress"><span style={`width:${total ? p.net / total * 100 : 0}%`}></span></div><p class="admin-help mt-1">{p.count} confirmed contributions · {total ? Math.round(p.net / total * 100) : 0}% of net support</p></div>)}

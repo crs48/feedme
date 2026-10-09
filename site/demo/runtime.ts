@@ -2,6 +2,7 @@ import { allocateAmount } from '../../src/lib/allocation';
 import { money, netSupport, supportParts, type Project, type Support } from '../../src/lib/model';
 import { reportQuery, selectedPayments, summarizePayments, earningsSeries, projectPerformance, supporterPerformance, recurringSummary, paymentsCsv, displayDate, paymentDate } from '../../src/lib/analytics';
 import type { Subscription } from '../../src/lib/recurring';
+import { initAdminPopovers } from '../../src/lib/admin-popovers';
 
 type Tip = { amount: number; frequency: string; visibility: string; allocations: { projectId: string; amount: number }[] };
 type State = { projects?: Record<string, Project>; forms?: Record<string, Record<string, string>>; follows?: Record<string, boolean>; tip?: Tip; stopped?: boolean };
@@ -27,28 +28,54 @@ const cardHeading = (title: string, ...details: Node[]) => {
 const names: Record<string, string> = { a: 'Alex Rivers', b: 'Sam Taylor', c: 'Jordan Lee', d: 'Maya Chen', e: 'Jamie Morgan', f: 'Devon Brooks' };
 const avatars: Record<string, string> = { a: '12', b: '13', c: '5', d: '47', e: '44', f: '49' };
 const person = (did?: string) => names[did?.split(':').at(-1)?.[0] || ''] || 'Anonymous';
-const identity = (did?: string) => {
+const identity = (did?: string, caption = '', fallback = 'Anonymous') => {
   const node = element('div', '', 'admin-person');
   if (did) { const img = element('img'); img.src = `/demo/avatars/${avatars[did.split(':').at(-1)?.[0] || ''] || '12'}.jpg`; img.width = 32; img.height = 32; img.alt = ''; img.style.borderRadius = '50%'; node.append(img); }
-  node.append(element('span', person(did))); return node;
+  else { const avatar = element('span', fallback.slice(0, 1), 'admin-avatar-placeholder'); avatar.setAttribute('aria-hidden', 'true'); node.append(avatar); }
+  const body = element('div'); body.append(element('strong', did ? person(did) : fallback, 'admin-person-name'));
+  if (caption) body.append(element('span', caption, 'admin-caption'));
+  node.append(body); return node;
 };
-const table = (headings: string[], rows: (string | Node)[][]) => {
-  const scroll = element('div', '', 'admin-table-scroll'), table = element('table', '', 'admin-table');
+const table = (headings: string[], rows: (string | Node)[][], ledger = false) => {
+  const scroll = element('div', '', 'admin-table-scroll'), table = element('table', '', `admin-table${ledger ? ' admin-ledger' : ''}`);
+  scroll.tabIndex = 0; scroll.setAttribute('aria-label', 'Report table');
   const head = element('thead'), heading = element('tr'), body = element('tbody');
   const columnClass = (index: number) => ['Gross', 'Refunds', 'Disputes', 'Net', 'Net support'].includes(headings[index]) ? 'numeric' : '';
-  headings.forEach((value, index) => heading.append(element('th', value, columnClass(index)))); head.append(heading);
-  rows.forEach((values) => { const row = element('tr'); values.forEach((value, index) => { const cell = element('td', '', columnClass(index)); cell.append(value); row.append(cell); }); body.append(row); });
+  headings.forEach((value, index) => { const th = element('th', value === 'Details' ? '' : value, columnClass(index)); if (value === 'Details') th.append(element('span', value, 'sr-only')); heading.append(th); }); head.append(heading);
+  rows.forEach((values) => { const row = element('tr'); values.forEach((value, index) => { const cell = element('td', '', headings[index] === 'Details' ? 'admin-row-action' : columnClass(index)); cell.append(value); row.append(cell); }); body.append(row); });
   table.append(head, body); scroll.append(table); return scroll;
 };
-const paymentTable = (records: Support[]) => table(['Supporter / payment', 'Project', 'Status', 'Net support'], records.map((s) => {
-  const who = element('div'); who.append(identity(s.visibility === 'anonymous' ? undefined : s.supporterDid), element('span', `${displayDate(paymentDate(s))} · ${s.visibility}`, 'admin-caption'));
-  const details = element('details'); details.append(element('summary', 'Payment details'), element('p', `Fictional ID: ${s.id}`), element('p', `Gross: ${money(s.amount)} · Refunded: ${money(s.refundedAmount)}`));
-  if (s.note) details.append(element('p', `Fictional private note: ${s.note}`)); who.append(details);
-  const allocation = element('div'); supportParts(s).forEach((p) => { const row = element('div'); row.append(link(projectName(p.projectId), `/demo/studio/projects/${p.projectId}/`), element('span', money(netSupport(p)), 'admin-caption')); allocation.append(row); });
-  const status = element('span', s.status, 'status-pill'); status.dataset.status = s.status;
-  const amount = element('div'); amount.append(element('strong', money(netSupport(s))), element('span', s.frequency || 'once', 'admin-caption'));
-  return [who, allocation, status, amount];
-}));
+const popover = (label: string, title: string, total: number, nodes: Node[], iconOnly = false) => {
+  const details = element('details', '', `admin-popover${iconOnly ? ' admin-popover-action' : ''}`); details.dataset.adminPopover = '';
+  const summary = element('summary'); summary.setAttribute('aria-label', label); if (iconOnly) summary.title = title;
+  const chevron = element('span', iconOnly ? '•••' : '⌄', 'admin-popover-chevron'); chevron.setAttribute('aria-hidden', 'true');
+  summary.append(element('span', label, iconOnly ? 'sr-only' : ''), chevron);
+  const panel = element('div', '', 'admin-popover-panel'); panel.setAttribute('role', 'region'); panel.setAttribute('aria-label', title);
+  const heading = element('div', '', 'admin-popover-heading'); heading.append(element('strong', title), element('span', money(total)));
+  const body = element('div', '', 'admin-popover-content'); body.tabIndex = 0; body.append(...nodes);
+  panel.append(heading, body); details.append(summary, panel); return details;
+};
+const breakdown = (parts: {projectId: string; amount: number}[], total: number, title = 'Support breakdown', caption = 'Net support after refunds and disputes.') => {
+  const list = element('ul', '', 'admin-breakdown-list'); list.setAttribute('aria-label', 'Supported projects');
+  parts.forEach(p => { const row = element('li'), name = element('span'); name.append(link(projectName(p.projectId), projectEditUrl(p.projectId))); row.append(name, element('strong', money(p.amount))); list.append(row); });
+  return popover(`${parts.length} ${parts.length === 1 ? 'project' : 'projects'}`, title, total, [list, element('p', caption, 'admin-popover-note')]);
+};
+const paymentTable = (records: Support[]) => records.length ? table(['Supporter', 'Allocation', 'Status', 'Net support', 'Details'], records.map((s) => {
+  const did = s.visibility === 'anonymous' ? undefined : s.supporterDid;
+  const who = identity(did, `${displayDate(paymentDate(s))} · ${s.visibility}`, s.visibility === 'anonymous' ? 'Anonymous' : 'Guest');
+  const meta = element('dl', '', 'admin-detail-list');
+  const frequency = s.frequency === 'monthly' ? 'Monthly' : s.frequency === 'yearly' ? 'Yearly' : 'One time';
+  const fields = [['Gross', money(s.amount)], ['Refunded', money(s.refundedAmount)], ['Frequency', frequency], ['Visibility', s.visibility], ['Payment ID', s.id], ...(did ? [['Supporter DID', did]] : [])];
+  fields.forEach(([name, value]) => { const row = element('div', '', name.endsWith('ID') ? 'admin-detail-id' : ''); row.append(element('dt', name), element('dd', value)); meta.append(row); });
+  const nodes: Node[] = [meta];
+  if (s.note) { const note = element('div', '', 'admin-detail-note'); note.append(element('strong', 'Private note'), element('p', s.note)); nodes.push(note); }
+  if (s.disputed) nodes.push(element('p', 'Disputed payments are excluded from earnings.', 'admin-popover-note'));
+  const details = popover(`Payment details for ${did ? person(did) : s.visibility === 'anonymous' ? 'Anonymous' : 'Guest'}, ${displayDate(paymentDate(s))}`, 'Payment details', netSupport(s), nodes, true);
+  const allocation = breakdown(supportParts(s).map(p => ({ projectId: p.projectId, amount: netSupport(p) })), netSupport(s));
+  const status = element('span', s.disputed ? 'disputed' : s.status, 'status-pill'); status.dataset.status = status.textContent!;
+  const amount = element('div'); amount.append(element('strong', money(netSupport(s))), element('span', frequency.toLowerCase(), 'admin-caption'));
+  return [who, allocation, status, amount, details];
+}), true) : element('p', 'No payments match these filters.', 'admin-empty');
 let reportRecords = fixture.payments || [];
 const applyReport = (form: HTMLFormElement) => {
   const values = formValues(form), query = reportQuery(new URLSearchParams(values));
@@ -75,11 +102,14 @@ const applyReport = (form: HTMLFormElement) => {
     const performance = card('Project performance');
     if (performance) {
       performance.replaceChildren(cardHeading('Project performance', link('Manage projects →', '/demo/studio/projects/')));
-      projectPerformance(reportRecords, projects()).filter((p) => !query.project || p.id === query.project).forEach((p) => {
+      const ranked = projectPerformance(reportRecords, projects()).filter((p) => !query.project || p.id === query.project);
+      const more = element('details', '', 'admin-more'); more.append(element('summary', `Show ${ranked.length - 5} more projects`));
+      ranked.forEach((p, index) => {
         const row = element('div', '', 'admin-progress-row'), heading = element('div'), track = element('div', '', 'progress'), bar = element('span');
         heading.append(link(p.title, projectEditUrl(p.id)), element('strong', money(p.net))); bar.style.width = `${stats.net ? p.net / stats.net * 100 : 0}%`; track.append(bar);
-        row.append(heading, track, element('p', `${p.count} confirmed contributions`, 'admin-help')); performance.append(row);
+        row.append(heading, track, element('p', `${p.count} confirmed contributions · ${stats.net ? Math.round(p.net / stats.net * 100) : 0}% of net support`, 'admin-help')); (index < 5 ? performance : more).append(row);
       });
+      if (ranked.length > 5) performance.append(more);
     }
     const health = card('Payment health');
     health?.querySelectorAll('dd').forEach((node, index) => { node.textContent = [money(stats.refunded), money(stats.disputed), String(stats.pending), String(stats.failed), String(recurring.pastDue), String(recurring.ending)][index]; });
@@ -88,10 +118,19 @@ const applyReport = (form: HTMLFormElement) => {
     const payments = cards[0]; payments?.replaceChildren(cardHeading(`${reportRecords.length} payments · ${money(stats.net)} net`), paymentTable(reportRecords));
   } else if (screen === '/studio/supporters') {
     const supporters = supporterPerformance(reportRecords);
-    cards[0]?.replaceChildren(cardHeading(`${supporters.length} named supporters`), table(['Supporter', 'Projects supported', 'First / latest', 'Net support'], supporters.map((s) => [identity(s.did), s.projects.map(projectName).join(' · '), `${displayDate(s.first)} / ${displayDate(s.last)}`, `${money(s.net)} · ${s.count} payments`])));
+    const rows = supporters.map(s => {
+      const parts = projectPerformance(reportRecords.filter(record => record.visibility !== 'anonymous' && record.supporterDid === s.did), projects()).filter(part => s.projects.includes(part.id)).map(part => ({ projectId: part.id, amount: part.net }));
+      const date = element('div'); date.append(element('span', displayDate(s.last), 'admin-date'), element('span', `Since ${displayDate(s.first)}`, 'admin-caption'));
+      const amount = element('div'), params = new URLSearchParams(values); params.set('q', s.did); params.set('status', 'paid');
+      const payments = link(`${s.count} ${s.count === 1 ? 'payment' : 'payments'} ↗`, `/demo/studio/payments/?${params}`); payments.className = 'admin-caption admin-payment-count';
+      amount.append(element('strong', money(s.net)), payments);
+      return [identity(s.did), breakdown(parts, s.net, 'Projects supported', 'Net support in the selected period.'), date, amount];
+    });
+    cards[0]?.replaceChildren(cardHeading(`${supporters.length} named supporters`, element('span', 'Ranked by net support in this period', 'admin-help')), rows.length ? table(['Supporter', 'Allocation', 'Latest support', 'Net support'], rows, true) : element('p', 'No named supporters in this period yet.', 'admin-empty'));
     const anonymous = summarizePayments(reportRecords.filter((s) => s.visibility === 'anonymous' || !s.supporterDid));
     const caption = cards[1]?.querySelector('.admin-help'); if (caption) caption.textContent = `${anonymous.anonymousPayments} tips · ${money(anonymous.net)} net support`;
   }
+  initAdminPopovers();
 };
 const renderProjects = () => {
   const list = document.querySelector('.admin-project-row')?.parentElement; if (!list || screen !== '/studio/projects') return;
