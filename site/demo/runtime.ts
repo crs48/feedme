@@ -19,6 +19,11 @@ const projects = () => fixture.projects.map((p) => state.projects?.[p.id] || p).
 const projectEditUrl = (id: string) => fixture.projects.some((p) => p.id === id) ? `/demo/studio/projects/${id}/` : `/demo/studio/projects/new/?draft=${encodeURIComponent(id)}`;
 const projectName = (id: string) => projects().find((p) => p.id === id)?.title || id;
 const link = (text: string, href: string) => { const node = element('a', text, 'admin-link'); node.href = href; return node; };
+const cardHeading = (title: string, ...details: Node[]) => {
+  const heading = element('div', '', 'admin-card-heading');
+  heading.append(element('h2', title), ...details);
+  return heading;
+};
 const names: Record<string, string> = { a: 'Alex Rivers', b: 'Sam Taylor', c: 'Jordan Lee', d: 'Maya Chen', e: 'Jamie Morgan', f: 'Devon Brooks' };
 const avatars: Record<string, string> = { a: '12', b: '13', c: '5', d: '47', e: '44', f: '49' };
 const person = (did?: string) => names[did?.split(':').at(-1)?.[0] || ''] || 'Anonymous';
@@ -30,8 +35,9 @@ const identity = (did?: string) => {
 const table = (headings: string[], rows: (string | Node)[][]) => {
   const scroll = element('div', '', 'admin-table-scroll'), table = element('table', '', 'admin-table');
   const head = element('thead'), heading = element('tr'), body = element('tbody');
-  headings.forEach((value) => heading.append(element('th', value))); head.append(heading);
-  rows.forEach((values) => { const row = element('tr'); values.forEach((value) => { const cell = element('td'); cell.append(value); row.append(cell); }); body.append(row); });
+  const columnClass = (index: number) => ['Gross', 'Refunds', 'Disputes', 'Net', 'Net support'].includes(headings[index]) ? 'numeric' : '';
+  headings.forEach((value, index) => heading.append(element('th', value, columnClass(index)))); head.append(heading);
+  rows.forEach((values) => { const row = element('tr'); values.forEach((value, index) => { const cell = element('td', '', columnClass(index)); cell.append(value); row.append(cell); }); body.append(row); });
   table.append(head, body); scroll.append(table); return scroll;
 };
 const paymentTable = (records: Support[]) => table(['Supporter / payment', 'Project', 'Status', 'Net support'], records.map((s) => {
@@ -64,11 +70,11 @@ const applyReport = (form: HTMLFormElement) => {
       series.forEach((s) => { const bar = element('div'); bar.style.height = `${Math.max(2, s.net / max * 100)}%`; bar.title = `${displayDate(s.date)}: ${money(s.net)}`; bars.append(bar); });
       const details = element('details'); details.append(element('summary', 'View earnings table', 'admin-link'), table(['Period starting', 'Gross', 'Refunds', 'Disputes', 'Net'], series.map((s) => [displayDate(s.date), money(s.gross), money(s.refunded), money(s.disputed), money(s.net)])));
       const labels = element('div', '', 'admin-chart-labels'); labels.append(element('span', series[0] ? displayDate(series[0].date) : ''), element('span', series.at(-1) ? displayDate(series.at(-1)!.date) : ''));
-      chart.replaceChildren(element('h2', 'Earnings over time'), element('p', `${query.interval === 'month' ? 'Monthly' : 'Weekly'} · fictional payments`, 'admin-help'), bars, labels, details);
+      chart.replaceChildren(cardHeading('Earnings over time', element('span', `${query.interval === 'month' ? 'Monthly' : 'Weekly'} · fictional payments`, 'admin-help')), bars, labels, details);
     }
     const performance = card('Project performance');
     if (performance) {
-      performance.replaceChildren(element('h2', 'Project performance'));
+      performance.replaceChildren(cardHeading('Project performance', link('Manage projects →', '/demo/studio/projects/')));
       projectPerformance(reportRecords, projects()).filter((p) => !query.project || p.id === query.project).forEach((p) => {
         const row = element('div', '', 'admin-progress-row'), heading = element('div'), track = element('div', '', 'progress'), bar = element('span');
         heading.append(link(p.title, projectEditUrl(p.id)), element('strong', money(p.net))); bar.style.width = `${stats.net ? p.net / stats.net * 100 : 0}%`; track.append(bar);
@@ -77,12 +83,12 @@ const applyReport = (form: HTMLFormElement) => {
     }
     const health = card('Payment health');
     health?.querySelectorAll('dd').forEach((node, index) => { node.textContent = [money(stats.refunded), money(stats.disputed), String(stats.pending), String(stats.failed), String(recurring.pastDue), String(recurring.ending)][index]; });
-    const recent = card('Recent payments'); if (recent) recent.replaceChildren(element('h2', 'Recent payments'), paymentTable(reportRecords.slice(0, 5)));
+    const recent = card('Recent payments'); if (recent) recent.replaceChildren(cardHeading('Recent payments', link('View payment history →', '/demo/studio/payments/')), paymentTable(reportRecords.slice(0, 5)));
   } else if (screen === '/studio/payments') {
-    const payments = cards[0]; payments?.replaceChildren(element('h2', `${reportRecords.length} payments · ${money(stats.net)} net`), paymentTable(reportRecords));
+    const payments = cards[0]; payments?.replaceChildren(cardHeading(`${reportRecords.length} payments · ${money(stats.net)} net`), paymentTable(reportRecords));
   } else if (screen === '/studio/supporters') {
     const supporters = supporterPerformance(reportRecords);
-    cards[0]?.replaceChildren(element('h2', `${supporters.length} named supporters`), table(['Supporter', 'Projects supported', 'First / latest', 'Net support'], supporters.map((s) => [identity(s.did), s.projects.map(projectName).join(' · '), `${displayDate(s.first)} / ${displayDate(s.last)}`, `${money(s.net)} · ${s.count} payments`])));
+    cards[0]?.replaceChildren(cardHeading(`${supporters.length} named supporters`), table(['Supporter', 'Projects supported', 'First / latest', 'Net support'], supporters.map((s) => [identity(s.did), s.projects.map(projectName).join(' · '), `${displayDate(s.first)} / ${displayDate(s.last)}`, `${money(s.net)} · ${s.count} payments`])));
     const anonymous = summarizePayments(reportRecords.filter((s) => s.visibility === 'anonymous' || !s.supporterDid));
     const caption = cards[1]?.querySelector('.admin-help'); if (caption) caption.textContent = `${anonymous.anonymousPayments} tips · ${money(anonymous.net)} net support`;
   }

@@ -44,22 +44,22 @@ const pickUrl = (id: string) => {
 <style>
   .live-example { scroll-margin-top:24px; }
   .live-heading { max-width:690px; margin-bottom:28px; }
-  .live-heading h2 { font-size:clamp(28px,3.6vw,40px); line-height:1.2; letter-spacing:-.04em; font-weight:600; margin:14px 0; }
-  .live-heading > p:not(.eyebrow) { font-size:15px; line-height:1.85; color:#61758c; }
+  .live-heading h2 { font-size:clamp(26px,3.4vw,36px); line-height:1.2; letter-spacing:-.04em; font-weight:600; margin:14px 0; }
+  .live-heading > p:not(.eyebrow) { font-size:15px; line-height:1.85; color:var(--color-muted); }
   .live-heading a, figcaption a { color:#0866ff; text-decoration:underline; text-underline-offset:3px; }
   .live-domain { min-height:48px; }
-  .live-domain strong { font-size:13px; font-weight:600; color:#294c77; }
+  .live-domain strong { font-size:13px; font-weight:600; color:var(--color-ink); }
   .live-domain > span { margin-left:auto; }
   .live-monogram { display:grid; place-items:center; flex:none; width:48px; height:48px; border-radius:50%; background:#edf3ec; color:#55704e; font-size:16px; font-weight:600; }
-  .live-link { min-height:74px; border-radius:6px; }
+  .live-link { min-height:64px; border-radius:6px; }
   .live-link:hover { background:#f7faff; }
-  .live-card-action { padding:18px 22px 22px; }
+  .live-card-action { padding:16px 20px 20px; }
   .live-card-action .button { width:100%; font-size:13px; }
-  .live-flow { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px; margin-top:30px; }
+  .live-flow { list-style:none; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; margin-top:24px; }
   .live-flow li { display:flex; gap:12px; }
   .live-flow li > span { color:#0866ff; font-size:11px; padding-top:3px; }
   .live-flow strong { font-size:14px; font-weight:550; }
-  .live-flow p { font-size:12px; color:#61758c; line-height:1.8; margin-top:6px; }
+  .live-flow p { font-size:12px; color:var(--color-muted); line-height:1.8; margin-top:6px; }
   .live-setup-link { font-size:13px; }
   @media(max-width:720px) { .live-flow { grid-template-columns:1fr; gap:18px; } .live-heading { margin-bottom:22px; } }
 </style>
