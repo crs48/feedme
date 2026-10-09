@@ -13,14 +13,14 @@ const total = totals(p.id);
 const cover = p.image || (config().demo ? demoCover(p.id)?.url : undefined);
 ---
 <article class="project-card">
-  <a href={`/support/${p.id}`} class="project-art" tabindex="-1" aria-hidden="true">{cover ? <img src={cover} srcset={demoImageSources(cover)} sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 950px) 44vw, 347px" alt="" loading="lazy" decoding="async" width="960" height="640" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</a>
+  <a href={`/support/${p.id}`} target="_blank" rel="noopener noreferrer" class="project-art" tabindex="-1" aria-hidden="true">{cover ? <img src={cover} srcset={demoImageSources(cover)} sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 950px) 44vw, 347px" alt="" loading="lazy" decoding="async" width="960" height="640" referrerpolicy="no-referrer"/> : <Artwork color={p.color} title={p.title}/>}</a>
   <div class="card-body">
     <div class="card-meta"><span class="tag">{p.category}</span><span>{p.status === 'complete' ? 'Complete' : p.kind === 'ongoing' ? 'Ongoing' : 'In progress'}</span></div>
-    <h3><a href={`/support/${p.id}`}>{p.title}</a></h3><p class="summary">{p.summary}</p>
+    <h3><a href={`/support/${p.id}`} target="_blank" rel="noopener noreferrer">{p.title}</a></h3><p class="summary">{p.summary}</p>
     <div class="card-bottom">
       <div class="support-total"><span><strong>{money(total.amount)}</strong> <span class="muted">public support</span></span><span class="muted">{total.count} {total.count === 1 ? 'tip' : 'tips'}</span></div>
       {p.target > 0 && <><AspirationProgress amount={total.amount} target={p.target}/><p class="target-label">{money(p.target)} aspiration</p></>}
-      <a class="support-link" href={`/support/${p.id}`}>{p.status === 'active' ? 'Support project' : 'View project'}<Icon name="arrow" size={16}/></a>
+      <a class="support-link" href={`/support/${p.id}`} target="_blank" rel="noopener noreferrer">{p.status === 'active' ? 'Support project' : 'View project'}<Icon name="arrow" size={16}/></a>
     </div>
   </div>
 </article>

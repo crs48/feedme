@@ -8,7 +8,7 @@ const info = Astro.props.item && githubRepo(Astro.props.item);
 const cached = info?.showCount ? cachedGithubStars(getDb(), info.repo) : undefined;
 const count = cached?.count;
 ---
-{info && <a class:list={["github-stars", { compact: Astro.props.compact }]} href={info.url} rel="noopener noreferrer" aria-label={`${info.repo} on GitHub${count !== undefined ? `, ${count} ${count === 1 ? 'star' : 'stars'}` : ''}`} title={`${info.repo}${cached?.checkedAt ? ` · stars checked ${new Date(cached.checkedAt).toUTCString()}` : ''}`}>
+{info && <a class:list={["github-stars", { compact: Astro.props.compact }]} href={info.url} target="_blank" rel="noopener noreferrer" aria-label={`${info.repo} on GitHub${count !== undefined ? `, ${count} ${count === 1 ? 'star' : 'stars'}` : ''}`} title={`${info.repo}${cached?.checkedAt ? ` · stars checked ${new Date(cached.checkedAt).toUTCString()}` : ''}`}>
   <LibcardIcon name="github" size={Astro.props.compact ? 12 : 15}/>{!Astro.props.compact && <span>GitHub</span>}{info.showCount && <>{!Astro.props.compact && <span aria-hidden="true">☆</span>}<span>{count === undefined ? '—' : count.toLocaleString('en-US')}</span></>}
 </a>}
 <style>
