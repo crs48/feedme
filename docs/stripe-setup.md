@@ -1,5 +1,7 @@
 # Stripe setup for a self-hosted Feedme
 
+For an agent-guided installation, start with the [setup runbook](agent-setup.md). It sequences hosting, creator login, private storage, Stripe and verification; this guide supplies the detailed payment configuration.
+
 Open **Dashboard → Settings → Set up Stripe**, or `/studio/stripe`. The page shows missing configuration, the deployment's webhook address, and payment/payout flags retrieved from Stripe. It does not collect bank details or store new API keys through a web form.
 
 ## What you need

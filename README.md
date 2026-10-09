@@ -16,6 +16,8 @@ Your community gives you resources **and a signal about what they want more of**
 
 ## Try it
 
+**Want an agent to help?** [Copy the setup prompt](https://feedme.fund/get-started/#agent-setup-title) into Codex, Claude, or another assistant. The [repository runbook](docs/agent-setup.md) walks through hosting, Bluesky login, Habitat private storage, Stripe, backups, and verification, with browser handoffs when you need to sign in. Start in an isolated sandbox, then create a separate production instance. Keys go directly into your host's secret settings, never into chat.
+
 For a self-hosted installation that is easy to update, use the small deployment bundle attached to a [numbered release](https://github.com/crs48/feedme/releases) once its publishing workflow has completed. It runs a prebuilt container with a pinned version and digest; your configuration and data survive image upgrades. See [releases and upgrades](docs/releases.md). The source template below remains useful for development and code customization.
 
 Use Node **24 LTS** and pnpm **10.11.1**.
@@ -47,7 +49,7 @@ The second amount is the starting amount on both the homepage and project pages.
 
 Set `LIBCARD_REPO=your-name/your-libcard` (and optionally `LIBCARD_REF=main`) to use a public LibCard config as your profile. **All links and socials accept picks by default**—no per-link YAML needed, up to 99 plus the creator. Hide exceptions in **Dashboard → Projects → From LibCard**. Set `LIBCARD_DEFAULT_SUPPORT=explicit` to require per-item `feedme.id` values instead. Supporters use integer picks, review the exact split, and check out once. Public pick totals are available at `/api/public/libcard` for the separate LibCard integration.
 
-Try the offline fixture with `FEEDME_MODE=demo LIBCARD_REPO=example/libcard pnpm dev`. Unset the repository to retain the existing percentage UI. Live mode still needs the normal Stripe, Habitat, and HTTPS setup. The GitHub Pages demo stays unchanged.
+Try the offline fixture with `FEEDME_MODE=demo LIBCARD_REPO=example/libcard pnpm dev`. Unset the repository to retain the existing percentage UI. Live mode still needs the normal Stripe, Habitat, and HTTPS setup. The GitHub Pages demo uses bundled LibCard picks with simulated payments.
 
 To preview the real crs.land LibCard while keeping payments simulated: `FEEDME_MODE=demo LIBCARD_REPO=crs48/LIBCard LIBCARD_DEMO_SOURCE=github BLUESKY_HANDLE=crs.land pnpm dev`. This imports the public profile and full link rows with icons and real GitHub star counts, checks the source every 15 minutes while in use, and stores simulated activity in a separate `demo-libcard.sqlite`. All links and socials can be tried with picks in this preview, alongside labeled sample goals and support. Live mode uses separate IDs and real payment records. Goals can come from LibCard or a local override under **Dashboard → Projects → From LibCard**.
 
