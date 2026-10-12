@@ -29,8 +29,8 @@ const statusLabel = (s?: Subscription) => !s ? 'Confirming subscription' : s.sta
       {!subscription && !cfg.demo && <a class="button secondary mt-4" href="/billing">Refresh billing status</a>}
       <details class="billing-payments"><summary>Payment history</summary><ul>{payments.map((s) => <li><span><time datetime={s.createdAt}>{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</time><small>{s.status}{s.refundedAmount > 0 ? ` · ${money(s.refundedAmount)} refunded` : ''}</small></span><strong>{money(s.amount)}</strong></li>)}</ul></details>
     </article>; })}
-    {!roots.length && <div class="panel"><h2 class="section-title mb-3">No recurring support here yet</h2><p class="muted text-sm">Use the browser you tipped from, or <a class="text-primary underline" href="/login?returnTo=/billing">sign in</a> with the account attached to your tip.</p></div>}
-    {loginUrl && <div class="panel mt-6"><h2 class="section-title mb-3">Tipped from another browser?</h2><p class="muted text-sm mb-4">Use the email you entered at checkout. Stripe will send a secure sign-in link so you can manage your support, including anonymous tips.</p><a class="button secondary" href={loginUrl}>Find support with email →</a></div>}
+    {!roots.length && <div class="panel"><h2 class="section-title mb-3">No recurring support here yet</h2><p class="muted text-sm">Use the browser you tipped from, or <a class="text-primary underline" href="/login?returnTo=/billing">sign in with Bluesky</a> using the profile you attached to your tip. Anonymous gifts aren’t attached to a Bluesky account.</p></div>}
+    {loginUrl && <div class="panel mt-6"><h2 class="section-title mb-3">Tipped from another browser?</h2><p class="muted text-sm mb-4">No Bluesky account is needed for this option. Use the email you entered at checkout. Stripe will send a secure sign-in link so you can manage your support, including anonymous tips.</p><a class="button secondary" href={loginUrl}>Manage with your checkout email →</a></div>}
   </div></section>
 </Layout>
 <style>

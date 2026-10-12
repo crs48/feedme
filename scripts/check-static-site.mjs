@@ -52,7 +52,7 @@ for (const file of html) {
     assert(url.origin === 'https://feedme.fund' && exists(url), `Missing responsive image: ${url}`);
   }));
 }
-for (const route of ['', 'get-started/', 'libcard/', 'libcard/setup/', 'demo/', 'demo/checkout/', 'demo/checkout/review/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
+for (const route of ['', 'get-started/', 'libcard/', 'libcard/setup/', 'demo/', 'demo/checkout/', 'demo/checkout/review/', 'demo/studio/', 'demo/studio/projects/new/', 'demo/studio/payments/', 'demo/studio/supporters/', 'demo/studio/updates/', 'demo/studio/settings/', 'demo/thanks/', 'demo/share/sample/', 'demo/discover/extended/', 'demo/billing/', 'demo/login/', 'demo/bluesky/', 'demo/following/people/']) assert(all.has(join(root, route, 'index.html')), `Missing screen: ${route}`);
 for (const route of ['demo', 'demo/checkout']) {
   const $ = load(await readFile(join(root, route, 'index.html'), 'utf8'));
   assert.equal($('[data-pick-visit][data-demo-action="/api/checkout/review"]').length, 1, 'Demo must use the real pick/review form.');

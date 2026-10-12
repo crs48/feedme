@@ -5,7 +5,7 @@ const url = `${config().origin}/share/${Astro.props.id}`;
 ---
 <section class="support-share panel text-left mt-8">
   <p class="eyebrow">Your public support card</p><h2 class="section-title">Share what you believe in.</h2>
-  <p>Your project split, in one little card. The image shows percentages and leaves out your tip amount.</p>
+  <p>Your project split, in one little card. The image shows percentages and leaves out your tip amount. Copying this link does not post it to Bluesky; you choose where to share it.</p>
   <a href={url}><img src={`${url}.png`} alt="Preview of your public support allocation card" width="1200" height="630" loading="lazy"/></a>
   <label class="field">Your share link<input type="url" value={url} readonly data-share-url/></label>
   <div class="share-actions"><button type="button" class="button" data-copy-share hidden>Copy link</button><a class="button secondary" href={url}>Open card ↗</a><a class="button secondary" href={`${url}.png`} download="feedme-support.png">Save image ↓</a></div>

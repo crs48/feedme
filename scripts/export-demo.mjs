@@ -133,7 +133,7 @@ try {
     }
     return demoPath(href, base, origin);
   };
-  const toolbar = `<aside class="static-demo-bar" aria-label="Demo navigation"><div><a class="demo-product" href="/">← Feedme</a><span>Interactive demo <span class="demo-status-dot"></span></span><a href="/get-started/">Set up your own ↗</a></div><nav aria-label="Demo screens"><a href="/demo/">Creator page</a><a href="/demo/updates/">Updates</a><a href="/demo/discover/">Discover</a><a href="/demo/studio/">Dashboard</a><a href="/demo/studio/projects/">Projects</a><a href="/demo/studio/settings/">Settings</a><a href="/demo/login/">Sign in</a><button type="button" data-demo-reset>Reset demo</button></nav><p>Fictional people and payments. Nothing is charged or published. Edits stay in this browser tab.</p></aside><div id="demo-notice" class="demo-toast" role="status" tabindex="-1" hidden></div><noscript><p class="demo-noscript">Browse every screen without JavaScript. Enable it to try simulated tips and local edits.</p></noscript>`;
+  const toolbar = `<aside class="static-demo-bar" aria-label="Demo navigation"><div><a class="demo-product" href="/">← Feedme</a><span>Interactive demo <span class="demo-status-dot"></span></span><a href="/get-started/">Set up your own ↗</a></div><nav aria-label="Demo screens"><a href="/demo/">Creator page</a><a href="/demo/updates/">Updates</a><a href="/demo/discover/">Discover</a><a href="/demo/studio/">Dashboard</a><a href="/demo/studio/projects/">Projects</a><a href="/demo/studio/settings/">Settings</a><a href="/demo/login/">Bluesky sign-in</a><button type="button" data-demo-reset>Reset demo</button></nav><p>Fictional people and payments. Nothing is charged or published. Edits stay in this browser tab.</p></aside><div id="demo-notice" class="demo-toast" role="status" tabindex="-1" hidden></div><noscript><p class="demo-noscript">Browse every screen without JavaScript. Enable it to try simulated tips and local edits.</p></noscript>`;
   const render = async (path, target, admin = false) => {
     const response = await request(path);
     if (response.status !== 200) throw new Error(`Unexpected redirect for demo screen ${path}: ${response.headers.get('location')}`);
@@ -152,6 +152,7 @@ try {
       $('.review-card > ul').attr('data-demo-review-parts', '');
       $('.review-card > .mb-5').attr('data-demo-review-note', '');
       $('.review-card > .muted.text-sm.mb-4').attr('data-demo-review-privacy', '');
+      $('.review-card [data-review-identity]').text('Using a fictional demo profile. On a live site, named gifts use your Bluesky account.');
       $('.review-card > p.notice').attr('data-demo-review-recurring', '');
       $('.review-card form[action="/api/checkout"]').attr('data-demo-confirm', '').find('button').text('Confirm demo gift');
       $('.review-card > p.text-xs.mt-2').text('Demo only. No Stripe checkout opens and nothing is charged.');
@@ -160,11 +161,11 @@ try {
       const form = $(element), action = form.attr('action') || path.split('?')[0];
       form.attr('data-demo-action', action).attr('data-demo-method', form.attr('method') || 'get').attr('action', '#demo-notice').attr('method', 'get');
       form.contents().wrapAll('<fieldset data-demo-controls disabled></fieldset>');
-      if (action === '/auth/login') form.replaceWith('<p class="notice">Real sign-in uses AT Protocol OAuth on your own server. No account is needed for this demo. Choose a preview below.</p>');
+      if (action === '/auth/login') form.replaceWith('<p class="notice">On a live site, sign in with your Bluesky account for a named gift, or tip anonymously without an account. This preview uses fictional profiles; no Bluesky sign-in is needed. Choose a demo account below.</p>');
     });
     $('a[href],link[href]').each((_, element) => {
       const href = $(element).attr('href');
-      if ($(element).is('[data-feedme-attribution]')) return;
+      if ($(element).is('[data-feedme-attribution],[data-feedme-product-link]')) return;
       if ($(element).is('link[rel=canonical]')) $(element).attr('href', `${demoOrigin}${target}`);
       else $(element).attr('href', map(href, path));
     });
@@ -194,7 +195,7 @@ try {
     const staticPath = target.split(/[?#]/)[0];
     await save(`${staticPath.replace(/^\//, '')}index.html`, $.html());
   };
-  const publicRoutes = ['/', '/checkout', reviewPath, '/updates', '/circle', '/following', '/following?view=people', '/discover', '/recommendations', '/login', '/billing', '/about', '/privacy', '/protocol',
+  const publicRoutes = ['/', '/checkout', reviewPath, '/updates', '/circle', '/following', '/following?view=people', '/discover', '/recommendations', '/login', '/billing', '/about', '/privacy', '/protocol', '/bluesky',
     ...projects.map((project) => `/support/${project.id}`), ...['network','mutuals','following','followers','extended','explore'].map((view) => `/discover?view=${view}`),
     ...['a','b','c','d','e','f'].map((letter) => `/recommend?did=did:plc:${letter.repeat(24)}`), receiptPath, shareRoute];
   for (const base of ['/', ...projects.map((project) => `/support/${project.id}`)]) {

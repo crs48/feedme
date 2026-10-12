@@ -1,0 +1,50 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BlueskySignup from '../components/BlueskySignup.astro';
+---
+<Layout title="Why Feedme uses Bluesky" description="Tip without an account, or bring your Bluesky profile to an independent creator’s site. Learn how Feedme connects to the open social web.">
+  <section class="shell page-section"><article class="bluesky-guide">
+    <p class="eyebrow">Independent sites. A shared social network.</p>
+    <h1 class="display page-title">Your Bluesky account.<br/>A creator’s own home.</h1>
+    <p class="intro">Feedme lets people run their own tipping site while staying connected to the people and conversations on Bluesky.</p>
+    <div class="account-choice panel"><h2>No Bluesky account? You can still tip.</h2><p>Choose <strong>Anonymous</strong> and pay securely with Stripe. You don’t need to join a social network, make a Feedme account, or sign in to support someone.</p><p>“Anonymous” means your Bluesky profile isn’t attached. Stripe and the creator may still receive billing details.</p></div>
+    <h2>Why sign in with Bluesky?</h2>
+    <p>Use the profile people already recognize instead of creating another username and password for every creator’s site. Signing in verifies control of that account—it isn’t a check of someone’s legal identity.</p>
+    <ul><li>Put your profile on a tip, either privately for the creator or publicly with your support.</li><li>Follow creators on Bluesky and find people you already know who use Feedme.</li><li>Follow a project in Feedme, or choose to publish a message of support on Bluesky after tipping.</li></ul>
+    <p>Signing in alone does not post, follow anyone, or make an anonymous tip public. Each of those actions is a separate choice.</p>
+    <h2>What happens where?</h2>
+    <dl class="network-roles">
+      <div><dt>Bluesky: your social account</dt><dd>Your handle, public profile, posts, and account follows. You sign in with your account provider; Feedme does not ask for or receive your password.</dd></div>
+      <div><dt>Feedme: this creator’s tipping site</dt><dd>Free, open-source software anyone can host. The creator runs their own site, chooses what to share, and receives tips through their Stripe account. Feedme adds no platform fee; hosting and payment-processing fees still apply.</dd></div>
+      <div><dt>Stripe: payment and billing</dt><dd>Enter payment details on Stripe’s hosted checkout. Stripe also handles recurring-payment management. A Bluesky password or account cannot replace payment details.</dd></div>
+      <div><dt>Habitat: private support records</dt><dd>The creator’s server uses private storage for receipts and notes. Those records aren’t Bluesky posts. The site operator and relevant service providers handle your data as described in <a href="/privacy">Privacy</a>.</dd></div>
+    </dl>
+    <h2>One account, beyond one website</h2>
+    <p>Bluesky uses <a href="https://atproto.com/guides/overview" target="_blank" rel="noopener noreferrer">AT Protocol</a>, an open network that lets independent apps share social identities and public records. Feedme uses that network so independently hosted creator sites can connect with one another.</p>
+    <p>Bluesky is the simplest place to start. If you already use another compatible AT Protocol provider, enter that account’s handle on the same sign-in page. Some social features depend on your provider and its Bluesky compatibility.</p>
+    <h2>You choose what’s public</h2>
+    <p>A private tip connects your account to the gift for the creator only. A public tip makes your profile, amount, and allocation visible. Your tip note always stays private. Public records can be copied across the open network.</p>
+    <p>Publishing a Bluesky post after tipping is optional, including for public tips. Posting about an anonymous gift can reveal that you supported the creator, so we ask you to confirm before publishing. <a href="/privacy">Read the full privacy choices →</a></p>
+    <section class="panel signup-panel" aria-labelledby="join-bluesky"><h2 id="join-bluesky">New to Bluesky?</h2><BlueskySignup/></section>
+    <div class="guide-actions"><a class="button" href="/login">Sign in with Bluesky</a><a class="button secondary" href="/">Explore this creator’s projects</a></div>
+    <p class="source-note">Learn more from <a href="https://bsky.social/about/blog/5-19-2023-user-faq" target="_blank" rel="noopener noreferrer">Bluesky’s user guide</a>, or <a data-feedme-product-link href="https://feedme.fund/get-started/" target="_blank" rel="noopener noreferrer">set up your own Feedme</a>. Feedme is independent software, not a Bluesky or Stripe service.</p>
+  </article></section>
+</Layout>
+<style>
+  .bluesky-guide { max-width:680px; margin-inline:auto; }
+  h1 { margin-block:16px 20px; }
+  h2 { font-size:19px; font-weight:600; margin:30px 0 12px; letter-spacing:-.02em; }
+  p, li, dd { font-size:14px; line-height:1.75; color:var(--color-muted); }
+  p + p { margin-top:12px; }
+  .intro { font-size:16px; }
+  ul { list-style:disc; padding-left:22px; margin:16px 0; } li + li { margin-top:8px; }
+  a:not(.button) { color:var(--color-primary); text-decoration:underline; text-underline-offset:3px; }
+  .account-choice { margin-top:24px; background:var(--color-surface); box-shadow:none; }
+  .panel h2 { margin-top:0; }
+  .network-roles { border:1px solid var(--color-border); border-radius:8px; }
+  .network-roles > div { padding:20px; } .network-roles > div + div { border-top:1px solid var(--color-border); }
+  dt { font-size:14px; font-weight:600; margin-bottom:6px; }
+  .signup-panel { margin-top:28px; }
+  .guide-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+  .source-note { font-size:12px; margin-top:24px; }
+</style>

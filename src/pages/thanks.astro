@@ -1,6 +1,8 @@
 ---
 import { creatorCircle } from '../lib/creator-circle';
 import SupportShare from '../components/SupportShare.astro';
+import BlueskySignup from '../components/BlueskySignup.astro';
+import { people } from '../lib/people';
 import { ensureSupportShare, supportShare } from '../lib/support-shares';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
@@ -23,6 +25,7 @@ const shareable = canShareTip(s, user, browser);
 const p = accessible && s ? project(s.projectId) : undefined;
 const allocations = accessible && s?.allocations ? supportParts(s) : [];
 const saved = shareable && user && s ? publishedPost(user.did, `tip:${s.id}`) : undefined;
+const person = shareable && user ? (await people([user.did])).get(user.did) : undefined;
 const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
 const candidateShareId = paid && s ? ensureSupportShare(s.id) : undefined;
 const shareId = candidateShareId && supportShare(candidateShareId) ? candidateShareId : undefined;
@@ -35,15 +38,22 @@ const shareId = candidateShareId && supportShare(candidateShareId) ? candidateSh
     {paid && allocations.length > 0 && <div class="panel text-left mt-8"><h2 class="section-title mb-4">Your support breakdown</h2><ul>{allocations.map((part) => <li class="flex justify-between gap-4 border-b border-border py-3 text-sm"><a class="text-primary" href={`/support/${part.projectId}`}>{project(part.projectId)?.title || 'Project'}{s?.picks && <span class="block text-xs muted mt-1">{s.picks.find(p => p.projectId === part.projectId)?.count} {s.picks.find(p => p.projectId === part.projectId)?.count === 1 ? 'pick' : 'picks'}{project(part.projectId)?.target ? ` · ${money(project(part.projectId)!.target)} aspiration` : ''}</span>}</a><strong class="whitespace-nowrap">{money(netSupport(part))}</strong></li>)}</ul><p class="text-sm font-semibold mt-4">Total: {money(netSupport(s!))}</p></div>}
     {shareId && <SupportShare id={shareId}/>}
     {paid && p && !allocations.length && <div class="panel text-left mt-8"><p class="eyebrow mb-2">Project updates</p><h2 class="section-title mb-4">Keep up with this project</h2><FollowButton kind="project" subject={projectUri(config().ownerDid, p.id)} title={p.title} returnTo={returnTo}/></div>}
-    {paid && accessible && !user && <p class="notice text-sm"><a class="underline" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in</a> to follow projects or write a public message about your support.</p>}
+    {paid && accessible && !user && <section class="panel text-left mt-6" aria-labelledby="stay-connected">
+      <h2 id="stay-connected" class="section-title mb-3">Your gift is complete. Stay connected?</h2>
+      <p class="muted text-sm mb-4">Use your Bluesky account to follow creators or choose to post a message about your support. This is optional: your gift is already confirmed, and signing in won’t change its privacy or publish a post.</p>
+      <a class="button secondary" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in with Bluesky</a>
+      <details class="receipt-signup"><summary>Don’t have a Bluesky account?</summary><BlueskySignup/></details>
+      <p class="muted text-xs mt-3">Keep this receipt link in this browser. You don’t need an account to return to it or use the billing link for recurring support. <a class="underline" href="/bluesky" target="_blank" rel="noopener noreferrer">Why Bluesky? ↗</a></p>
+    </section>}
     {shareable && user && s && <div class="panel text-left mt-6">
-      <p class="eyebrow mb-2">Share your support</p><h2 class="section-title mb-4">{saved?.uri ? 'Your public message' : 'Leave a public message'}</h2>
+      <p class="eyebrow mb-2">Share your support</p><h2 class="section-title mb-4">{saved?.uri ? 'Your public message' : 'Post on Bluesky (optional)'}</h2>
       {saved?.uri ? <><p class="prose-copy text-sm mb-4">{String(saved.record.text)}</p><a class="button secondary" href={config().demo ? '/following?view=people' : blueskyPostUrl(saved.uri)} rel="noopener noreferrer">{config().demo ? 'View your demo post' : 'View on Bluesky'} ↗</a></> : <form method="post" action="/api/social">
         <input type="hidden" name="action" value="post"/><input type="hidden" name="supportId" value={s.id}/>
-        <label class="field">Your public words<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…">{saved ? String(saved.record.text) : ''}</textarea></label>
+        <p class="muted text-sm mb-4">Share a separate Bluesky post with your followers and the open social web. Your gift is already confirmed; posting is entirely up to you.</p>
+        <label class="field">Your Bluesky post<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…">{saved ? String(saved.record.text) : ''}</textarea></label>
         <p class="muted text-xs mb-4">Up to 300 characters. Includes {shareId ? 'your support card and allocation image' : `a link to ${allocations.length ? 'the creator’s projects' : 'this project'}`}. Your private tip note and amount are never copied here.</p>
-        <p class="text-xs muted mb-4 break-all">Posting as {user.did}</p>
-        <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this message publicly under my AT Protocol identity. This identifies me even if my tip was anonymous.</span></label>
+        <p class="text-xs muted mb-4">{config().demo ? 'Demo profile' : 'Posting as'} <strong>{person?.handle ? `@${person.handle}` : person?.name || 'your connected Bluesky account'}</strong></p>
+        <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this post publicly with my Bluesky profile. People can see that I supported this creator, even if my gift was private or anonymous.</span></label>
         <button class="button">{config().demo ? 'Try a demo public post' : 'Publish on Bluesky'}</button>
       </form>}
     </div>}
@@ -54,3 +64,8 @@ const shareId = candidateShareId && supportShare(candidateShareId) ? candidateSh
     <a class="button secondary mt-4" href="/">Back to projects</a>
   </div></section>
 </Layout>
+
+<style>
+  .receipt-signup { margin-top:14px; border-top:1px solid var(--color-border); }
+  .receipt-signup summary { cursor:pointer; min-height:44px; padding-block:12px; font-size:13px; font-weight:500; }
+</style>
