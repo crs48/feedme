@@ -45,6 +45,13 @@ beforeEach(() => {
 afterEach(() => state.db!.close());
 
 describe('browser-bound pick checkout', () => {
+  it('reviews a custom $20 amount without selecting anything and sends that exact amount to checkout', async () => {
+    const id = await review({ amount: '20', 'pick:creator': '0', note: '' });
+    expect(readPickReview(ctx(), id)).toMatchObject({ amount: 2000, picks: [{ projectId: 'creator', count: 1 }], visibility: 'anonymous' });
+    await checkoutPost(ctx({ reviewId: id }));
+    expect(state.checkout.mock.calls[0][1]).toEqual([{ title: 'A tip for Alex Rivers', amount: 2000 }]);
+    expect(readRecord<Support>(state.db!, 'support', id)).toMatchObject({ amount: 2000, status: 'pending' });
+  });
   it('reviews and charges an automatic target through the same frozen intent as explicit targets', async () => {
     const target = libcardTargets().find(p => p.title === 'Résumé')!;
     const id = await review({ 'pick:creator': '0', [`pick:${target.id}`]: '3' });
@@ -110,6 +117,37 @@ describe('browser-bound pick checkout', () => {
     expect(state.checkout).toHaveBeenCalledTimes(1);
     expect(readRecord<Support>(state.db!, 'support', nextId)).toMatchObject({ visibility: 'anonymous', frequency: 'yearly', amount: 2200, picks: original.picks });
     expect(readRecord<Support>(state.db!, 'support', nextId)?.supporterDid).toBeUndefined();
+  });
+  it.each([false, true])('adds an optional private profile to a fresh review (signed in: %s)', async signedIn => {
+    const id = await review({ amount: '20.01', frequency: 'monthly', 'pick:presence': '3', announceAnonymously: 'yes' });
+    const original = readPickReview(ctx(), id);
+    if (signedIn) state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
+    const response = await reviewPost(ctx({ intent: 'attach-profile', editReview: id, amount: '999', visibility: 'public', note: 'tampered' }));
+    const destination = new URL(response.headers.get('location')!, 'https://feedme.example');
+    expect(destination.pathname).toBe(signedIn ? '/checkout/review' : '/login');
+    const reviewUrl = new URL(signedIn ? destination.href : destination.searchParams.get('returnTo')!, destination.origin);
+    const nextId = reviewUrl.searchParams.get('token')!;
+    expect(nextId).not.toBe(id);
+    expect(readPickReview(ctx(), nextId)).toEqual({ ...original, visibility: 'private', announceAnonymously: false, ...(signedIn ? { supporterDid: state.user!.did } : {}) });
+    expect(readPickReview(ctx(), id)).toEqual(original);
+    expect(destination.href).not.toContain(original.note);
+    expect(state.checkout).not.toHaveBeenCalled(); expect(listRecords(state.db!, 'support')).toEqual([]);
+    // Only successful sign-in identifies the new review; the anonymous original stays anonymous.
+    state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
+    expect(identifyPickReview(ctx(), nextId).supporterDid).toBe(state.user.did);
+    expect(identifyPickReview(ctx(), id).supporterDid).toBeUndefined();
+    await checkoutPost(ctx({ reviewId: nextId }));
+    expect(readRecord<Support>(state.db!, 'support', nextId)).toMatchObject({ amount: 2001, frequency: 'monthly', visibility: 'private', supporterDid: state.user.did, note: original.note, picks: original.picks, status: 'pending' });
+  });
+  it.each(['wrong-browser', 'expired', 'unavailable'])('rejects attaching a profile to a %s review', async failure => {
+    const id = await review({ 'pick:presence': '3' });
+    if (failure === 'wrong-browser') jar.set('feedme_checkout', 'different');
+    if (failure === 'expired') state.db!.prepare("UPDATE kv SET expires=1 WHERE namespace='pick-review'").run();
+    if (failure === 'unavailable') overrideLibcard(state.db!, 'presence', true);
+    const response = await reviewPost(ctx({ intent: 'attach-profile', editReview: id }));
+    expect(response.headers.get('location')).toMatch(/^\/checkout\?error=/);
+    expect(state.db!.prepare("SELECT count(*) AS count FROM kv WHERE namespace='pick-review' AND key!=?").get(id)).toEqual({ count: 0 });
+    expect(state.checkout).not.toHaveBeenCalled();
   });
   it.each(['wrong-browser', 'expired', 'unavailable'])('rejects anonymous conversion of a %s review', async failure => {
     const id = await review({ visibility: 'private', 'pick:presence': '3' });

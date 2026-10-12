@@ -64,11 +64,11 @@ export const readPickReview = (context: Pick<APIContext, 'cookies'>, id: string)
   bound(context, value); return value!;
 };
 // A privacy change creates a new reviewed intent; never mutate a frozen checkout.
-export const anonymousPickReview = (context: APIContext, id: string) => {
+export const changePickReviewVisibility = (context: APIContext, id: string, visibility: 'anonymous' | 'private') => {
   const { amount, picks, frequency, note } = readPickReview(context, id);
   const ids = new Set(libcardTargets().map(p => p.id));
   if (picks.some(p => !ids.has(p.projectId))) throw new Error('A selected target is no longer available. Edit and review your gift again.');
-  return createPickReview(context, { amount, picks, frequency, note, visibility: 'anonymous', announceAnonymously: false });
+  return createPickReview(context, { amount, picks, frequency, note, visibility, announceAnonymously: false });
 };
 // Capture identity after OAuth before rendering the final review, never at payment submission.
 export const identifyPickReview = (context: APIContext, id: string) => {

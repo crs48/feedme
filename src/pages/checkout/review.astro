@@ -42,6 +42,10 @@ const person = user && review && review.visibility !== 'anonymous' ? (await peop
         <p class="muted text-xs mt-3">Anonymous keeps the same gift with no profile attached or public timeline entry. You’ll review it again before paying.</p>
         <details class="mt-4"><summary>New to Bluesky?</summary><BlueskySignup/></details>
       </div> : <form method="post" action="/api/checkout"><input type="hidden" name="reviewId" value={token}/><button class="button w-full">{config().demo ? 'Confirm demo gift' : 'Continue to Stripe'} <span aria-hidden="true">→</span></button></form>}
+      {!changed && review.visibility === 'anonymous' && <div class="review-profile-option mt-4">
+        <form method="post" action="/api/checkout/review"><input type="hidden" name="editReview" value={token}/><input type="hidden" name="intent" value="attach-profile"/><button class="button secondary w-full">{user ? 'Add my Bluesky profile' : 'Sign in with Bluesky'} <span>(optional)</span></button></form>
+        <p class="muted text-xs mt-3">Keep this gift and share your profile with {review.creatorName} only. You’ll review it again before paying. Nothing is posted publicly.</p>
+      </div>}
       <p class="muted text-xs mt-3">Your gift goes to the creator, minus payment processing fees. Where you placed it is a suggestion.</p>
       <p class="muted text-xs mt-2">{config().demo ? 'Demo only. No Stripe checkout opens and nothing is charged.' : 'Stripe collects your payment details. Signing in with Bluesky does not make a payment.'}</p>
       <form method="post" action="/checkout" class="mt-5"><input type="hidden" name="editReview" value={token}/><button class="button secondary">Edit your gift</button></form>

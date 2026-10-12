@@ -49,7 +49,12 @@ try {
     await new Promise(done => setTimeout(done,100));
   }
   assert.ok(ready, logs);
-  const initial = fields(await page('/'));
+  const home = await page('/');
+  // The browser's implicit Enter action is the first submit button in tree order.
+  const defaultSubmit = home('form[data-pick-visit] button').filter((_, el) => !['button', 'reset'].includes(home(el).attr('type'))).first();
+  assert.equal(defaultSubmit.attr('name'), 'intent'); assert.equal(defaultSubmit.attr('value'), 'review');
+  assert.equal(defaultSubmit.attr('formaction'), undefined, 'Enter must review, never activate a preset or pick shortcut.');
+  const initial = fields(home);
   assert.equal(initial.get('amount'),'22.00');
   assert.equal([...initial].filter(([key]) => key.startsWith('pick:')).length,9);
   const automatic = [...initial.keys()].filter(key => key.startsWith('pick:auto-'));
@@ -90,6 +95,17 @@ try {
   assert.match(anonymousReview.text(), /No account or sign-in needed/);
   assert.match(anonymousReview.text(), /fixture-private-note/); assert.match(anonymousReview.text(), /Monthly/);
   assert.equal(anonymousReview('form[action="/api/checkout"] input[name=reviewId]').length, 1, 'Anonymous gift must proceed without sign-in.');
+  const attach = anonymousReview('form[action="/api/checkout/review"]:has(input[value="attach-profile"])');
+  assert.match(attach.text(), /Sign in with Bluesky/);
+  const attached = await request('/api/checkout/review', { intent: 'attach-profile', editReview: attach.find('input[name=editReview]').val() });
+  const attachLogin = new URL(attached.headers.get('location'), origin);
+  assert.equal(attachLogin.pathname, '/login');
+  const privateUrl = attachLogin.searchParams.get('returnTo');
+  assert.ok(privateUrl.startsWith('/checkout/review?token=') && privateUrl !== anonymousUrl);
+  const privateReview = await page(privateUrl);
+  assert.match(privateReview.text(), /Monthly · private/); assert.match(privateReview.text(), /fixture-private-note/);
+  assert.match(privateReview.text(), /\$44 to Alex Rivers/);
+  assert.equal((await page(anonymousUrl))('form[action="/api/checkout"]').length, 1, 'Adding a profile must leave the original anonymous gift available.');
   assert.equal((await page(reviewUrl))('.review-identity').length, 1, 'Converting must not mutate the original named review.');
   const wrongConversion = await request('/api/checkout/review', { intent: 'anonymous', editReview: token }, new Map());
   assert.ok(wrongConversion.headers.get('location').startsWith('/checkout?error='));
