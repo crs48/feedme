@@ -57,8 +57,8 @@ for (const route of ['demo', 'demo/checkout']) {
   const $ = load(await readFile(join(root, route, 'index.html'), 'utf8'));
   assert.equal($('[data-pick-visit][data-demo-action="/api/checkout/review"]').length, 1, 'Demo must use the real pick/review form.');
   assert.equal($('input[type=range]').length, 0, 'Legacy sliders must not replace the pick demo.');
-  assert($('[data-pick-input]').length > 1 && $('[data-pick-start]').length === $('[data-pick-input]').length, 'Missing pick controls.');
-  assert($('[data-pick-input]').toArray().every(input => $(input).val() === '0'), 'Demo picks must start at zero.');
+  assert($('[data-pick-input]').length > 1 && $('[data-pick-start], [data-pick-creator]').length === $('[data-pick-input]').length, 'Missing pick controls.');
+  assert($('[data-pick-input]').toArray().every(input => $(input).val() === ($(input).attr('name') === 'pick:creator' ? '1' : '0')), 'Demo must default to no preference until specific work is picked.');
   assert($('.pick-socials').length && $('[data-pick-group="ready"]').length, 'Missing grouped links or social picks.');
 }
 const review = load(await readFile(join(root, 'demo/checkout/review/index.html'), 'utf8'));

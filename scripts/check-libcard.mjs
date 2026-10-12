@@ -56,19 +56,19 @@ try {
   assert.equal(automatic.length,3);
   const prefilled = fields(await page(`/checkout?${encodeURIComponent(automatic[0].slice(5))}=2`));
   assert.equal(prefilled.get(automatic[0]),'2');
-  assert.ok([...initial].filter(([key]) => key.startsWith('pick:')).every(([,v]) => v === '0'));
+  assert.ok([...initial].filter(([key]) => key.startsWith('pick:')).every(([key,v]) => v === (key === 'pick:creator' ? '1' : '0')));
   const publicBefore = await (await request('/api/public/libcard')).json();
   const automaticTarget = publicBefore.targets.find(p => p.id === automatic[0].slice(5));
   assert.ok(automaticTarget);
   assert.ok(publicBefore.targets.every(p => p.publicCount === 0 && p.publicShareMillis === 0));
   initial.set('intent','all'); initial.set('note','fixture-private-note');
   const equal = fields(await page('/checkout', initial));
-  assert.ok([...equal].filter(([key]) => key.startsWith('pick:')).every(([,v]) => v === '1'));
+  assert.ok([...equal].filter(([key]) => key.startsWith('pick:')).every(([key,v]) => v === (key === 'pick:creator' ? '0' : '1')));
   equal.set('intent','amount-4400');
   const larger = fields(await page('/checkout',equal)); assert.equal(larger.get('amount'),'44.00'); assert.equal(larger.get('pick:x'),'1');
   larger.set('intent','creator');
   const selected = fields(await page('/checkout',larger)); assert.equal(selected.get('pick:x'),'0'); assert.equal(selected.get('pick:creator'),'1');
-  selected.set('pick:presence','3'); selected.set('visibility','public'); selected.set('frequency','monthly'); selected.set('intent','review');
+  selected.set('pick:presence','3'); selected.set('pick:x','1'); selected.set('visibility','public'); selected.set('frequency','monthly'); selected.set('intent','review');
   const posted = await request('/api/checkout/review',selected); assert.equal(posted.status,303);
   const reviewUrl = posted.headers.get('location'); assert.ok(reviewUrl.startsWith('/checkout/review?token=')); assert.ok(!reviewUrl.includes('fixture-private-note'));
   const reviewResponse = await request(reviewUrl); assert.equal(reviewResponse.headers.get('cache-control'),'private, no-store');
@@ -104,7 +104,7 @@ try {
   const receipt = await page(final.headers.get('location')); assert.match(receipt.text(),/No money changed hands/);
   const publicResponse = await request('/api/public/libcard'); assert.equal(publicResponse.headers.get('cache-control'),'public, max-age=60');
   const signal = await publicResponse.json(); assert.equal(signal.defaultAmountCents,2200);
-  assert.deepEqual(signal.targets.slice(0,2).map(p => [p.publicCount,p.publicShareMillis]),[[1,250],[1,750]]);
+  assert.deepEqual(signal.targets.slice(0,2).map(p => [p.publicCount,p.publicShareMillis]),[[0,0],[1,750]]);
   assert.ok(!JSON.stringify(signal).includes('fixture-private-note'));
   const shareUrl = new URL(receipt('[data-share-url]').val());
   const share = await page(shareUrl.pathname); assert.equal(share('.share-allocation').length,0); assert.match(share.text(),/\$3,000 aspiration/);
@@ -115,7 +115,7 @@ try {
     const id = new URL(next,origin).searchParams.get('token'); assert.equal((await request('/api/checkout',{reviewId:id})).status,303);
   }
   assert.deepEqual(await (await request('/api/public/libcard')).json(),signal);
-  const old = fields(await page('/checkout?gone=1&x=10')); assert.ok([...old].filter(([key]) => key.startsWith('pick:')).every(([,v]) => v === '0'));
+  const old = fields(await page('/checkout?gone=1&x=10')); assert.ok([...old].filter(([key]) => key.startsWith('pick:')).every(([key,v]) => v === (key === 'pick:creator' ? '1' : '0')));
   await request('/auth/demo', {role:'admin'});
   const studio = await page('/studio/projects'); assert.match(studio.text(),/From LibCard/);
   const automaticReview = fields(await page('/checkout'));

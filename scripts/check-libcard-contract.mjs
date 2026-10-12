@@ -64,13 +64,13 @@ for (const scenario of ['ready', 'ready-all', 'disabled', 'unavailable']) {
       const response = await request(`/checkout${query}`); assert.equal(response.status, 200);
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
       const $ = load(await response.text()); assert.equal($('input[name="amount"]').val(), amount); assert.equal($('input[name="pick:presence"]').val(), presence);
-      assert.equal($('input[name="pick:creator"]').val(), '0');
+      assert.equal($('input[name="pick:creator"]').val(), presence === '0' ? '1' : '0');
     }
     for (const path of ['/', '/checkout?skipped-link=1&skipped-social=1']) {
       const page = load(await (await request(path)).text());
       for (const url of skippedUrls) assert.equal(page(`a[href="${url}"]`).length, 0, `Skipped source item appeared on ${path}`);
       assert.equal(page('input[name="pick:skipped-link"],input[name="pick:skipped-social"]').length, 0);
-      assert.ok(page('[data-pick-input]').toArray().every(input => page(input).val() === '0'));
+      assert.ok(page('[data-pick-input]').toArray().every(input => page(input).val() === (page(input).attr('name') === 'pick:creator' ? '1' : '0')));
     }
     const login = await request('/auth/demo', { method: 'POST', headers: { origin: canonical }, body: new URLSearchParams({ role: 'admin' }) });
     assert.equal(login.status, 303);

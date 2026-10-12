@@ -8,6 +8,7 @@ import { billingFrequency, type BillingFrequency } from './billing-frequency';
 import { allocatePicks, picksFromForm, picksSchema, type Pick as TargetPick } from './picks';
 import { libcardSnapshot, libcardTargets } from './libcard';
 import { sourceKey } from './libcard-schema';
+import { withDefaultPick } from './pick-selection';
 
 export type PickValues = { amount: number; picks: TargetPick[]; frequency: BillingFrequency; visibility: Visibility; note: string; announceAnonymously: boolean };
 export type PickReview = PickValues & { binding: string; source: string; creatorName: string; supporterDid?: string };
@@ -39,7 +40,7 @@ export const pickFormValues = (context: APIContext, form: FormData): PickValues 
   const parsed = picksFromForm(form, token!.ids);
   const ids = libcardTargets().map(p => p.id);
   if (token!.ids.some(id => !ids.includes(id))) throw new Error('The target list changed. Reload and review your picks.');
-  const picks = action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [{ projectId: 'creator', count: 1 }] : parsed;
+  const picks = withDefaultPick(action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [] : parsed);
   const visibility = oneField(form, 'visibility') || 'anonymous';
   if (!['anonymous', 'private', 'public'].includes(visibility)) throw new Error('Choose a valid privacy setting.');
   const note = oneField(form, 'note').trim(); if (note.length > 500) throw new Error('Keep your note to 500 characters.');

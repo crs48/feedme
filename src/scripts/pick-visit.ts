@@ -1,4 +1,5 @@
 import { splitUnits } from '../lib/pick-allocation';
+import { withDefaultPick } from '../lib/pick-selection';
 
 const cents = (value: string) => {
   if (!/^\d{1,5}(\.\d{1,2})?$/.test(value)) return;
@@ -16,17 +17,24 @@ export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement
   const status = form.querySelector<HTMLElement>('[data-pick-status]')!;
   const text = (selector: string, value: string) => { form.querySelector<HTMLElement>(selector)!.textContent = value; };
   const update = (announce = false, expand = false) => {
-    const picks = rows.flatMap((row, i) => Number(inputs[i].value) > 0 ? [{ projectId: row.dataset.pickRow!, count: Number(inputs[i].value) }] : []);
+    const picks = withDefaultPick(rows.flatMap((row, i) => Number(inputs[i].value) > 0 ? [{ projectId: row.dataset.pickRow!, count: Number(inputs[i].value) }] : []));
+    inputs.forEach((input, i) => input.value = String(picks.find(pick => pick.projectId === rows[i].dataset.pickRow)?.count || 0));
     const total = picks.reduce((n, pick) => n + pick.count, 0);
     const price = cents(amount.value);
     const shares = new Map(total ? splitUnits(1000, picks).map(p => [p.projectId, p.amount / 10]) : []);
     const parts = new Map(total && price !== undefined ? splitUnits(price, picks).map(p => [p.projectId, p.amount]) : []);
     const frequency = form.querySelector<HTMLInputElement>('[name=frequency]:checked')!.value;
     const suffix = frequency === 'monthly' ? ' / month' : frequency === 'yearly' ? ' / year' : '';
-    const summary = `${total} ${total === 1 ? 'pick' : 'picks'} across ${picks.length} ${picks.length === 1 ? 'thing' : 'things'}`;
+    const summary = picks[0]?.projectId === 'creator' ? `No preference — just ${form.dataset.creatorName}` : `${total} ${total === 1 ? 'pick' : 'picks'} across ${picks.length} ${picks.length === 1 ? 'thing' : 'things'}`;
     rows.forEach((row, i) => {
       const count = Number(inputs[i].value);
       row.dataset.selected = String(count > 0);
+      const creatorChoice = row.querySelector<HTMLButtonElement>('[data-pick-creator]');
+      if (creatorChoice) {
+        creatorChoice.setAttribute('aria-pressed', String(count > 0));
+        creatorChoice.textContent = count ? 'Selected' : 'Choose';
+        return;
+      }
       row.querySelector<HTMLElement>('[data-pick-start]')!.hidden = count > 0;
       row.querySelector<HTMLElement>('[data-pick-stepper]')!.hidden = count === 0;
       row.querySelector<HTMLOutputElement>('[data-pick-count]')!.textContent = String(count);
@@ -56,6 +64,11 @@ export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement
     row.querySelector<HTMLElement>('[data-pick-input-label]')!.hidden = true;
     inputs[i].hidden = true;
     row.querySelector<HTMLElement>('[data-pick-controls]')!.hidden = false;
+    const creatorChoice = row.querySelector<HTMLButtonElement>('[data-pick-creator]');
+    if (creatorChoice) {
+      creatorChoice.addEventListener('click', () => { inputs.forEach(input => input.value = '0'); update(true); });
+      return;
+    }
     const start = row.querySelector<HTMLButtonElement>('[data-pick-start]')!;
     const add = row.querySelector<HTMLButtonElement>('[data-pick-add]')!;
     start.addEventListener('click', () => { inputs[i].value = '1'; update(true); add.focus(); });
