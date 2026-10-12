@@ -187,7 +187,7 @@ if (fixture.projects) {
         field(form, 'note')!.value = gift.note || '';
         (field(form, 'announceAnonymously') as HTMLInputElement).checked = Boolean(gift.announceAnonymously);
         const options = form.querySelector<HTMLDetailsElement>('.pick-options');
-        if (options && (gift.note || gift.announceAnonymously)) options.open = true;
+        if (options && (gift.note || gift.announceAnonymously || gift.visibility !== 'anonymous')) options.open = true;
       }
     }
   });

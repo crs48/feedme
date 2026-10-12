@@ -8,6 +8,7 @@ import { billingFrequency, type BillingFrequency } from './billing-frequency';
 import { allocatePicks, picksFromForm, picksSchema, type Pick as TargetPick } from './picks';
 import { libcardSnapshot, libcardTargets } from './libcard';
 import { sourceKey } from './libcard-schema';
+import { withDefaultPick } from './pick-selection';
 
 export type PickValues = { amount: number; picks: TargetPick[]; frequency: BillingFrequency; visibility: Visibility; note: string; announceAnonymously: boolean };
 export type PickReview = PickValues & { binding: string; source: string; creatorName: string; supporterDid?: string };
@@ -39,7 +40,7 @@ export const pickFormValues = (context: APIContext, form: FormData): PickValues 
   const parsed = picksFromForm(form, token!.ids);
   const ids = libcardTargets().map(p => p.id);
   if (token!.ids.some(id => !ids.includes(id))) throw new Error('The target list changed. Reload and review your picks.');
-  const picks = action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [{ projectId: 'creator', count: 1 }] : parsed;
+  const picks = withDefaultPick(action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [] : parsed);
   const visibility = oneField(form, 'visibility') || 'anonymous';
   if (!['anonymous', 'private', 'public'].includes(visibility)) throw new Error('Choose a valid privacy setting.');
   const note = oneField(form, 'note').trim(); if (note.length > 500) throw new Error('Keep your note to 500 characters.');
@@ -63,11 +64,11 @@ export const readPickReview = (context: Pick<APIContext, 'cookies'>, id: string)
   bound(context, value); return value!;
 };
 // A privacy change creates a new reviewed intent; never mutate a frozen checkout.
-export const anonymousPickReview = (context: APIContext, id: string) => {
+export const changePickReviewVisibility = (context: APIContext, id: string, visibility: 'anonymous' | 'private') => {
   const { amount, picks, frequency, note } = readPickReview(context, id);
   const ids = new Set(libcardTargets().map(p => p.id));
   if (picks.some(p => !ids.has(p.projectId))) throw new Error('A selected target is no longer available. Edit and review your gift again.');
-  return createPickReview(context, { amount, picks, frequency, note, visibility: 'anonymous', announceAnonymously: false });
+  return createPickReview(context, { amount, picks, frequency, note, visibility, announceAnonymously: false });
 };
 // Capture identity after OAuth before rendering the final review, never at payment submission.
 export const identifyPickReview = (context: APIContext, id: string) => {

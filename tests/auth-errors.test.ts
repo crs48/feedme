@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { authErrorSummary } from '../src/lib/auth-errors';
 
 describe('safe OAuth diagnostics', () => {
+  it('distinguishes browser binding and state failures without logging their values', () => {
+    expect(authErrorSummary(new Error('Invalid browser binding.'))).toEqual([{ code: 'unknown', topics: ['browser binding'] }]);
+    expect(authErrorSummary(new Error('Invalid OAuth state.'))).toEqual([{ code: 'unknown', topics: ['oauth state'] }]);
+    expect(authErrorSummary(new Error('Unknown authorization session "secret-state"'))).toEqual([{ code: 'unknown', topics: ['authorization session'] }]);
+  });
   it('reports provider codes, status, and fixed topics without copying sensitive details', () => {
     const error = Object.assign(new Error('client_id signature assertion failed: secret-token for private-handle.example'), {
       error: 'invalid_client', status: 401,

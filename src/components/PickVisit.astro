@@ -6,19 +6,20 @@ import { libcardCatalog } from '../lib/libcard-catalog';
 import { profile, supports } from '../lib/repository';
 import { createPickForm, type PickValues } from '../lib/pick-checkout';
 import { allocatePicks, splitUnits } from '../lib/picks';
+import { withDefaultPick } from '../lib/pick-selection';
 import { pickGroups, groupForItem } from '../lib/pick-groups';
 import { money, netSupport } from '../lib/model';
 import PickRow from './PickRow.astro';
 import LibcardIcon from './LibcardIcon.astro';
 import LibcardGithub from './LibcardGithub.astro';
-import TipIdentityHelp from './TipIdentityHelp.astro';
 interface Props { values?: PickValues; notice?: string; }
 const cfg = config();
 const snapshot = libcardSnapshot();
 const targets = libcardTargets(snapshot);
 const creator = libcardProfile(profile(), snapshot);
 const firstName = creator.name.split(/\s+/)[0];
-const values = Astro.props.values || { amount: cfg.defaultTipAmount, picks: [], frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
+const initialValues = Astro.props.values || { amount: cfg.defaultTipAmount, picks: [], frequency: 'once', visibility: 'anonymous', note: '', announceAnonymously: false };
+const values = { ...initialValues, picks: withDefaultPick(initialValues.picks) };
 const requestId = snapshot ? createPickForm(Astro, targets.map(p => p.id)) : '';
 const total = values.picks.reduce((n, p) => n + p.count, 0);
 const countFor = (id: string) => values.picks.find(p => p.projectId === id)?.count || 0;
@@ -32,47 +33,50 @@ const groups = pickGroups.map(group => ({ ...group, targets: targets.filter(p =>
 const socials = targets.filter(p => p.libcard?.kind === 'social');
 const rowProps = (p: typeof targets[number]) => ({ project: p, item: itemsById.get(p.id), count: countFor(p.id), share: shares.get(p.id) || '', publicAmount: publicAmounts.get(p.id) || 0, creatorName: firstName });
 const suffix = values.frequency === 'monthly' ? ' / month' : values.frequency === 'yearly' ? ' / year' : '';
-const summary = total ? `${total} picks across ${values.picks.length} ${values.picks.length === 1 ? 'thing' : 'things'}` : 'One amount, split across your picks';
+const summary = countFor('creator') ? `No preference — just ${firstName}` : `${total} ${total === 1 ? 'pick' : 'picks'} across ${values.picks.length} ${values.picks.length === 1 ? 'thing' : 'things'}`;
 ---
 {!snapshot ? <section class="panel"><h2 class="section-title">This page is getting ready.</h2><p class="muted mt-3">The creator’s LibCard is not available yet. Please try again shortly.</p></section> : <>
   {Astro.props.notice && <p class="notice" role="status">{Astro.props.notice}</p>}
   {cfg.libcardRemoteDemo && <p class="pick-demo-note">Real LibCard links and GitHub stars. Goals and support below are sample data.</p>}
-  <ol class="pick-guide" aria-label="How picks work">
-    <li><span class="guide-number">1</span><div><strong>Pick what you’d like more of.</strong><p>Pick something twice to give it more weight.</p></div></li>
-    <li><span class="guide-number">2</span><div><strong>Choose one amount.</strong><p>It’s split across your picks in proportion.</p></div></li>
-    <li><span class="guide-number">3</span><div><strong>{firstName} receives your gift.</strong><p>Picks are a signal, not a condition.</p></div></li>
-  </ol>
+  <section class="pick-overview" aria-labelledby="pick-purpose">
+  <h2 id="pick-purpose">Send {firstName} a tip</h2>
+  <p>Choose an amount. Add picks if you’d like to say what you want more of. Every tip goes to {firstName}.</p>
+  </section>
   <form class="pick-visit" data-pick-visit data-creator-name={firstName} action="/api/checkout/review" method="post">
     <input type="hidden" name="requestId" value={requestId}/>
-    <section class="pick-catalog" aria-labelledby="pick-heading">
-      <h2 id="pick-heading" class="sr-only">What would you love to see more of?</h2>
-      <noscript><p class="notice">Choose a whole count from 0 to 9 for each item. You’ll review the exact dollar split before paying.</p></noscript>
-      {targets.filter(p => p.id === 'creator').map(p => <PickRow {...rowProps(p)}/>)}
-      {socials.length > 0 && <section class="pick-socials" aria-label="Socials"><header class="pick-section-heading"><h3 class="group-title">Socials</h3><span class="group-count">{socials.length}</span><span class="group-description">Where {firstName} shows up</span></header><div class="social-chips">{socials.map(p => <PickRow {...rowProps(p)}/>)}</div></section>}
-      {groups.map(group => <details class="pick-group" data-pick-group={group.id} open={cfg.libcardCollapseQuiet === false || !('quiet' in group && group.quiet) || group.targets.some(p => countFor(p.id))}>
-        <summary><span class="group-title">{group.title}</span><span class="group-count">{group.targets.length}</span><span class="group-description">{group.description}</span><span class="group-chevron" aria-hidden="true">⌄</span></summary>
-        <div class="pick-list">{group.targets.map(p => <PickRow {...rowProps(p)}/>)}</div>
-      </details>)}
-      {untippable.length > 0 && <details class="pick-group"><summary><span class="group-title">More links</span><span class="group-count">{untippable.length}</span><span class="group-chevron" aria-hidden="true">⌄</span></summary><div class="pick-list">{untippable.map(i => <article class="pick-row"><div class="pick-icon" aria-hidden="true"><LibcardIcon name={i.icon || 'link'} size={16}/></div><div class="pick-copy"><h3><a class="pick-title" href={i.url} target="_blank" rel="noopener noreferrer">{i.label} ↗</a></h3><div class="pick-details"><span class="pick-destination">{i.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>{cfg.libcardShowGithubStars !== false && <LibcardGithub item={i} compact/>}</div></div></article>)}</div></details>}
-      <div class="pick-shortcuts"><button name="intent" value="all" formaction="/checkout" data-pick-shortcut="all">All of these, equally</button><button name="intent" value="creator" formaction="/checkout" data-pick-shortcut="creator">Just them</button></div>
-    </section>
+    <!-- Enter must review the gift, even without JavaScript, before any preset or shortcut. -->
+    <button type="submit" name="intent" value="review" hidden tabindex="-1" aria-hidden="true">Review your gift</button>
     <aside class="pick-payment panel" id="libcard-gift" tabindex="-1">
       <h2>Your gift</h2><p class="pick-intro" data-pick-summary>{summary}</p>
       <div class="pick-presets">{cfg.tipAmounts.map(amount => <button type="submit" name="intent" value={`amount-${amount}`} formaction="/checkout" data-pick-amount={amount} aria-pressed={values.amount === amount}>{money(amount)}</button>)}</div>
       <label class="field pick-amount"><span class="sr-only">Amount (USD)</span><span class="pick-amount-field"><span aria-hidden="true">$</span><input type="number" name="amount" min="1" max="1000" step="0.01" required value={(values.amount / 100).toFixed(2)} data-pick-total/><span aria-hidden="true">USD</span></span></label>
       <fieldset class="pick-frequency"><legend class="sr-only">How often?</legend>{(['once', 'monthly', 'yearly'] as const).map((frequency, index) => <label><input type="radio" name="frequency" value={frequency} checked={values.frequency === frequency}/><span>{['One-time', 'Monthly', 'Yearly'][index]}</span></label>)}</fieldset>
       <div class="pick-split"><p data-pick-empty hidden={total > 0}>Nothing picked yet. Choose something you’d like more of, or just {firstName}.</p><ul aria-label="Your gift split" tabindex="0">{targets.map(p => <li data-split-id={p.id} hidden={!countFor(p.id)}><span class="split-label">{p.title} <small data-split-count>{countFor(p.id) > 1 ? `×${countFor(p.id)}` : ''}</small></span><strong data-split-amount>{money(allocations.get(p.id) || 0)}</strong></li>)}</ul><div class="pick-total-line"><strong data-total-label>Total{suffix}</strong><strong data-total-amount>{money(values.amount)}</strong></div></div>
-      <label class="field pick-visibility"><span>Who can see your support?</span><select name="visibility"><option value="anonymous" selected={values.visibility === 'anonymous'}>Anonymous — no account needed</option><option value="private" selected={values.visibility === 'private'}>My Bluesky profile — {firstName} only</option><option value="public" selected={values.visibility === 'public'}>Public — my Bluesky profile, amount &amp; picks</option></select></label>
-      <TipIdentityHelp namedAfterReview/>
-      <details class="pick-options" open={Boolean(values.note || values.announceAnonymously)}><summary>More options <span>Note &amp; thank-you</span></summary>
+      <p class="sr-only" data-pick-status role="status" aria-live="polite"></p>
+      <button class="button pick-submit" type="submit" name="intent" value="review" data-pick-submit>Give {money(values.amount)}{suffix} to {firstName}</button>
+      <p class="pick-fine pick-after">Review your gift, then pay with Stripe. No Feedme platform fee.</p>
+      <p class="pick-fine">No account needed. You can add your Bluesky profile when you review.</p>
+      <details class="pick-options" open={Boolean(values.note || values.announceAnonymously || values.visibility !== 'anonymous')}><summary>Note &amp; sharing options</summary>
+        <label class="field pick-visibility"><span>Who can see your support?</span><select name="visibility"><option value="anonymous" selected={values.visibility === 'anonymous'}>Anonymous — no account needed</option><option value="private" selected={values.visibility === 'private'}>My Bluesky profile — {firstName} only</option><option value="public" selected={values.visibility === 'public'}>Public — my Bluesky profile, amount &amp; picks</option></select></label>
+        <p class="pick-fine">Private and public gifts need Bluesky sign-in after review. <a href="/bluesky" target="_blank" rel="noopener noreferrer">Why Bluesky? ↗</a></p>
         <p class="pick-fine">Only public gifts contribute to public pick totals. Your note stays private with the creator.</p>
         <label class="pick-checkbox"><input type="checkbox" name="announceAnonymously" value="yes" checked={values.announceAnonymously}/> Show an anonymous thank-you on the timeline (no amount).</label>
         <label class="field">A private note <span class="muted">(optional)</span><textarea name="note" rows="3" maxlength="500">{values.note}</textarea></label>
       </details>
-      <p class="sr-only" data-pick-status role="status" aria-live="polite"></p>
-      <button class="button pick-submit" type="submit" name="intent" value="review" data-pick-submit>Give {money(values.amount)}{suffix} to {firstName}</button>
-      <p class="pick-fine pick-after">Review the exact split next, then continue to Stripe. No Feedme platform fee.</p><p class="pick-fine">Where you placed it is a suggestion. Recurring gifts repeat this amount and split; cancel anytime.{cfg.demo && ' Demo only; nothing is charged.'}</p>
+      <p class="pick-fine">Recurring gifts repeat this amount and split; cancel anytime.{cfg.demo && ' Demo only; nothing is charged.'}</p>
     </aside>
+    <section class="pick-catalog" aria-labelledby="pick-heading">
+      <h2 id="pick-heading" class="sr-only">What would you love to see more of?</h2>
+      <noscript><p class="notice">Choose a whole count from 0 to 9 for each item. You’ll review the exact dollar split before paying.</p></noscript>
+      {groups.map(group => <details class="pick-group" data-pick-group={group.id} open={cfg.libcardCollapseQuiet === false || !('quiet' in group && group.quiet) || group.targets.some(p => countFor(p.id))}>
+        <summary><span class="group-title">{group.title}</span><span class="group-count">{group.targets.length}</span><span class="group-description">{group.description}</span><span class="group-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="pick-list">{group.targets.map(p => <PickRow {...rowProps(p)}/>)}</div>
+      </details>)}
+      {untippable.length > 0 && <details class="pick-group"><summary><span class="group-title">More links</span><span class="group-count">{untippable.length}</span><span class="group-chevron" aria-hidden="true">⌄</span></summary><div class="pick-list">{untippable.map(i => <article class="pick-row"><div class="pick-icon" aria-hidden="true"><LibcardIcon name={i.icon || 'link'} size={16}/></div><div class="pick-copy"><h3><a class="pick-title" href={i.url} target="_blank" rel="noopener noreferrer">{i.label} ↗</a></h3><div class="pick-details"><span class="pick-destination">{i.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</span>{cfg.libcardShowGithubStars !== false && <LibcardGithub item={i} compact/>}</div></div></article>)}</div></details>}
+      {socials.length > 0 && <section class="pick-socials" aria-label="Socials"><header class="pick-section-heading"><h3 class="group-title">Socials</h3><span class="group-count">{socials.length}</span><span class="group-description">Where {firstName} shows up</span></header><div class="social-chips">{socials.map(p => <PickRow {...rowProps(p)}/>)}</div></section>}
+      <div class="pick-shortcuts"><button name="intent" value="all" formaction="/checkout" data-pick-shortcut="all">All of these, equally</button><button name="intent" value="creator" formaction="/checkout" data-pick-shortcut="creator">Just them</button></div>
+      {targets.filter(p => p.id === 'creator').map(p => <PickRow {...rowProps(p)}/>)}
+    </section>
     <div class="pick-mobile-bar"><div><strong data-mobile-total>{money(values.amount)}{suffix}</strong><span data-mobile-summary>{total ? summary : 'Choose what you’d like more of'}</span></div><a href="#libcard-gift" class="button" data-pick-jump>Review gift <span aria-hidden="true">↑</span></a></div>
   </form>
 </>}

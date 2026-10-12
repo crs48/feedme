@@ -6,6 +6,7 @@ const errorCodes = new Set([
 const topics = [
   'response_mode', 'private_key_jwt', 'jwks', 'key_ops', 'signature', 'audience',
   'redirect_uri', 'client_id', 'scope', 'pkce', 'dpop', 'resolve', 'fetch', 'algorithm', 'assertion',
+  'browser binding', 'oauth state', 'authorization session',
 ] as const;
 
 // Provider errors can contain request bodies, tokens, and account identifiers.
