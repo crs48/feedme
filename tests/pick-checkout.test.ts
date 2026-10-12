@@ -88,6 +88,44 @@ describe('browser-bound pick checkout', () => {
     state.user = { did: 'did:plc:cccccccccccccccccccccccc' };
     expect((await checkoutPost(ctx({ reviewId: id }))).headers.get('location')).toContain('Sign%20in');
   });
+  it('creates a fresh anonymous review from a named gift without retaining identity or changing the original', async () => {
+    state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
+    const id = await review({ visibility: 'public', frequency: 'yearly', 'pick:presence': '3' });
+    const original = readPickReview(ctx(), id);
+    const response = await reviewPost(ctx({ intent: 'anonymous', editReview: id, amount: '999', note: 'tampered', announceAnonymously: 'yes' }));
+    const location = new URL(response.headers.get('location')!, 'https://feedme.example');
+    const nextId = location.searchParams.get('token')!;
+    expect(location.pathname).toBe('/checkout/review'); expect(nextId).not.toBe(id);
+    expect(location.href).not.toContain(original.note); expect(location.href).not.toContain(state.user.did);
+    expect(readPickReview(ctx(), nextId)).toEqual({ ...original, supporterDid: undefined, visibility: 'anonymous', announceAnonymously: false });
+    expect(readPickReview(ctx(), id)).toEqual(original);
+    expect(state.checkout).not.toHaveBeenCalled(); expect(listRecords(state.db!, 'support')).toEqual([]);
+    // Anonymous checkout works without a session and is still idempotent.
+    state.user = undefined;
+    await checkoutPost(ctx({ reviewId: nextId })); await checkoutPost(ctx({ reviewId: nextId }));
+    expect(state.checkout).toHaveBeenCalledTimes(1);
+    expect(readRecord<Support>(state.db!, 'support', nextId)).toMatchObject({ visibility: 'anonymous', frequency: 'yearly', amount: 2200, picks: original.picks });
+    expect(readRecord<Support>(state.db!, 'support', nextId)?.supporterDid).toBeUndefined();
+  });
+  it.each(['wrong-browser', 'expired', 'unavailable'])('rejects anonymous conversion of a %s review', async failure => {
+    const id = await review({ visibility: 'private', 'pick:presence': '3' });
+    if (failure === 'wrong-browser') jar.set('feedme_checkout', 'different');
+    if (failure === 'expired') state.db!.prepare("UPDATE kv SET expires=1 WHERE namespace='pick-review'").run();
+    if (failure === 'unavailable') overrideLibcard(state.db!, 'presence', true);
+    const response = await reviewPost(ctx({ intent: 'anonymous', editReview: id }));
+    expect(response.headers.get('location')).toMatch(/^\/checkout\?error=/);
+    expect(state.db!.prepare("SELECT count(*) AS count FROM kv WHERE namespace='pick-review' AND key!=?").get(id)).toEqual({ count: 0 });
+    expect(state.checkout).not.toHaveBeenCalled();
+  });
+  it('rejects repeated anonymous-action fields instead of choosing one', async () => {
+    const id = await review({ visibility: 'public' });
+    for (const field of ['intent', 'editReview']) {
+      const form = new URLSearchParams({ intent: 'anonymous', editReview: id }); form.append(field, 'tampered');
+      const context = ctx(); context.request = new Request('https://feedme.example/api/checkout/review', { method: 'POST', body: form });
+      expect((await reviewPost(context)).headers.get('location')).toContain('each%20form%20field%20once');
+    }
+    expect(state.checkout).not.toHaveBeenCalled();
+  });
   it('rejects expired/wrong-browser reviews and targets archived after review without charging', async () => {
     const id = await review({ 'pick:presence': '1' });
     jar.set('feedme_checkout','different'); expect((await checkoutPost(ctx({ reviewId: id }))).headers.get('location')).toContain('expired');

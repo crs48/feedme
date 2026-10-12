@@ -1,0 +1,21 @@
+---
+import { config } from '../lib/config';
+---
+<div class="bluesky-signup">
+  <p>Bluesky is a free social network for posts, follows, and conversations. Creating an account gives you a public profile and a handle you can also use here.</p>
+  <ol>
+    <li>Open Bluesky and choose <strong>Create account</strong>.</li>
+    <li>Follow its signup steps and choose a handle, such as <strong>yourname.bsky.social</strong>.</li>
+    <li>{config().demo ? 'On the creator’s live Feedme site, sign in with that handle. This demo uses fictional accounts.' : 'Come back to this tab and sign in with that handle.'}</li>
+  </ol>
+  <a class="button secondary" href="https://bsky.app/" target="_blank" rel="noopener noreferrer">Create a Bluesky account <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+  <p class="signup-fine">Bluesky has its own terms and privacy policy. You don’t need to post or build a following to use your account on Feedme.</p>
+</div>
+<style>
+  .bluesky-signup { font-size:13px; line-height:1.65; color:var(--color-muted); }
+  ol { padding-left:20px; list-style:decimal; margin-block:14px; }
+  li + li { margin-top:6px; }
+  strong { color:var(--color-ink); font-weight:500; overflow-wrap:anywhere; }
+  .button { margin-top:2px; min-height:44px; font-size:13px; }
+  .signup-fine { margin-top:12px; font-size:12px; }
+</style>

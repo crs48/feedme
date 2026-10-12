@@ -211,7 +211,8 @@ if (fixture.projects) {
       }));
       const note = review.querySelector<HTMLElement>('[data-demo-review-note]')!; note.hidden = !gift.note;
       note.querySelector('p:last-child')!.textContent = gift.note || '';
-      text('[data-demo-review-privacy]', gift.visibility === 'public' ? 'In a live gift, your name, amount, and picks are public. Your note stays private.' : gift.visibility === 'private' ? 'In a live gift, your name and note are shared only with the creator.' : gift.announceAnonymously ? 'In a live gift, an anonymous thank-you can appear without your amount.' : 'Your gift stays off the public timeline.');
+      text('[data-demo-review-privacy]', gift.visibility === 'public' ? 'On a live site, your Bluesky profile, amount, and picks are public. Your note stays private. Publishing a Bluesky post is a separate choice.' : gift.visibility === 'private' ? 'On a live site, your Bluesky profile and note are shared only with the creator. No public post or timeline entry.' : gift.announceAnonymously ? 'In a live gift, an anonymous thank-you can appear without your amount.' : 'No account needed. Your gift stays off the public timeline, without a Bluesky profile attached.');
+      text('[data-review-identity]', gift.visibility === 'anonymous' ? 'No Bluesky sign-in is needed for an anonymous gift. Stripe and the creator may still receive billing details on a live site.' : 'Using a fictional demo profile. On a live site, named gifts use your Bluesky account.');
       const recurring = review.querySelector<HTMLElement>('[data-demo-review-recurring]')!; recurring.hidden = gift.frequency === 'once';
       recurring.textContent = `On a live site, ${money(gift.amount)} repeats ${gift.frequency} until canceled. This demo takes no payments.`;
     }

@@ -1,15 +1,51 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
+import BlueskySignup from '../components/BlueskySignup.astro';
 import { config } from '../lib/config';
 import { safeReturnPath } from '../lib/http';
+import { readPickReview } from '../lib/pick-checkout';
 const cfg = config();
+const returnTo = safeReturnPath(Astro.url.searchParams.get('returnTo'));
+const reviewToken = returnTo.startsWith('/checkout/review?') ? new URL(returnTo, cfg.origin).searchParams.get('token') : undefined;
+let savedGift = false;
+if (reviewToken) { try { readPickReview(Astro, reviewToken); savedGift = true; } catch { /* Expired drafts must be reviewed again. */ } }
+const guestPath = returnTo.startsWith('/thanks?') || returnTo.startsWith('/support/') ? returnTo : '/';
 ---
-<Layout title="Sign in" noindex>
-  <section class="shell page-section"><div class="mx-auto max-w-lg panel"><h1 class="display page-title mb-4">Sign in to Feedme</h1><p class="muted text-sm mb-7">Sign in with your Bluesky or other AT Protocol account. Habitat connects to your provider — your password stays there.</p>
-    <form action="/auth/login" method="post"><input type="hidden" name="returnTo" value={safeReturnPath(Astro.url.searchParams.get('returnTo'))}/><label class="field">Your handle<input name="handle" placeholder="you.bsky.social" autocomplete="username" required maxlength="253"/></label><button class="button full">Continue with AT Protocol <Icon name="arrow" size={15}/></button></form>
-    <p class="text-xs muted mt-4">Configured administrators are taken to the dashboard after sign-in.</p>
-    {cfg.demo && <div class="mt-7 border-t border-[#e3e8ee] pt-6"><p class="text-xs muted mb-3">Just looking around? Explore with an example creator or supporter account. Real sign-in requires a public HTTPS URL.</p><form method="post" action="/auth/demo" class="mb-3"><input type="hidden" name="role" value="supporter"/><input type="hidden" name="returnTo" value={safeReturnPath(Astro.url.searchParams.get('returnTo'))}/><button class="button full">Explore as a supporter</button></form><form method="post" action="/auth/demo"><button class="button secondary full">Explore the demo studio</button></form></div>}
-    <p class="text-xs muted mt-6">Habitat handles identity resolution and permissioned storage. You choose whether your support is public, private, or unlinked to your identity.</p>
+<Layout title="Sign in with Bluesky" noindex>
+  <section class="shell page-section"><div class="login-flow">
+    <div class="panel">
+      <p class="eyebrow">Your social account, connected</p>
+      <h1 class="display page-title mt-3 mb-4">Sign in with Bluesky</h1>
+      <p class="muted text-sm mb-6">Use your existing Bluesky profile to give with your name, follow creators, and connect with people you know. There’s no separate Feedme account to create.</p>
+      <nav class="login-options" aria-label="Account choices"><a href="#signup-heading">New to Bluesky?</a><a href="#guest-heading">Tip without an account</a></nav>
+      {savedGift && <p class="notice">Your gift is saved in this browser for up to one hour from review. You’ll return to review it after signing in; nothing has been charged.</p>}
+      <form action="/auth/login" method="post">
+        <input type="hidden" name="returnTo" value={returnTo}/>
+        <label class="field">Your Bluesky handle<input name="handle" placeholder="yourname.bsky.social" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="253" aria-describedby="handle-help"/><span class="handle-help" id="handle-help">Find it under your name on your Bluesky profile. Include the full handle, like @yourname.bsky.social or your own domain.</span></label>
+        <button class="button full">Continue with Bluesky <Icon name="arrow" size={15}/></button>
+      </form>
+      <p class="text-xs muted mt-4">{cfg.demo ? 'On a live site, your' : 'Next, your'} account provider asks you to sign in and review access. Your password stays with that provider. Feedme receives permission to use your account for the actions you choose here.</p>
+      <p class="text-xs muted mt-3">Other compatible AT Protocol accounts work too: sign in with their handle or DID. You don’t need to create a Bluesky account.</p>
+      <p class="text-xs muted mt-3">Signing in doesn’t post or follow anyone. It doesn’t change an anonymous gift into a named one.</p>
+    </div>
+    <section class="panel guest-choice" aria-labelledby="guest-heading">
+      <h2 id="guest-heading" class="section-title">Just here to tip?</h2>
+      <p class="muted text-sm mt-3">No account needed. Choose anonymous support and pay with Stripe. Your Bluesky profile won’t be attached; Stripe and the creator may still see billing details.</p>
+      {savedGift ? <form method="post" action="/api/checkout/review" class="mt-4"><input type="hidden" name="editReview" value={reviewToken}/><input type="hidden" name="intent" value="anonymous"/><button class="button secondary full">Review as an anonymous gift</button><p class="text-xs muted mt-3">Keeps your amount, picks, schedule, and note. Turns off public sharing and anonymous timeline entries. Review again before paying.</p></form> : <a class="button secondary mt-4" href={guestPath}>{returnTo.startsWith('/thanks?') ? 'Back to your receipt' : 'Continue without an account'}</a>}
+    </section>
+    <section class="panel" aria-labelledby="signup-heading"><h2 id="signup-heading" class="section-title mb-4">New to Bluesky?</h2><BlueskySignup/></section>
+    <p class="text-sm muted login-explainer">Feedme is free, open-source software for independently hosted tipping sites. Bluesky connects their people and conversations through the open social web. <a href="/bluesky" target="_blank" rel="noopener noreferrer">Why Feedme uses Bluesky ↗</a></p>
+    {cfg.demo && <div class="panel"><h2 class="section-title mb-3">Try a fictional account</h2><p class="text-xs muted mb-4">This demo doesn’t sign in to Bluesky or charge money. Choose a preview; your real account stays unchanged.</p><form method="post" action="/auth/demo" class="mb-3"><input type="hidden" name="role" value="supporter"/><input type="hidden" name="returnTo" value={returnTo}/><button class="button full">Explore as a supporter</button></form><form method="post" action="/auth/demo"><button class="button secondary full">Explore the demo studio</button></form></div>}
   </div></section>
 </Layout>
+<style>
+  .login-flow { max-width:540px; margin-inline:auto; display:grid; gap:20px; }
+  .handle-help { color:var(--color-muted); font-size:12px; line-height:1.6; font-weight:400; }
+  .login-options { display:flex; flex-wrap:wrap; gap:4px 20px; margin-top:-12px; margin-bottom:16px; }
+  .login-options a { display:inline-flex; align-items:center; min-height:44px; font-size:13px; color:var(--color-primary); text-decoration:underline; text-underline-offset:3px; }
+  #guest-heading, #signup-heading { scroll-margin-top:24px; }
+  .guest-choice { background:var(--color-surface); box-shadow:none; }
+  .login-explainer { padding-inline:4px; line-height:1.7; }
+  .login-explainer a { color:var(--color-primary); text-decoration:underline; text-underline-offset:3px; }
+</style>

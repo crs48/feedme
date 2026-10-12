@@ -27,6 +27,38 @@ flowchart LR
 - [x] Actor-scoped writes, idempotent retries, pagination, and privacy tests.
 - [x] Accessible HTML forms, demo supporter, desktop/mobile browser verification.
 
+## Supporter onboarding
+
+The `/bluesky` guide explains who does what: Feedme is the creator’s independently hosted tipping site, Bluesky provides a familiar social account on AT Protocol, Stripe handles payment, and Habitat provides private storage. The same guide is exported at `/demo/bluesky/`; the public demo uses fictional profiles and never authorizes a real account.
+
+Every guest-facing sign-in action names Bluesky. Other compatible AT Protocol handles and DIDs still work. Anonymous gifts need no account; “anonymous” leaves the social profile unattached, but does not hide billing information from Stripe or the creator. A named gift needs control of the chosen account, not legal-identity verification.
+
+```mermaid
+flowchart TD
+  Choose[Choose amount, picks, and visibility] --> Review[Browser-bound review]
+  Review --> Anonymous[Anonymous: no account required]
+  Review --> Named[Private or public: attach a profile]
+  Named --> Existing[Sign in with Bluesky or compatible provider]
+  Named --> Signup[Create a Bluesky account in a new tab]
+  Signup --> Existing
+  Existing --> ReviewAgain[Return to the saved review]
+  Named --> Switch[Make a new anonymous review with the same gift]
+  Switch --> Anonymous
+  Anonymous --> Stripe[Continue to Stripe]
+  ReviewAgain --> Stripe
+  Stripe --> Verified[Verified payment event]
+  Verified --> Receipt[Receipt and optional social actions]
+  Receipt --> Consent[Explicit consent to publish a Bluesky post]
+```
+
+LibCard reviews last one hour and are bound to the original browser. URLs carry only an opaque review token, never notes or identities. Sign-in validation and provider errors retain that safe return path. OAuth callbacks validate browser binding before restoring it, and still require successful provider verification before creating a session.
+
+The “Review as an anonymous gift” action creates a new review with the original amount, picks, schedule, and note. It clears identity and public timeline consent, rechecks target eligibility, and never mutates an existing checkout or makes a payment. Changing back to a named gift requires another review. The native percentage and single-project forms require sign-in before choosing a named gift; their unsubmitted fields are not saved across sign-in.
+
+After payment, signing in does not retroactively attach a profile to an anonymous receipt. Following and publishing are separate explicit actions; posting can identify a supporter even if their gift was private or anonymous. Anonymous recurring supporters can use the original browser or Stripe’s checkout-email recovery to manage billing.
+
+Regression coverage lives in `tests/auth-flow.test.ts`, `tests/pick-checkout.test.ts`, and `scripts/check-libcard.mjs` (ordinary HTML forms without JavaScript).
+
 ## Protocol contracts
 
 - `app.bsky.graph.follow` lives in the follower's public repo, targets a DID, and uses a TID record key. Existing records from other apps are honored.

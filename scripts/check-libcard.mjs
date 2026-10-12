@@ -74,6 +74,25 @@ try {
   const reviewResponse = await request(reviewUrl); assert.equal(reviewResponse.headers.get('cache-control'),'private, no-store');
   const review = load(await reviewResponse.text()); assert.match(review.text(),/\$11/); assert.match(review.text(),/\$33/); assert.match(review.text(),/fixture-private-note/);
   const token = new URL(reviewUrl,origin).searchParams.get('token');
+  const loginLink = review('a').filter((_, el) => review(el).text() === 'Sign in with Bluesky').last().attr('href');
+  assert.ok(loginLink, 'Named review must explain Bluesky sign-in.');
+  const loginPage = await page(loginLink);
+  assert.equal(loginPage('form[action="/auth/login"] input[name=returnTo]').val(), reviewUrl);
+  assert.equal(loginPage('a[href="https://bsky.app/"]').attr('target'), '_blank', 'Signup must preserve the gift tab.');
+  const badHandle = await request('/auth/login', { handle: 'missing-full-handle', returnTo: reviewUrl });
+  const retryUrl = new URL(badHandle.headers.get('location'), origin);
+  assert.equal(retryUrl.searchParams.get('returnTo'), reviewUrl);
+  assert.equal((await page(retryUrl.pathname + retryUrl.search))('input[name=editReview]').val(), token);
+  const anonymous = await request('/api/checkout/review', { intent: 'anonymous', editReview: token });
+  const anonymousUrl = anonymous.headers.get('location');
+  assert.ok(anonymousUrl.startsWith('/checkout/review?token=') && anonymousUrl !== reviewUrl);
+  const anonymousReview = await page(anonymousUrl);
+  assert.match(anonymousReview.text(), /No account or sign-in needed/);
+  assert.match(anonymousReview.text(), /fixture-private-note/); assert.match(anonymousReview.text(), /Monthly/);
+  assert.equal(anonymousReview('form[action="/api/checkout"] input[name=reviewId]').length, 1, 'Anonymous gift must proceed without sign-in.');
+  assert.equal((await page(reviewUrl))('.review-identity').length, 1, 'Converting must not mutate the original named review.');
+  const wrongConversion = await request('/api/checkout/review', { intent: 'anonymous', editReview: token }, new Map());
+  assert.ok(wrongConversion.headers.get('location').startsWith('/checkout?error='));
   const outsider = await page('/checkout'); // Refreshing a form must not invalidate another review in this browser.
   assert.ok(outsider('input[name=requestId]').val());
   const wrongBrowser = await request(reviewUrl, undefined, new Map()); assert.equal(wrongBrowser.status,400);

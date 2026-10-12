@@ -62,6 +62,13 @@ export const readPickReview = (context: Pick<APIContext, 'cookies'>, id: string)
   const value = getKv<PickReview>(getDb(), 'pick-review', id);
   bound(context, value); return value!;
 };
+// A privacy change creates a new reviewed intent; never mutate a frozen checkout.
+export const anonymousPickReview = (context: APIContext, id: string) => {
+  const { amount, picks, frequency, note } = readPickReview(context, id);
+  const ids = new Set(libcardTargets().map(p => p.id));
+  if (picks.some(p => !ids.has(p.projectId))) throw new Error('A selected target is no longer available. Edit and review your gift again.');
+  return createPickReview(context, { amount, picks, frequency, note, visibility: 'anonymous', announceAnonymously: false });
+};
 // Capture identity after OAuth before rendering the final review, never at payment submission.
 export const identifyPickReview = (context: APIContext, id: string) => {
   const draft = readPickReview(context, id); const user = currentUser(context);
@@ -76,6 +83,6 @@ export const identifyPickReview = (context: APIContext, id: string) => {
 export const validatePickReview = (context: APIContext, draft: PickReview) => {
   const ids = new Set(libcardTargets().map(p => p.id));
   if (draft.picks.some(p => !ids.has(p.projectId))) throw new Error('A selected target is no longer accepting picks. Edit and review your gift again.');
-  if (draft.visibility !== 'anonymous' && (!draft.supporterDid || draft.supporterDid !== currentUser(context)?.did)) throw new Error('Sign in with the account used to review this gift.');
+  if (draft.visibility !== 'anonymous' && (!draft.supporterDid || draft.supporterDid !== currentUser(context)?.did)) throw new Error('Sign in with the Bluesky or AT Protocol account used to review this gift.');
   return allocatePicks(draft.amount, draft.picks);
 };

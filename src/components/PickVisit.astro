@@ -11,6 +11,7 @@ import { money, netSupport } from '../lib/model';
 import PickRow from './PickRow.astro';
 import LibcardIcon from './LibcardIcon.astro';
 import LibcardGithub from './LibcardGithub.astro';
+import TipIdentityHelp from './TipIdentityHelp.astro';
 interface Props { values?: PickValues; notice?: string; }
 const cfg = config();
 const snapshot = libcardSnapshot();
@@ -61,9 +62,10 @@ const summary = total ? `${total} picks across ${values.picks.length} ${values.p
       <label class="field pick-amount"><span class="sr-only">Amount (USD)</span><span class="pick-amount-field"><span aria-hidden="true">$</span><input type="number" name="amount" min="1" max="1000" step="0.01" required value={(values.amount / 100).toFixed(2)} data-pick-total/><span aria-hidden="true">USD</span></span></label>
       <fieldset class="pick-frequency"><legend class="sr-only">How often?</legend>{(['once', 'monthly', 'yearly'] as const).map((frequency, index) => <label><input type="radio" name="frequency" value={frequency} checked={values.frequency === frequency}/><span>{['One-time', 'Monthly', 'Yearly'][index]}</span></label>)}</fieldset>
       <div class="pick-split"><p data-pick-empty hidden={total > 0}>Nothing picked yet. Choose something you’d like more of, or just {firstName}.</p><ul aria-label="Your gift split" tabindex="0">{targets.map(p => <li data-split-id={p.id} hidden={!countFor(p.id)}><span class="split-label">{p.title} <small data-split-count>{countFor(p.id) > 1 ? `×${countFor(p.id)}` : ''}</small></span><strong data-split-amount>{money(allocations.get(p.id) || 0)}</strong></li>)}</ul><div class="pick-total-line"><strong data-total-label>Total{suffix}</strong><strong data-total-amount>{money(values.amount)}</strong></div></div>
-      <label class="field pick-visibility"><span class="sr-only">Visibility</span><select name="visibility"><option value="anonymous" selected={values.visibility === 'anonymous'}>Give anonymously</option><option value="private" selected={values.visibility === 'private'}>Show my name to {firstName} only</option><option value="public" selected={values.visibility === 'public'}>Public — name, amount and picks</option></select></label>
+      <label class="field pick-visibility"><span>Who can see your support?</span><select name="visibility"><option value="anonymous" selected={values.visibility === 'anonymous'}>Anonymous — no account needed</option><option value="private" selected={values.visibility === 'private'}>My Bluesky profile — {firstName} only</option><option value="public" selected={values.visibility === 'public'}>Public — my Bluesky profile, amount &amp; picks</option></select></label>
+      <TipIdentityHelp namedAfterReview/>
       <details class="pick-options" open={Boolean(values.note || values.announceAnonymously)}><summary>More options <span>Note &amp; thank-you</span></summary>
-        <p class="pick-fine">Private and public gifts require sign-in. Only public gifts contribute to public pick totals.</p>
+        <p class="pick-fine">Only public gifts contribute to public pick totals. Your note stays private with the creator.</p>
         <label class="pick-checkbox"><input type="checkbox" name="announceAnonymously" value="yes" checked={values.announceAnonymously}/> Show an anonymous thank-you on the timeline (no amount).</label>
         <label class="field">A private note <span class="muted">(optional)</span><textarea name="note" rows="3" maxlength="500">{values.note}</textarea></label>
       </details>

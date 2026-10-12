@@ -1,12 +1,12 @@
 ---
 import '../styles/global.css';
-import Icon from '../components/Icon.astro';
 import BrandIcon from '../components/BrandIcon.astro';
 import BrandMeta from '../components/BrandMeta.astro';
 import PoweredBy from '../components/PoweredBy.astro';
 import { siteName } from '../lib/site-branding';
 import { config } from '../lib/config';
 import { isAdmin } from '../lib/auth';
+import { loginPath } from '../lib/http';
 interface Props { title?: string; description?: string; noindex?: boolean; image?: { url: string; alt: string; width: number; height: number }; }
 const { title = 'Good things grow with a little support', description = 'A home for the things you make and the people who make them possible.', noindex = false } = Astro.props;
 const cfg = config();
@@ -41,10 +41,10 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
         <a href="/circle" class="nav-link nav-section" aria-current={Astro.url.pathname === '/circle' ? 'page' : undefined}>Circle</a>
         <details class="nav-menu"><summary>More <span aria-hidden="true">⌄</span></summary><div class="nav-menu-panel">
           <a href="/">Projects</a><a class="mobile-nav-section" href="/updates">Updates</a><a class="mobile-nav-section" href="/circle">Circle</a>
-          <a href="/discover">Discover creators</a>{user && <a href="/following">Following</a>}<a href="/about">About Feedme</a>
+          <a href="/discover">Discover creators</a>{user && <a href="/following">Following</a>}<a href="/bluesky">Why Bluesky?</a><a href="/about">About Feedme</a>
           <a href="/billing">Manage support</a>{user && <form action="/auth/logout" method="post"><button>Sign out</button></form>}
         </div></details>
-        {isAdmin(user) ? <a class="button secondary" href="/studio">Dashboard</a> : user ? <a class="button secondary" href="/following">Following</a> : <a class="button secondary" href="/login">Sign in <Icon name="arrow" size={14}/></a>}
+        {isAdmin(user) ? <a class="button secondary" href="/studio">Dashboard</a> : user ? <a class="button secondary" href="/following">Following</a> : <a class="button secondary nav-login" href={loginPath(Astro.url.pathname === '/login' ? Astro.url.searchParams.get('returnTo') : Astro.url.pathname + Astro.url.search)}>Sign in with Bluesky</a>}
       </nav>
     </div></header>
     <main id="main">
@@ -53,7 +53,7 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
     </main>
     <footer class="shell site-footer">
       <a href="/">{name} · Independent work, supported.</a>
-      <div class="footer-links"><a href="/billing">Manage support</a><a href="/privacy">Privacy</a><a href="/about">Open source <span aria-hidden="true">↗</span></a>{user?.did !== cfg.ownerDid && <a href={`/recommend?did=${encodeURIComponent(cfg.ownerDid)}`}>Recommend this creator</a>}</div>
+      <div class="footer-links"><a href="/billing">Manage support</a><a href="/bluesky">Why Bluesky?</a><a href="/privacy">Privacy</a><a href="/about">Open source <span aria-hidden="true">↗</span></a>{user?.did !== cfg.ownerDid && <a href={`/recommend?did=${encodeURIComponent(cfg.ownerDid)}`}>Recommend this creator</a>}</div>
       <PoweredBy/>
     </footer>
   </body>
@@ -82,6 +82,7 @@ const socialImage = Astro.props.image || { url: `${cfg.origin}/social-card.png`,
   .skip-link { position: absolute; left: -9999px; top: 8px; z-index: 30; padding: 12px; background: white; }
   .skip-link:focus { left: 12px; }
   @media(max-width:600px) { .main-nav { gap:12px; font-size:13px; } .main-nav .nav-section { display:none; } .nav-menu-panel .mobile-nav-section { display:flex; } .main-nav .button { min-height:44px; font-size:13px; } .site-footer { margin-top:32px; gap:4px 16px; } .site-footer :global(.powered-by) { margin-left:0; } }
+  @media(max-width:440px) { .header-inner { flex-wrap:wrap; gap:4px 12px; padding-block:8px; } .main-nav { margin-left:auto; } }
 </style>
 <script>
   document.querySelectorAll<HTMLDetailsElement>('.nav-menu').forEach(menu => {

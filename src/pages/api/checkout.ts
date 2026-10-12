@@ -40,7 +40,7 @@ export const POST: APIRoute = async (context) => {
     const visibility = (review?.visibility ?? String(form.visibility || 'anonymous')) as Visibility;
     if (!['anonymous', 'private', 'public'].includes(visibility)) throw new Error('Choose a valid privacy setting.');
     const user = currentUser(context);
-    if (visibility !== 'anonymous' && !user) throw new Error('Sign in to attach your AT Protocol identity.');
+    if (visibility !== 'anonymous' && !user) throw new Error('Sign in with Bluesky for a named gift, or choose anonymous support without an account.');
     const note = review?.note ?? String(form.note || '').trim();
     const announceAnonymously = review?.announceAnonymously ?? (visibility === 'anonymous' && form.announceAnonymously === 'yes');
     if (note.length > 500) throw new Error('Keep your note to 500 characters.');

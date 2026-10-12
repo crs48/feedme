@@ -1,0 +1,20 @@
+---
+import BlueskySignup from './BlueskySignup.astro';
+import { config } from '../lib/config';
+interface Props { namedAfterReview?: boolean; }
+const signedIn = Boolean(Astro.locals.user);
+const demo = config().demo;
+---
+<div class="tip-identity-help">
+  <p>{signedIn && demo ? 'This demo uses a fictional profile. On a live site, sign in with Bluesky for a named gift, or tip anonymously without an account.' : signedIn ? 'Your Bluesky account is connected. An anonymous gift still leaves your profile unattached.' : 'No account needed for an anonymous tip.'}</p>
+  {!signedIn && <p>{Astro.props.namedAfterReview ? 'To give with your Bluesky name, choose a named option above. You’ll sign in after reviewing your gift.' : 'Sign in with Bluesky to put your profile on a private or public tip.'}</p>}
+  <a class="identity-explainer" href="/bluesky" target="_blank" rel="noopener noreferrer">Why Bluesky? <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+  {!signedIn && <details><summary>Don’t have a Bluesky account?</summary><BlueskySignup/></details>}
+</div>
+<style>
+  .tip-identity-help { margin-block:14px; font-size:12px; line-height:1.6; color:var(--color-muted); }
+  p + p { margin-top:5px; }
+  .identity-explainer { color:var(--color-primary); display:inline-flex; align-items:center; gap:4px; min-height:36px; }
+  details { border-top:1px solid var(--color-border); margin-top:4px; }
+  summary { min-height:44px; padding-block:12px; color:var(--color-ink); font-weight:500; cursor:pointer; }
+</style>

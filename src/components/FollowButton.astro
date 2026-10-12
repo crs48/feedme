@@ -17,6 +17,6 @@ if (user && subject !== user.did) {
   {user ? <form method="post" action="/api/social">
     <input type="hidden" name="action" value="follow"/><input type="hidden" name="kind" value={kind}/><input type="hidden" name="subject" value={subject}/><input type="hidden" name="title" value={title}/><input type="hidden" name="returnTo" value={path}/><input type="hidden" name="enabled" value={following ? 'no' : 'yes'}/>
     <button class:list={['button', { secondary: following || compact }]} disabled={unavailable} aria-label={`${following ? 'Unfollow' : label} · ${title}`}>{following ? 'Following ✓ · Unfollow' : label}</button>
-  </form> : <a class:list={['button', { secondary: compact }]} href={`/login?returnTo=${encodeURIComponent(path)}`}>{label}</a>}
-  {(!compact || unavailable) && <p class="text-xs muted mt-2">{unavailable ? 'Follow status is unavailable. Refresh or reconnect your account.' : kind === 'project' ? 'A public project follow. Updates appear in Feedme’s Following page.' : 'A public account follow. New posts appear in your Bluesky timeline.'}</p>}
+  </form> : <a class:list={['button', { secondary: compact }]} href={`/login?returnTo=${encodeURIComponent(path)}`}>Sign in with Bluesky to follow</a>}
+  {(!compact || unavailable) && <p class="text-xs muted mt-2">{unavailable ? 'Follow status is unavailable. Refresh or reconnect your Bluesky account.' : kind === 'project' ? 'A public project follow using your Bluesky account. Updates appear in Feedme’s Following page.' : 'A public account follow. New posts appear in your Bluesky timeline.'}</p>}
 </div>}
