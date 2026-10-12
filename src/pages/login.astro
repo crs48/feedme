@@ -25,8 +25,8 @@ const guestPath = returnTo.startsWith('/thanks?') || returnTo.startsWith('/suppo
         <label class="field">Your Bluesky handle<input name="handle" placeholder="yourname.bsky.social" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="253" aria-describedby="handle-help"/><span class="handle-help" id="handle-help">Find it under your name on your Bluesky profile. Include the full handle, like @yourname.bsky.social or your own domain.</span></label>
         <button class="button full">Continue with Bluesky <Icon name="arrow" size={15}/></button>
       </form>
-      <p class="text-xs muted mt-4">Next, your account provider asks you to sign in and review access. Your password stays with that provider. Feedme receives permission to use your account for the actions you choose here.</p>
-      <p class="text-xs muted mt-3">Already on another AT Protocol provider? Enter that handle or DID above. You don’t need to create a Bluesky account.</p>
+      <p class="text-xs muted mt-4">{cfg.demo ? 'On a live site, your' : 'Next, your'} account provider asks you to sign in and review access. Your password stays with that provider. Feedme receives permission to use your account for the actions you choose here.</p>
+      <p class="text-xs muted mt-3">Other compatible AT Protocol accounts work too: sign in with their handle or DID. You don’t need to create a Bluesky account.</p>
       <p class="text-xs muted mt-3">Signing in doesn’t post or follow anyone. It doesn’t change an anonymous gift into a named one.</p>
     </div>
     <section class="panel guest-choice" aria-labelledby="guest-heading">
