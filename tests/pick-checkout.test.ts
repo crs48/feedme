@@ -12,7 +12,7 @@ import { demoProfile } from '../src/lib/seed';
 import { libcardFixture } from '../src/lib/libcard-fixture';
 import { parseLibcard } from '../src/lib/libcard-schema';
 import { importLibcard, libcardTargets, overrideLibcard } from '../src/lib/libcard';
-import { createPickForm, pickFormValues, identifyPickReview, readPickReview } from '../src/lib/pick-checkout';
+import { createPickForm, pickFormState, pickFormValues, identifyPickReview, readPickReview } from '../src/lib/pick-checkout';
 import { POST as reviewPost } from '../src/pages/api/checkout/review';
 import { POST as checkoutPost } from '../src/pages/api/checkout';
 import { safeReturnPath } from '../src/lib/http';
@@ -45,6 +45,35 @@ beforeEach(() => {
 afterEach(() => state.db!.close());
 
 describe('browser-bound pick checkout', () => {
+  it('restores exact picks after no preference, keeping current amount, schedule and note', async () => {
+    const cleared = pickFormState(ctx(), await ctx(fields({ intent: 'creator', 'pick:presence': '3', 'pick:x': '2' })).request.formData());
+    expect(cleared.values.picks).toEqual([{ projectId: 'creator', count: 1 }]);
+    expect(cleared.previousPicks).toEqual([{ projectId: 'presence', count: 3 }, { projectId: 'x', count: 2 }]);
+    const requestId = createPickForm(ctx(), libcardTargets().map(p => p.id), cleared.previousPicks);
+    const changed = pickFormState(ctx(), await ctx(fields({ requestId, intent: 'amount-8800' })).request.formData());
+    expect(changed.previousPicks).toEqual(cleared.previousPicks);
+    const repeated = pickFormState(ctx(), await ctx(fields({ requestId, intent: 'creator' })).request.formData());
+    expect(repeated.previousPicks).toEqual(cleared.previousPicks);
+    const restored = pickFormState(ctx(), await ctx(fields({ requestId, intent: 'undo', amount: '88', frequency: 'monthly' })).request.formData());
+    expect(restored).toEqual({ previousPicks: undefined, values: { amount: 8800, frequency: 'monthly', visibility: 'anonymous', note: 'Private encouragement', announceAnonymously: false, picks: cleared.previousPicks } });
+    const replacements: Record<string, string>[] = [{ intent: 'all' }, { 'pick:x': '1' }];
+    for (const extra of replacements) {
+      expect(pickFormState(ctx(), await ctx(fields({ requestId, ...extra })).request.formData()).previousPicks).toBeUndefined();
+    }
+    expect(state.checkout).not.toHaveBeenCalled();
+  });
+  it('binds undo to the same browser and rejects unavailable or missing pick history', async () => {
+    const ids = libcardTargets().map(p => p.id);
+    const requestId = createPickForm(ctx(), ids, [{ projectId: 'presence', count: 3 }]);
+    const undo = await ctx(fields({ requestId, intent: 'undo' })).request.formData();
+    jar.set('feedme_checkout', 'different-browser');
+    expect(() => pickFormState(ctx(), undo)).toThrow('expired');
+    jar.set('feedme_checkout', 'browser-secret');
+    overrideLibcard(state.db!, 'presence', true);
+    expect(() => pickFormState(ctx(), undo)).toThrow('target list changed');
+    const missing = await ctx(fields({ intent: 'undo' })).request.formData();
+    expect(() => pickFormState(ctx(), missing)).toThrow('no previous picks');
+  });
   it('reviews a custom $20 amount without selecting anything and sends that exact amount to checkout', async () => {
     const id = await review({ amount: '20', 'pick:creator': '0', note: '' });
     expect(readPickReview(ctx(), id)).toMatchObject({ amount: 2000, picks: [{ projectId: 'creator', count: 1 }], visibility: 'anonymous' });

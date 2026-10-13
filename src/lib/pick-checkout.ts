@@ -12,13 +12,13 @@ import { withDefaultPick } from './pick-selection';
 
 export type PickValues = { amount: number; picks: TargetPick[]; frequency: BillingFrequency; visibility: Visibility; note: string; announceAnonymously: boolean };
 export type PickReview = PickValues & { binding: string; source: string; creatorName: string; supporterDid?: string };
-type PickForm = { binding: string; source: string; ids: string[] };
-export const createPickForm = (context: Pick<APIContext, 'cookies'>, ids: string[]) => {
+type PickForm = { binding: string; source: string; ids: string[]; previousPicks?: TargetPick[] };
+export const createPickForm = (context: Pick<APIContext, 'cookies'>, ids: string[], previousPicks?: TargetPick[]) => {
   const source = config().libcard; if (!source) throw new Error('LibCard is disabled.');
   const binding = context.cookies.get('feedme_checkout')?.value || randomToken();
   context.cookies.set('feedme_checkout', binding, { ...cookieOptions(), maxAge: 365 * 86400 });
   const id = randomUUID();
-  setKv(getDb(), 'pick-form', id, { binding: digest(binding), source: sourceKey(source), ids } satisfies PickForm, 3600_000);
+  setKv(getDb(), 'pick-form', id, { binding: digest(binding), source: sourceKey(source), ids, previousPicks } satisfies PickForm, 3600_000);
   return id;
 };
 const bound = (context: Pick<APIContext, 'cookies'>, value: { binding: string; source: string } | undefined) => {
@@ -32,21 +32,25 @@ export const oneField = (form: FormData, name: string) => {
   if (values.length > 1 || (values[0] !== undefined && typeof values[0] !== 'string')) throw new Error('Submit each form field once.');
   return String(values[0] || '');
 };
-export const pickFormValues = (context: APIContext, form: FormData): PickValues => {
+export const pickFormState = (context: APIContext, form: FormData): { values: PickValues; previousPicks?: TargetPick[] } => {
   const token = getKv<PickForm>(getDb(), 'pick-form', oneField(form, 'requestId'));
   bound(context, token);
   const action = oneField(form, 'intent');
-  if (!['', 'review', 'all', 'creator', ...config().tipAmounts.map(n => `amount-${n}`)].includes(action)) throw new Error('Unknown pick action.');
+  if (!['', 'review', 'all', 'creator', 'undo', ...config().tipAmounts.map(n => `amount-${n}`)].includes(action)) throw new Error('Unknown pick action.');
   const parsed = picksFromForm(form, token!.ids);
   const ids = libcardTargets().map(p => p.id);
   if (token!.ids.some(id => !ids.includes(id))) throw new Error('The target list changed. Reload and review your picks.');
-  const picks = withDefaultPick(action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [] : parsed);
+  if (action === 'undo' && !token!.previousPicks?.length) throw new Error('There are no previous picks to restore.');
+  const picks = withDefaultPick(action === 'all' ? ids.map(projectId => ({ projectId, count: 1 })) : action === 'creator' ? [] : action === 'undo' ? token!.previousPicks! : parsed);
+  const selected = parsed.filter(pick => pick.projectId !== 'creator');
+  const previousPicks = action === 'creator' && selected.length ? selected : action !== 'undo' && picks[0].projectId === 'creator' ? token!.previousPicks : undefined;
   const visibility = oneField(form, 'visibility') || 'anonymous';
   if (!['anonymous', 'private', 'public'].includes(visibility)) throw new Error('Choose a valid privacy setting.');
   const note = oneField(form, 'note').trim(); if (note.length > 500) throw new Error('Keep your note to 500 characters.');
-  return { amount: action.startsWith('amount-') ? Number(action.slice(7)) : centsFromInput(oneField(form, 'amount')), picks, frequency: billingFrequency(oneField(form, 'frequency')),
-    visibility: visibility as Visibility, note, announceAnonymously: visibility === 'anonymous' && oneField(form, 'announceAnonymously') === 'yes' };
+  return { previousPicks, values: { amount: action.startsWith('amount-') ? Number(action.slice(7)) : centsFromInput(oneField(form, 'amount')), picks, frequency: billingFrequency(oneField(form, 'frequency')),
+    visibility: visibility as Visibility, note, announceAnonymously: visibility === 'anonymous' && oneField(form, 'announceAnonymously') === 'yes' } };
 };
+export const pickFormValues = (context: APIContext, form: FormData): PickValues => pickFormState(context, form).values;
 export const createPickReview = (context: APIContext, values: PickValues) => {
   const snapshot = libcardSnapshot(); if (!snapshot) throw new Error('LibCard is unavailable.');
   if (!values.picks.length) throw new Error('Pick at least one thing before giving.');

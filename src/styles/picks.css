@@ -8,6 +8,8 @@
 .pick-shortcuts { display:flex; flex-wrap:wrap; gap:0 18px; }
 .pick-shortcuts button { min-height:44px; font-size:12px; color:var(--color-primary); text-align:left; }
 .pick-shortcuts button:hover { text-decoration:underline; }
+.pick-undo { display:flex; flex-wrap:wrap; align-items:center; gap:0 12px; padding:4px 12px 0; font-size:13px; color:var(--color-muted); }
+.pick-undo button { min-height:44px; color:var(--color-primary); font-weight:500; text-decoration:underline; text-underline-offset:3px; }
 .pick-demo-note { font-size:12px; color:var(--color-muted); }
 .pick-row { display:flex; gap:14px; align-items:center; padding:12px 16px; background:white; }
 .pick-row + .pick-row { border-top:1px solid #eef1f5; }
