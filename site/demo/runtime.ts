@@ -221,13 +221,18 @@ if (fixture.projects) {
   if (state.projects) renderProjects();
   const filter = document.querySelector<HTMLFormElement>('.admin-filters:has(select[name="range"])'); if (filter) { restore(filter, Object.fromEntries(new URLSearchParams(location.search))); applyReport(filter); }
   if (state.tip && screen === '/thanks') {
+    const receiptMessage = document.querySelector('[data-receipt-message]');
+    if (receiptMessage) receiptMessage.textContent = `Your ${money(state.tip.amount)} demo tip is saved. No money changed hands and no payment will recur.`;
+    const recurringReceipt = document.querySelector<HTMLElement>('[data-receipt-recurring]');
+    if (recurringReceipt) { recurringReceipt.hidden = state.tip.frequency === 'once'; const heading = recurringReceipt.querySelector('h2'); if (heading) heading.textContent = `${money(state.tip.amount)} · ${state.tip.frequency}`; }
     const block = document.querySelector('[data-demo-breakdown]');
     if (block) { const list = element('ul'); const shares = new Map(state.tip.picks?.length ? splitUnits(1000, state.tip.picks).map(p => [p.projectId, p.amount / 10]) : []); state.tip.allocations.forEach((part) => { const row = element('li', '', 'demo-tip-row'), name = element('span'); name.append(link(projectName(part.projectId), projectVisitUrl(part.projectId))); const count = state.tip!.picks?.find(p => p.projectId === part.projectId)?.count; if (count) name.append(element('small', `${count} ${count === 1 ? 'pick' : 'picks'} · ${shares.get(part.projectId)}%`, 'admin-caption')); row.append(name, element('strong', money(part.amount))); list.append(row); }); block.replaceChildren(element('h2', 'Your simulated support breakdown', 'section-title'), list, element('p', `Total: ${money(state.tip.amount)} · ${state.tip.frequency}`, 'demo-tip-total')); }
+    const sharing = document.querySelector<HTMLElement>('#share-support'); if (sharing) sharing.hidden = state.tip.visibility !== 'public';
     const card = document.querySelector<HTMLElement>('.support-share'); if (card && state.tip.visibility !== 'public') card.hidden = true;
     const publicMessage = document.querySelector<HTMLElement>('[data-demo-public-message]'); if (publicMessage && state.tip.visibility !== 'public') publicMessage.hidden = true;
     const publicForm = document.querySelector<HTMLFormElement>('form:has(input[name="action"][value="post"])'); if (publicForm && state.tip.visibility !== 'public') publicForm.closest('.panel')?.setAttribute('hidden', '');
     document.querySelectorAll('.billing-heading').forEach((node) => { const title = node.querySelector('h2'); if (title) title.textContent = `${money(state.tip!.amount)} · ${state.tip!.frequency}`; });
-    document.querySelectorAll('.panel').forEach((node) => { if (node.querySelector('.eyebrow')?.textContent?.includes('Monthly support')) (node as HTMLElement).hidden = true; });
+
   }
   if (state.stopped && screen === '/billing') { document.querySelector('.billing-heading .tag')!.textContent = 'Stopped · demo'; document.querySelector<HTMLButtonElement>('form[data-demo-action="/api/billing"] button')!.disabled = true; }
 }

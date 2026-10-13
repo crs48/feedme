@@ -6,5 +6,9 @@ const recommendationReturn = (input: string) => {
   if (!input.startsWith('/recommend?')) return false;
   try { const url = new URL(input, 'https://return.invalid'); return url.origin === 'https://return.invalid' && url.pathname === '/recommend' && [...url.searchParams.keys()].every((key) => key === 'did') && /^did:(plc:[a-z2-7]{24}|web:[a-zA-Z0-9.:%_-]+)$/.test(url.searchParams.get('did') || '') && !url.hash; } catch { return false; }
 };
-export const safeReturnPath = (input: unknown) => typeof input === 'string' && (recommendationReturn(input) || /^\/checkout\/review\?token=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input) || /^\/(?!\/)[a-zA-Z0-9/_-]*$/.test(input) || /^\/thanks\?id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input)) ? input : '/';
+export const safeReturnPath = (input: unknown) => typeof input === 'string' && (recommendationReturn(input) || /^\/checkout\/review\?token=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input) || /^\/(?!\/)[a-zA-Z0-9/_-]*$/.test(input) || /^\/thanks\?id=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:&connect=1)?$/.test(input)) ? input : '/';
 export const loginPath = (returnTo: unknown) => `/login?${new URLSearchParams({ returnTo: safeReturnPath(returnTo) })}`;
+export const signInRecovery = (returnTo: string) => returnTo.startsWith('/thanks?')
+  ? 'You can return to your receipt for payment status. Signing in does not change your payment or its privacy.'
+  : returnTo === '/billing' ? 'You can also manage recurring support with your checkout email from the billing page.'
+  : 'Try again in this browser, or continue without a profile and review your gift before paying.';

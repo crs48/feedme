@@ -1,14 +1,18 @@
 ---
 import { config } from '../lib/config';
+import { loginPath } from '../lib/http';
+interface Props { returnTo?: string; }
+const { returnTo = '/' } = Astro.props;
 ---
 <div class="bluesky-signup">
-  <p>Bluesky is a free social network for posts, follows, and conversations. Creating an account gives you a public profile and a handle you can also use here.</p>
+  <p>Create a free Bluesky account to follow creators and use your profile here. Your tip does not depend on signing up.</p>
   <ol>
     <li>Open Bluesky and choose <strong>Create account</strong>.</li>
     <li>Follow its signup steps and choose a handle, such as <strong>yourname.bsky.social</strong>.</li>
     <li>{config().demo ? 'On the creator’s live Feedme site, sign in with that handle. This demo uses fictional accounts.' : 'Come back to this tab and sign in with that handle.'}</li>
   </ol>
   <a class="button secondary" href="https://bsky.app/" target="_blank" rel="noopener noreferrer">Create a Bluesky account <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+  <a class="signup-return" href={loginPath(returnTo)}>I have an account now →</a>
   <p class="signup-fine">Bluesky has its own terms and privacy policy. You don’t need to post or build a following to use your account on Feedme.</p>
 </div>
 <style>
@@ -17,5 +21,6 @@ import { config } from '../lib/config';
   li + li { margin-top:6px; }
   strong { color:var(--color-ink); font-weight:500; overflow-wrap:anywhere; }
   .button { margin-top:2px; min-height:44px; font-size:13px; }
+  .signup-return { display:flex; align-items:center; min-height:44px; margin-top:8px; color:var(--color-primary); text-decoration:underline; }
   .signup-fine { margin-top:12px; font-size:12px; }
 </style>

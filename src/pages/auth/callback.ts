@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import type { NodeSavedState } from '@atproto/oauth-client-node';
 import { createSession, digest, oauthClient, isAdmin } from '../../lib/auth';
 import { deleteKv, getDb, getKv } from '../../lib/db';
-import { loginPath, redirectNotice, safeReturnPath } from '../../lib/http';
+import { loginPath, redirectNotice, safeReturnPath, signInRecovery } from '../../lib/http';
 import { reportAuthError } from '../../lib/auth-errors';
 export const GET: APIRoute = async (context) => {
   let returnTo = '/';
@@ -23,6 +23,6 @@ export const GET: APIRoute = async (context) => {
     return context.redirect(returnTo === '/' && isAdmin({ did: session.did }) ? '/studio' : returnTo, 303);
   } catch (error) {
     reportAuthError('callback', error);
-    return redirectNotice(loginPath(returnTo), 'Bluesky sign-in was not completed. Try again in this browser, or return to your gift to tip anonymously.', true);
+    return redirectNotice(loginPath(returnTo), `Bluesky sign-in was not completed. ${signInRecovery(returnTo)}`, true);
   }
 };

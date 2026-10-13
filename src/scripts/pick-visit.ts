@@ -56,7 +56,7 @@ export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement
     text('[data-mobile-total]', price === undefined ? 'Choose an amount' : `${dollars(price)}${suffix}`);
     const submit = form.querySelector<HTMLButtonElement>('[data-pick-submit]')!;
     submit.disabled = total === 0 || price === undefined;
-    submit.textContent = !total ? 'Pick something to begin' : price === undefined ? 'Enter an amount from $1 to $1,000' : `Give ${dollars(price)}${suffix} to ${form.dataset.creatorName}`;
+    submit.textContent = !total ? 'Pick something to begin' : price === undefined ? 'Enter an amount from $1 to $1,000' : 'Review your tip';
     if (announce) status.textContent = `${summary}. ${price === undefined ? 'Enter a valid amount.' : `${dollars(price)}${suffix} in total.`}`;
     form.querySelectorAll<HTMLButtonElement>('[data-pick-amount]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.pickAmount) === price)));
   };

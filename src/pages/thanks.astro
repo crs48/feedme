@@ -1,71 +1,105 @@
 ---
-import { creatorCircle } from '../lib/creator-circle';
 import SupportShare from '../components/SupportShare.astro';
 import BlueskySignup from '../components/BlueskySignup.astro';
 import { people } from '../lib/people';
 import { ensureSupportShare, supportShare } from '../lib/support-shares';
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icon.astro';
-import Avatar from '../components/Avatar.astro';
-import { demoPerson } from '../lib/demo-media';
 import FollowButton from '../components/FollowButton.astro';
-import { support, project } from '../lib/repository';
+import { support, project, profile } from '../lib/repository';
+import { libcardProfile } from '../lib/libcard';
 import { config } from '../lib/config';
 import { canAccessTip, canShareTip } from '../lib/tip-sharing';
+import { receiptState } from '../lib/receipt';
 import { publishedPost } from '../lib/social-repo';
 import { blueskyPostUrl, projectUri } from '../lib/social-model';
 import { frequencyLabel, frequencySuffix } from '../lib/billing-frequency';
 import { money, netSupport, supportParts } from '../lib/model';
-const s = support(Astro.url.searchParams.get('id') || '');
+import { loginPath, safeReturnPath } from '../lib/http';
+const cfg = config();
+const candidate = support(Astro.url.searchParams.get('id') || '');
 const user = Astro.locals.user;
 const browser = Astro.cookies.get('feedme_checkout')?.value;
-const accessible = canAccessTip(s, user, browser);
-const paid = Boolean(accessible && s && netSupport(s) > 0);
+const s = canAccessTip(candidate, user, browser) ? candidate : undefined;
+const state = receiptState(s);
+if (!s) Astro.response.status = 404;
+const confirmed = state.kind === 'confirmed';
 const shareable = canShareTip(s, user, browser);
-const p = accessible && s ? project(s.projectId) : undefined;
-const allocations = accessible && s?.allocations ? supportParts(s) : [];
+const creator = libcardProfile(profile());
+const p = s ? project(s.projectId) : undefined;
+const allocations = s?.allocations ? supportParts(s) : [];
+const settled = s && !['pending', 'failed'].includes(s.status);
+const recurring = s?.frequency && s.frequency !== 'once';
 const saved = shareable && user && s ? publishedPost(user.did, `tip:${s.id}`) : undefined;
-const person = shareable && user ? (await people([user.did])).get(user.did) : undefined;
-const returnTo = s ? `/thanks?id=${encodeURIComponent(s.id)}` : '/';
-const candidateShareId = paid && s ? ensureSupportShare(s.id) : undefined;
+const person = confirmed && user ? (await people([user.did])).get(user.did) : undefined;
+const returnTo = safeReturnPath(`/thanks?id=${encodeURIComponent(Astro.url.searchParams.get('id') || '')}`);
+const connectionReturn = `${returnTo}&connect=1`;
+const candidateShareId = s && netSupport(s) > 0 ? ensureSupportShare(s.id) : undefined;
 const shareId = candidateShareId && supportShare(candidateShareId) ? candidateShareId : undefined;
 ---
-<Layout title={paid ? 'Thank you for your support' : 'Checking your support'} noindex>
-  <section class="shell page-section"><div class="max-w-xl mx-auto text-center">
-    <span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={paid ? 'heart' : 'leaf'} size={34}/></span><p class="eyebrow">{config().demo ? 'Demo tip' : 'Payment status'}</p><h1 class="display page-title my-5">{paid ? 'Thank you for your support.' : 'Confirming your payment.'}</h1><p class="muted text-sm">{config().demo && paid ? 'Your demo tip is saved. No money changed hands — but you can see how the real experience will feel.' : paid ? 'Your support is confirmed. Thank you for helping someone spend more time on what matters.' : 'Payment is not confirmed yet. This page only shows success after Stripe sends a verified payment event.'}</p>
-    {!paid && <a class="button secondary mt-5" href={returnTo}>Check payment status</a>}
-    {accessible && s && s.frequency && s.frequency !== 'once' && <div class="panel text-left mt-6"><p class="eyebrow mb-2">{frequencyLabel(s.frequency)} support</p><p class="text-lg font-semibold">{money(s.amount)}{frequencySuffix(s.frequency)}</p><p class="muted text-sm mt-2">{config().demo ? 'This is a demo. No future payments will be taken.' : 'Your selected amount, project split, and visibility repeat with each payment. You can stop future renewals in billing settings.'}</p><a class="button secondary mt-4" href="/billing">Manage recurring support</a></div>}
-    {paid && allocations.length > 0 && <div class="panel text-left mt-8"><h2 class="section-title mb-4">Your support breakdown</h2><ul>{allocations.map((part) => <li class="flex justify-between gap-4 border-b border-border py-3 text-sm"><a class="text-primary" href={`/support/${part.projectId}`}>{project(part.projectId)?.title || 'Project'}{s?.picks && <span class="block text-xs muted mt-1">{s.picks.find(p => p.projectId === part.projectId)?.count} {s.picks.find(p => p.projectId === part.projectId)?.count === 1 ? 'pick' : 'picks'}{project(part.projectId)?.target ? ` · ${money(project(part.projectId)!.target)} aspiration` : ''}</span>}</a><strong class="whitespace-nowrap">{money(netSupport(part))}</strong></li>)}</ul><p class="text-sm font-semibold mt-4">Total: {money(netSupport(s!))}</p></div>}
-    {shareId && <SupportShare id={shareId}/>}
-    {paid && p && !allocations.length && <div class="panel text-left mt-8"><p class="eyebrow mb-2">Project updates</p><h2 class="section-title mb-4">Keep up with this project</h2><FollowButton kind="project" subject={projectUri(config().ownerDid, p.id)} title={p.title} returnTo={returnTo}/></div>}
-    {paid && accessible && !user && <section class="panel text-left mt-6" aria-labelledby="stay-connected">
-      <h2 id="stay-connected" class="section-title mb-3">Your gift is complete. Stay connected?</h2>
-      <p class="muted text-sm mb-4">Use your Bluesky account to follow creators or choose to post a message about your support. This is optional: your gift is already confirmed, and signing in won’t change its privacy or publish a post.</p>
-      <a class="button secondary" href={`/login?returnTo=${encodeURIComponent(returnTo)}`}>Sign in with Bluesky</a>
-      <details class="receipt-signup"><summary>Don’t have a Bluesky account?</summary><BlueskySignup/></details>
-      <p class="muted text-xs mt-3">Keep this receipt link in this browser. You don’t need an account to return to it or use the billing link for recurring support. <a class="underline" href="/bluesky" target="_blank" rel="noopener noreferrer">Why Bluesky? ↗</a></p>
+<Layout title={state.title} noindex>
+  <section class="shell page-section"><div class="receipt max-w-xl mx-auto">
+    <header class="text-center" data-receipt-state={state.kind}>
+      <span class="avatar w-20 h-20 mx-auto mb-6"><Icon name={confirmed ? 'heart' : 'leaf'} size={34}/></span>
+      <p class="eyebrow">{cfg.demo ? 'Demo tip' : 'Payment status'}</p>
+      <h1 class="display page-title my-5">{state.title}</h1>
+      <p class="muted text-sm" data-receipt-message>{cfg.demo && confirmed && s ? `Your ${money(s.amount)} demo tip to ${creator.name} is saved. No money changed hands and no payment will recur.` : confirmed && s ? `Your ${money(s.amount)} tip to ${creator.name} is confirmed.` : state.message}</p>
+      {state.kind === 'pending' && <><a class="button secondary mt-5" href={returnTo}>Check payment status</a><p class="muted text-xs mt-4">Taking longer than expected? Contact the creator from their page before making another payment.</p></>}
+      {state.kind === 'unavailable' && <><p class="muted text-sm mt-4"><a class="receipt-link" href={loginPath(returnTo)}>Sign in with the profile you attached</a></p><p class="muted text-sm mt-3"><a class="receipt-link" href="/billing">Manage recurring support</a> without creating an account.</p></>}
+      <a class="receipt-link receipt-exit" href="/">Back to {creator.name}’s page</a>
+    </header>
+    {recurring && s && <section class="panel mt-6" data-receipt-recurring>
+      <p class="eyebrow mb-2">{frequencyLabel(s.frequency)} support</p><h2 class="section-title">{money(s.amount)}{frequencySuffix(s.frequency)}</h2>
+      <p class="muted text-sm mt-2">{cfg.demo ? 'This is a demo. No future payments will be taken.' : 'Your amount, project split, and visibility repeat until you stop renewals. Billing shows the current subscription status.'}</p>
+      <a class="button secondary mt-4" href="/billing">Manage recurring support</a>
+      <p class="muted text-xs mt-3">No Bluesky account needed. From another browser, use your checkout email in billing.</p>
     </section>}
-    {shareable && user && s && <div class="panel text-left mt-6">
-      <p class="eyebrow mb-2">Share your support</p><h2 class="section-title mb-4">{saved?.uri ? 'Your public message' : 'Post on Bluesky (optional)'}</h2>
-      {saved?.uri ? <><p class="prose-copy text-sm mb-4">{String(saved.record.text)}</p><a class="button secondary" href={config().demo ? '/following?view=people' : blueskyPostUrl(saved.uri)} rel="noopener noreferrer">{config().demo ? 'View your demo post' : 'View on Bluesky'} ↗</a></> : <form method="post" action="/api/social">
-        <input type="hidden" name="action" value="post"/><input type="hidden" name="supportId" value={s.id}/>
-        <p class="muted text-sm mb-4">Share a separate Bluesky post with your followers and the open social web. Your gift is already confirmed; posting is entirely up to you.</p>
-        <label class="field">Your Bluesky post<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…">{saved ? String(saved.record.text) : ''}</textarea></label>
-        <p class="muted text-xs mb-4">Up to 300 characters. Includes {shareId ? 'your support card and allocation image' : `a link to ${allocations.length ? 'the creator’s projects' : 'this project'}`}. Your private tip note and amount are never copied here.</p>
-        <p class="text-xs muted mb-4">{config().demo ? 'Demo profile' : 'Posting as'} <strong>{person?.handle ? `@${person.handle}` : person?.name || 'your connected Bluesky account'}</strong></p>
-        <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this post publicly with my Bluesky profile. People can see that I supported this creator, even if my gift was private or anonymous.</span></label>
-        <button class="button">{config().demo ? 'Try a demo public post' : 'Publish on Bluesky'}</button>
-      </form>}
-    </div>}
-    <h2 class="section-title mt-12 mb-5">Discover more creators</h2><p class="muted text-xs mb-6">If you have a little more curiosity to give, meet some friends.</p>
-    {paid && <p class="my-6"><a class="button secondary" href={`/recommend?did=${encodeURIComponent(config().ownerDid)}`}>Recommend this creator ↗</a></p>}
-    <p class="my-5"><a class="text-sm underline" href="/discover">Find more creators in your Bluesky circle</a></p>
-    {creatorCircle().slice(0, 3).map((f) => <article class="panel text-left mb-4"><a href={f.url} rel="noopener noreferrer" class="flex items-center gap-3"><Avatar name={f.name} src={config().demo ? demoPerson(f.did)?.avatar : undefined}/><span><strong class="text-sm">{f.name} ↗</strong><span class="block text-xs muted mt-1">{f.description}</span></span></a>{f.did && <div class="mt-4"><FollowButton kind="creator" subject={f.did} title={f.name} returnTo={returnTo}/></div>}</article>)}
-    <a class="button secondary mt-4" href="/">Back to projects</a>
+    {settled && allocations.length > 0 && <details class="receipt-section" data-receipt-details>
+      <summary>Receipt details</summary>
+      <div class="receipt-section-body"><h2 class="section-title mb-4">Your support breakdown</h2><ul>{allocations.map((part) => <li class="flex justify-between gap-4 border-b border-border py-3 text-sm"><a class="text-primary" href={`/support/${part.projectId}`}>{project(part.projectId)?.title || 'Project'}{s?.picks && <span class="block text-xs muted mt-1">{s.picks.find(pick => pick.projectId === part.projectId)?.count} {s.picks.find(pick => pick.projectId === part.projectId)?.count === 1 ? 'pick' : 'picks'}</span>}</a><strong class="whitespace-nowrap">{money(netSupport(part))}</strong></li>)}</ul><p class="text-sm font-semibold mt-4">Total support: {money(netSupport(s!))}</p></div>
+    </details>}
+    {confirmed && <details class="receipt-section" id="stay-connected" open={Astro.url.searchParams.get('connect') === '1'}>
+      <summary>Stay connected <span>— optional</span></summary>
+      <div class="receipt-section-body">
+        <h2 class="section-title mb-3">Follow {creator.name}’s work on Bluesky.</h2>
+        {!user ? <>
+          <p class="muted text-sm mb-4">Use a free Bluesky account to stay connected. You don’t need to post or build a following.</p>
+          <a class="button secondary" href={loginPath(connectionReturn)}>Sign in with Bluesky</a>
+          <details class="receipt-signup"><summary>New to Bluesky?</summary><BlueskySignup returnTo={connectionReturn}/></details>
+        </> : <>
+          <p class="muted text-sm mb-4">Connected as <strong>{person?.handle ? `@${person.handle}` : person?.name || 'your Bluesky account'}</strong>. Choose whether to follow.</p>
+          <FollowButton kind="creator" subject={cfg.ownerDid} title={creator.name} label={`Follow ${creator.name}`} returnTo={connectionReturn}/>
+          {p && !allocations.length && <div class="mt-5"><FollowButton kind="project" subject={projectUri(cfg.ownerDid, p.id)} title={p.title} returnTo={connectionReturn}/></div>}
+        </>}
+        <p class="muted text-xs mt-4">Connecting Bluesky doesn’t change this tip’s privacy or post for you. <a class="receipt-link" href="/bluesky">Why Bluesky?</a></p>
+        {(shareId || (shareable && user && s)) && <details class="receipt-section" id="share-support" open={Astro.url.searchParams.get('connect') === '1' && Boolean(saved?.uri)}><summary>Share your support</summary><div class="receipt-section-body">
+          {shareId && <SupportShare id={shareId}/>}
+          {shareable && user && s && <section class="panel mt-5">
+            <h2 class="section-title mb-4">{saved?.uri ? 'Your public message' : 'Post on Bluesky (optional)'}</h2>
+            {saved?.uri ? <><p class="prose-copy text-sm mb-4">{String(saved.record.text)}</p><a class="button secondary" href={cfg.demo ? '/following?view=people' : blueskyPostUrl(saved.uri)} rel="noopener noreferrer">{cfg.demo ? 'View your demo post' : 'View on Bluesky'} ↗</a></> : <form method="post" action="/api/social">
+              <input type="hidden" name="action" value="post"/><input type="hidden" name="supportId" value={s.id}/>
+              <p class="muted text-sm mb-4">Your tip is complete. Posting a separate public message is entirely up to you.</p>
+              <label class="field">Your Bluesky post<textarea name="publicText" required maxlength="3000" rows="4" placeholder="A small cheer for something you believe in…"></textarea></label>
+              <p class="muted text-xs mb-4">Up to 300 characters. Includes {shareId ? 'your support card and allocation image' : 'a link to the work you supported'}. Your private note and amount are never copied here.</p>
+              <p class="text-xs muted mb-4">{cfg.demo ? 'Demo profile' : 'Posting as'} <strong>{person?.handle ? `@${person.handle}` : person?.name || 'your connected Bluesky account'}</strong></p>
+              <label class="flex items-start gap-2 text-xs mb-5"><input type="checkbox" name="consent" value="public" required class="mt-1"/><span>Publish this post publicly with my Bluesky profile. People can see that I supported this creator, even if my gift was private or anonymous.</span></label>
+              <button class="button">{cfg.demo ? 'Try a demo public post' : 'Publish on Bluesky'}</button>
+            </form>}
+          </section>}
+        </div></details>}
+        <p class="muted text-sm mt-5"><a class="receipt-link" href={`/recommend?did=${encodeURIComponent(cfg.ownerDid)}`}>Recommend this creator</a> · <a class="receipt-link" href="/discover">Discover creators</a></p>
+      </div>
+    </details>}
   </div></section>
 </Layout>
-
 <style>
-  .receipt-signup { margin-top:14px; border-top:1px solid var(--color-border); }
-  .receipt-signup summary { cursor:pointer; min-height:44px; padding-block:12px; font-size:13px; font-weight:500; }
+  .receipt { max-width:560px; }
+  .receipt-link { color:var(--color-primary); text-decoration:underline; text-underline-offset:3px; }
+  .receipt-exit { display:inline-flex; align-items:center; min-height:44px; margin-top:16px; font-size:13px; }
+  .receipt-section { border-top:1px solid var(--color-border); margin-top:24px; }
+  .receipt-section > summary { cursor:pointer; min-height:48px; padding-block:14px; font-size:14px; font-weight:500; }
+  .receipt-section > summary span { color:var(--color-muted); font-weight:400; }
+  .receipt-section-body { padding-block:6px 16px; }
+  .receipt-signup { margin-top:12px; }
+  .receipt-signup > summary { cursor:pointer; min-height:44px; padding-block:12px; font-size:13px; font-weight:500; }
 </style>
