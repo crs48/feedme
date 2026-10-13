@@ -6,6 +6,12 @@ export const POST: APIRoute = async context => {
   try {
     const form = await context.request.formData();
     const intent = oneField(form, 'intent');
+    if (intent === 'visibility') {
+      const visibility = oneField(form, 'visibility');
+      if (visibility !== 'anonymous' && visibility !== 'private' && visibility !== 'public') throw new Error('Choose a valid privacy setting.');
+      const id = changePickReviewVisibility(context, oneField(form, 'editReview'), visibility);
+      return context.redirect(`/checkout/review?token=${id}`, 303);
+    }
     if (intent === 'anonymous' || intent === 'attach-profile') {
       const id = changePickReviewVisibility(context, oneField(form, 'editReview'), intent === 'anonymous' ? 'anonymous' : 'private');
       const reviewPath = `/checkout/review?token=${id}`;
