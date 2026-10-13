@@ -61,6 +61,28 @@ describe('Bluesky sign-in return flow', () => {
     expect(canceled.pathname).toBe('/login'); expect(canceled.searchParams.get('returnTo')).toBe(reviewPath);
     expect(canceled.href).not.toContain('secret-provider-token'); expect(state.createSession).not.toHaveBeenCalled();
   });
+  it('preserves the optional receipt section after sign-in without changing a payment', async () => {
+    const receipt = '/thanks?id=4f9f0abf-650d-47d5-8337-82e198bde722&connect=1';
+    binding(receipt);
+    expect((await GET(context('/auth/callback?state=provider-state&code=verified'))).headers.get('location')).toBe(receipt);
+    expect(state.createSession).toHaveBeenCalledOnce();
+  });
+  it.each(['authorize', 'callback'])('offers receipt recovery after a %s failure, never another tip', async stage => {
+    const receipt = '/thanks?id=4f9f0abf-650d-47d5-8337-82e198bde722&connect=1';
+    binding(receipt);
+    state.authorize.mockRejectedValueOnce(new Error('private'));
+    state.callback.mockRejectedValueOnce(new Error('private'));
+    const response = stage === 'authorize' ? await POST(context('/auth/login', { handle: 'name.bsky.social', returnTo: receipt })) : await GET(context('/auth/callback?state=provider-state&error=access_denied'));
+    const location = destination(response);
+    expect(location.searchParams.get('returnTo')).toBe(receipt);
+    expect(location.searchParams.get('error')).toContain('return to your receipt');
+    expect(location.searchParams.get('error')).not.toMatch(/tip anonymously|review your gift|private/);
+    expect(state.createSession).not.toHaveBeenCalled();
+  });
+  it.each(['&connect=2', '&connect=1&note=private', '#follow', '&redirect=https://evil.example'])('rejects unsupported receipt return arguments %s', async suffix => {
+    const response = await POST(context('/auth/login', { handle: 'invalid', returnTo: `/thanks?id=4f9f0abf-650d-47d5-8337-82e198bde722${suffix}` }));
+    expect(destination(response).searchParams.get('returnTo')).toBe('/');
+  });
   it.each(['wrong-browser', 'unknown-state', 'expired', 'expired-sdk-state', 'app-state-in-query'])('does not trust return paths or contact OAuth with %s', async failure => {
     binding();
     if (failure === 'wrong-browser') jar.set('feedme_oauth', 'someone-else');

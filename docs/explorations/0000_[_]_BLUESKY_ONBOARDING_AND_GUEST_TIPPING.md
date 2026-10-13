@@ -1,6 +1,6 @@
 # Bluesky onboarding and guest tipping
 
-Exploration · 2026-10-12 · Proposed direction, not an implemented redesign
+Exploration · 2026-10-12 · Pass 1 implemented; signup experiment results below
 
 ## Problem and executive summary
 
@@ -17,6 +17,18 @@ The most useful next work is:
 3. Reduce permissions requested for identity-only sign-in, separately from optional social actions.
 
 Attaching an identity to an already-paid guest tip is a separate product feature. Do not imply that ordinary sign-in already does this, or make it a dependency of the first release.
+
+## Implementation results
+
+Pass 1 is implemented. Review now gives payment one primary action; the receipt says “Thank you. You’re all set.” and puts social actions under a collapsed optional section. Receipt states distinguish missing authority, pending, failed, disputed, full refunds, and partial refunds. Sign-in preserves the selected receipt section, displays the connected identity, and still requires an explicit follow or post. Signup help retains the original context, and billing explains email recovery and its limits.
+
+Verification: `pnpm check`, 469 tests across 58 files, `pnpm build`, both LibCard HTTP checks, and the static export check pass. Browser checks cover a $20 guest tip, monthly support and cancellation without JavaScript, mobile/desktop layouts, keyboard disclosure, and return from a demo sign-in. HTTP checks cover inaccessible receipts and all payment states without social prompts. No real payment was made.
+
+### Live signup experiment
+
+The installed SDK successfully submitted `prompt: 'create'` with the identity-only `atproto` scope to Bluesky. In a fresh browser, the provider opened its hosted **Sign up** screen at “Choose a username,” step 1 of 3. Choosing Back and then Cancel returned `access_denied` to the prototype callback. No account was created and no credentials were entered.
+
+The prototype used the protocol's localhost development client and an in-memory store, not Feedme's deployed confidential client. This proves provider entry and cancellation, not completed signup, provider compatibility across mobile browsers, or successful account/session creation on a public HTTPS Feedme origin. The normal UI therefore retains the explicit new-tab signup fallback. Pass 2's production-client and real-account checks remain open; no speculative account-creation endpoint or permission change is included in Pass 1.
 
 ## Current state in the repository
 
@@ -266,15 +278,17 @@ Prefer a separate private association record rather than rewriting the paid fina
 
 ### Pass 1 — simplify the existing experience
 
-- [ ] Preserve guest one-time and recurring checkout, optional private profile attachment, and all current publication consent.
-- [ ] Reduce review to one dominant payment action and a secondary profile link.
-- [ ] Make receipt states accurate: confirmed, pending, failed, adjusted, and inaccessible.
-- [ ] Replace the receipt's default stack of social prompts with one optional continuation.
-- [ ] Make login/error copy depend on whether the visitor is before or after payment.
-- [ ] Keep guest billing and checkout-email recovery easy to find; include missing-portal and duplicate-customer handling.
-- [ ] Update the static demo, `/bluesky` guide, and affected [LibCard contracts](../../scripts/check-libcard.mjs) with the same vocabulary.
+- [x] Preserve guest one-time and recurring checkout, optional private profile attachment, and all current publication consent.
+- [x] Reduce review to one dominant payment action and a secondary profile link.
+- [x] Make receipt states accurate: confirmed, pending, failed, adjusted, and inaccessible.
+- [x] Replace the receipt's default stack of social prompts with one optional continuation.
+- [x] Make login/error copy depend on whether the visitor is before or after payment.
+- [x] Keep guest billing and checkout-email recovery easy to find; include missing-portal and duplicate-customer handling.
+- [x] Update the static demo, `/bluesky` guide, and affected [LibCard contracts](../../scripts/check-libcard.mjs) with the same vocabulary.
 
 ### Pass 2 — prove seamless account creation
+
+- [x] Verify hosted signup entry and cancellation with the installed SDK and a localhost development client.
 
 - [ ] Test provider-URL sign-in and `prompt: 'create'` using the installed SDK on a public HTTPS test origin.
 - [ ] Complete a human-authorized test signup and verify return, decline, cancellation, and timeout on desktop and mobile browsers.
@@ -305,17 +319,19 @@ Keep historical profile attachment and additional login providers out of these p
 
 ### Acceptance tests for implementation
 
-- [ ] A new visitor can send a one-time tip without encountering a required login or social-signup screen.
-- [ ] A new visitor can start, recover access to, and stop recurring support without Bluesky, including from a different browser.
-- [ ] Changing the amount and pressing Enter still reviews the intended gift, with JavaScript disabled as well as enabled.
-- [ ] Failed or canceled OAuth preserves the gift; canceled OAuth after payment never suggests paying again.
+- [x] A new visitor can send a one-time tip without encountering a required login or social-signup screen.
+- [x] A new visitor can start and stop recurring demo support without Bluesky or browser JavaScript.
+- [ ] Verify real Stripe checkout-email recovery from a different browser, including duplicate customer records.
+- [x] Changing the amount and pressing Enter still reviews the intended gift, with JavaScript disabled as well as enabled.
+- [x] Failed or canceled OAuth preserves the gift; canceled OAuth after payment never suggests paying again.
 - [ ] Signup completion returns to the intended context; signup failure or expiry leaves the payment untouched.
-- [ ] No profile, follow, post, or public acknowledgment is created merely by signing in.
-- [ ] A pending redirect cannot render payment success or expose receipt details to a different browser.
-- [ ] Repeated submit/callback/webhook delivery cannot duplicate a payment or an explicitly confirmed social action.
-- [ ] Existing private/public gift choices and public-card allowlists remain correct; private notes and billing identifiers stay private.
-- [ ] Mobile, keyboard, zoom, screen-reader status messages, browser Back, and the plain-form fallback remain usable.
-- [ ] `pnpm check`, `pnpm test`, and `pnpm build` pass before an implementation ships; run affected LibCard/static export checks when their surfaces change.
+- [x] No profile, follow, post, or public acknowledgment is created merely by signing in.
+- [x] A pending redirect cannot render payment success or expose receipt details to a different browser.
+- [x] Repeated submit/callback/webhook delivery cannot duplicate a payment or an explicitly confirmed social action.
+- [x] Existing private/public gift choices and public-card allowlists remain correct; private notes and billing identifiers stay private.
+- [x] Mobile and desktop layouts, keyboard disclosures, and the plain-form fallback remain usable.
+- [ ] Complete a dedicated screen-reader and browser zoom audit, including navigation Back after provider signup.
+- [x] `pnpm check`, `pnpm test`, and `pnpm build` pass before an implementation ships; run affected LibCard/static export checks when their surfaces change.
 
 ### Evaluate whether the experience is actually better
 
@@ -337,4 +353,4 @@ If adding telemetry, keep coarse event counts private to the instance with bound
 - [Stripe customer portal](https://docs.stripe.com/customer-management/activate-no-code-customer-portal)
 - [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
 
-Start with the receipt and review hierarchy in Pass 1, then test the provider signup round trip before choosing its final UI. The decision to reconsider another login provider should follow evidence of an unmet account need, not the mere presence of visitors without Bluesky.
+Continue with Pass 2: test the deployed-client signup round trip and a human-completed account before replacing the fallback signup UI. The decision to reconsider another login provider should follow evidence of an unmet account need, not the mere presence of visitors without Bluesky.

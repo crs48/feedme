@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { cookieOptions, oauthClient, randomToken, digest } from '../../lib/auth';
 import { getDb, setKv } from '../../lib/db';
-import { formObject, loginPath, redirectNotice, safeReturnPath } from '../../lib/http';
+import { formObject, loginPath, redirectNotice, safeReturnPath, signInRecovery } from '../../lib/http';
 import { reportAuthError } from '../../lib/auth-errors';
 export const POST: APIRoute = async (context) => {
   const form = await formObject(context.request);
@@ -17,6 +17,6 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(url.toString(), 303);
   } catch (error) {
     reportAuthError('authorize', error);
-    return redirectNotice(loginPath(returnTo), 'Could not connect to your account provider. Check your full handle and try again. You can also return to your gift and choose anonymous support. If this keeps happening, contact the site owner.', true);
+    return redirectNotice(loginPath(returnTo), `Could not connect to your account provider. Check your full handle and try again. ${signInRecovery(returnTo)}`, true);
   }
 };

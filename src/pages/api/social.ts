@@ -37,7 +37,7 @@ export const POST: APIRoute = async (context) => {
     if (form.action === 'post') {
       const s = support(String(form.supportId || ''));
       if (!canShareTip(s, user, context.cookies.get('feedme_checkout')?.value)) throw new Error('A confirmed tip and its original browser or account are required to share.');
-      returnTo = `/thanks?id=${encodeURIComponent(s!.id)}`;
+      returnTo = `/thanks?id=${encodeURIComponent(s!.id)}&connect=1`;
       if (form.consent !== 'public') throw new Error('Confirm that you want to publish this message publicly.');
       const p = project(s!.projectId);
       if (!p) throw new Error('This project is no longer available.');

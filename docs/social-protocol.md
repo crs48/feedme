@@ -55,7 +55,9 @@ LibCard reviews last one hour and are bound to the original browser. URLs carry 
 
 The “Review as an anonymous gift” action creates a new review with the original amount, picks, schedule, and note. It clears identity and public timeline consent, rechecks target eligibility, and never mutates an existing checkout or makes a payment. Changing back to a named gift requires another review. The native percentage and single-project forms require sign-in before choosing a named gift; their unsubmitted fields are not saved across sign-in.
 
-After payment, signing in does not retroactively attach a profile to an anonymous receipt. Following and publishing are separate explicit actions; posting can identify a supporter even if their gift was private or anonymous. Anonymous recurring supporters can use the original browser or Stripe’s checkout-email recovery to manage billing.
+The receipt distinguishes confirmed, pending, failed, refunded, partially refunded, disputed, and inaccessible payments. Only a confirmed, unadjusted receipt offers the collapsed “Stay connected — optional” section. A guest who chooses it returns from sign-in to that section with the connected profile shown; following and posting still require a separate action. Review gives payment the primary button and offers private profile attachment as a secondary link.
+
+After payment, signing in does not retroactively attach a profile to an anonymous receipt. Following and publishing are separate explicit actions; posting can identify a supporter even if their gift was private or anonymous. Anonymous recurring supporters can use the original browser or Stripe’s checkout-email recovery to manage billing. Billing explains missing portal configuration and duplicate Stripe customer records. A receipt URL alone never grants access; inaccessible receipts return 404 without their amount, allocation, or recurring details. Signup help retains the receipt or review as the return path, including when signup happens in another tab.
 
 Regression coverage lives in `tests/auth-flow.test.ts`, `tests/pick-checkout.test.ts`, and `scripts/check-libcard.mjs` (ordinary HTML forms without JavaScript).
 

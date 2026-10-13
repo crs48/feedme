@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
+import { DatabaseSync } from 'node:sqlite';
 import { load } from 'cheerio';
 import { isolatedEnvironment } from './static-demo.mjs';
 
@@ -96,7 +97,8 @@ try {
   assert.match(anonymousReview.text(), /fixture-private-note/); assert.match(anonymousReview.text(), /Monthly/);
   assert.equal(anonymousReview('form[action="/api/checkout"] input[name=reviewId]').length, 1, 'Anonymous gift must proceed without sign-in.');
   const attach = anonymousReview('form[action="/api/checkout/review"]:has(input[value="attach-profile"])');
-  assert.match(attach.text(), /Sign in with Bluesky/);
+  assert.match(attach.text(), /Add my Bluesky profile/);
+  assert.equal(attach.find('button.button').length, 0, 'Optional profile attachment must not compete with payment.');
   const attached = await request('/api/checkout/review', { intent: 'attach-profile', editReview: attach.find('input[name=editReview]').val() });
   const attachLogin = new URL(attached.headers.get('location'), origin);
   assert.equal(attachLogin.pathname, '/login');
@@ -118,6 +120,30 @@ try {
   const final = await request('/api/checkout',{reviewId:token}); assert.equal(final.status,303); assert.ok(final.headers.get('location').startsWith('/thanks?id='));
   const repeated = await request('/api/checkout',{reviewId:token}); assert.equal(repeated.headers.get('location'),final.headers.get('location'));
   const receipt = await page(final.headers.get('location')); assert.match(receipt.text(),/No money changed hands/);
+  assert.equal(receipt('[data-receipt-state]').attr('data-receipt-state'), 'confirmed');
+  assert.equal(receipt('#stay-connected').is('[open]'), false, 'Social actions are optional after a complete gift.');
+  const foreignReceipt = await request(final.headers.get('location'), undefined, new Map());
+  assert.equal(foreignReceipt.status, 404);
+  const foreign = load(await foreignReceipt.text());
+  assert.equal(foreign('[data-receipt-state]').attr('data-receipt-state'), 'unavailable');
+  assert.equal(foreign('#stay-connected, [data-receipt-recurring], [data-receipt-details]').length, 0);
+  assert.doesNotMatch(foreign.text(), /Confirming your payment|fixture-private-note|\$44/);
+
+  // Only mutate this script's temporary, fictional database to exercise rendered states.
+  const fixtureDb = new DatabaseSync(join(dir, 'demo.sqlite'));
+  try {
+    const original = fixtureDb.prepare("SELECT value FROM records WHERE kind='support' AND id=?").get(token).value;
+    const support = JSON.parse(original);
+    try {
+      for (const [patch, kind] of [[{status:'pending'}, 'pending'], [{status:'failed'}, 'failed'], [{status:'refunded'}, 'refunded'], [{status:'disputed', disputed:true}, 'disputed'], [{refundedAmount:100}, 'partially-refunded']]) {
+        fixtureDb.prepare("UPDATE records SET value=? WHERE kind='support' AND id=?").run(JSON.stringify({...support,...patch}),token);
+        const status = await page(final.headers.get('location'));
+        assert.equal(status('[data-receipt-state]').attr('data-receipt-state'), kind);
+        assert.equal(status('#stay-connected, form[action="/api/social"]').length, 0, 'Unconfirmed or adjusted payments must not prompt social onboarding.');
+        assert.equal(status('a').filter((_,el) => status(el).text() === 'Check payment status').length, kind === 'pending' ? 1 : 0);
+      }
+    } finally { fixtureDb.prepare("UPDATE records SET value=? WHERE kind='support' AND id=?").run(original, token); }
+  } finally { fixtureDb.close(); }
   const publicResponse = await request('/api/public/libcard'); assert.equal(publicResponse.headers.get('cache-control'),'public, max-age=60');
   const signal = await publicResponse.json(); assert.equal(signal.defaultAmountCents,2200);
   assert.deepEqual(signal.targets.slice(0,2).map(p => [p.publicCount,p.publicShareMillis]),[[0,0],[1,750]]);
@@ -129,6 +155,26 @@ try {
     const f = fields(await page('/checkout?creator=1')); f.set('visibility',visibility); f.set('intent','review');
     const response = await request('/api/checkout/review', f); const next = response.headers.get('location'); await page(next);
     const id = new URL(next,origin).searchParams.get('token'); assert.equal((await request('/api/checkout',{reviewId:id})).status,303);
+    if (visibility === 'anonymous') {
+      await request('/auth/logout', {});
+      const receiptPath = `/thanks?id=${id}`;
+      const guestReceipt = await page(receiptPath);
+      assert.equal(guestReceipt('[data-receipt-state]').attr('data-receipt-state'), 'confirmed');
+      assert.equal(guestReceipt('#stay-connected').is('[open]'), false);
+      const connectUrl = guestReceipt('#stay-connected > .receipt-section-body > a').attr('href');
+      const connectionPath = new URL(connectUrl, origin).searchParams.get('returnTo');
+      assert.equal(connectionPath, `${receiptPath}&connect=1`);
+      const guestLogin = await page(connectUrl);
+      assert.match(guestLogin.text(), /Your tip is complete/);
+      assert.equal(guestLogin('a').filter((_, el) => guestLogin(el).text() === 'Back to your receipt').attr('href'), connectionPath);
+      assert.doesNotMatch(guestLogin.text(), /Just here to tip|Review as an anonymous gift/);
+      const connected = await request('/auth/demo', { role: 'supporter', returnTo: connectionPath });
+      assert.equal(connected.headers.get('location'), connectionPath);
+      const returned = await page(connectionPath);
+      assert.equal(returned('#stay-connected').is('[open]'), true);
+      assert.match(returned.text(), /Connected as/);
+    }
+
   }
   assert.deepEqual(await (await request('/api/public/libcard')).json(),signal);
   const old = fields(await page('/checkout?gone=1&x=10')); assert.ok([...old].filter(([key]) => key.startsWith('pick:')).every(([key,v]) => v === (key === 'pick:creator' ? '1' : '0')));
