@@ -39,7 +39,7 @@ const summary = countFor('creator') ? `No preference — just ${firstName}` : `$
   {Astro.props.notice && <p class="notice" role="status">{Astro.props.notice}</p>}
   {cfg.libcardRemoteDemo && <p class="pick-demo-note">Real LibCard links and GitHub stars. Goals and support below are sample data.</p>}
   <section class="pick-overview" aria-labelledby="pick-purpose">
-  <h2 id="pick-purpose">Send {firstName} a tip</h2>
+  <h2 id="pick-purpose">Support independent work</h2>
   <p>Choose an amount. Add picks if you’d like to say what you want more of. Every tip goes to {firstName}.</p>
   </section>
   <form class="pick-visit" data-pick-visit data-creator-name={firstName} action="/api/checkout/review" method="post">
