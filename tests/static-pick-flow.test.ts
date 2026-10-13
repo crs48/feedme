@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { demoPickGift } from '../site/demo/pick-flow';
+import { changeDemoGiftVisibility, demoPickGift } from '../site/demo/pick-flow';
 
 const form = (overrides: Record<string, string> = {}) => {
   const data = new FormData();
@@ -8,6 +8,18 @@ const form = (overrides: Record<string, string> = {}) => {
   return data;
 };
 describe('static demo pick review', () => {
+  it('changes visibility without losing reviewed details or carrying public timeline consent', () => {
+    const original = demoPickGift(form({ visibility: 'anonymous', announceAnonymously: 'yes' }), ['creator', 'presence', 'x']);
+    const named = changeDemoGiftVisibility(original, 'public');
+    const privateGift = changeDemoGiftVisibility(named, 'private');
+    const anonymous = changeDemoGiftVisibility(privateGift, 'anonymous');
+    expect(named).toEqual({ ...original, visibility: 'public', announceAnonymously: false });
+    expect(privateGift).toEqual({ ...original, visibility: 'private', announceAnonymously: false });
+    expect(anonymous).toEqual({ ...original, announceAnonymously: false });
+    expect(original.announceAnonymously).toBe(true);
+    expect(changeDemoGiftVisibility(original, 'anonymous')).toEqual(original);
+    expect(() => changeDemoGiftVisibility(original, 'friends')).toThrow('valid privacy');
+  });
   it('freezes the original picks and exact cents with the frequency, visibility, and note', () => {
     const gift = demoPickGift(form(), ['creator', 'presence', 'x']);
     expect(gift).toMatchObject({ amount: 2201, frequency: 'monthly', visibility: 'private', note: 'Keep making things.',

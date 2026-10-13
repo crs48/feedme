@@ -3,6 +3,11 @@ import { billingFrequency } from '../../src/lib/billing-frequency';
 import { allocatePicks, picksFromForm } from '../../src/lib/picks';
 import { withDefaultPick } from '../../src/lib/pick-selection';
 
+export const changeDemoGiftVisibility = <T extends { visibility: string; announceAnonymously?: boolean }>(gift: T, visibility: string) => {
+  if (!['anonymous', 'private', 'public'].includes(visibility)) throw new Error('Choose a valid privacy setting.');
+  return { ...gift, visibility, announceAnonymously: visibility === gift.visibility ? gift.announceAnonymously : false };
+};
+
 // Use the same count validation and integer-cent allocation as real checkout.
 // This returns local preview data only; it never creates a provider request.
 export const demoPickGift = (form: FormData, ids: string[]) => {

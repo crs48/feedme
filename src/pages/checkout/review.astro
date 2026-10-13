@@ -28,24 +28,28 @@ const person = user && review && review.visibility !== 'anonymous' ? (await peop
     <p class="eyebrow">One more look</p><h1 class="section-title page-title my-4">Review your gift</h1>
     {error ? <><p class="notice">{error}</p><a class="button" href="/checkout">Choose your gift again</a></> : review && <>
       <p class="text-lg font-semibold">{money(review.amount)} to {review.creatorName}</p><p class="muted text-sm mt-2">{frequencyLabel(review.frequency)} · {review.visibility}</p>
+      <form method="post" action="/api/checkout/review" class="review-visibility" data-review-visibility>
+        <input type="hidden" name="editReview" value={token}/><input type="hidden" name="intent" value="visibility"/>
+        <fieldset disabled={changed} aria-describedby="review-privacy"><legend>Who can see your tip?</legend>
+          <div class="visibility-choices">{([
+            ['anonymous', 'Anonymous', 'No Bluesky profile'],
+            ['private', 'Private', 'Creator only'],
+            ['public', 'Public', 'Visible to everyone'],
+          ] as const).map(([value, label, description]) => <button type="submit" name="visibility" value={value} aria-pressed={review!.visibility === value} disabled={review!.visibility === value}><strong>{label}</strong><span>{description}</span></button>)}</div>
+        </fieldset>
+      </form>
       <ul class="my-6">{parts.map(part => { const p = project(part.projectId); const count = review!.picks.find(pick => pick.projectId === part.projectId)!.count; return <li class="border-b border-border py-4 text-sm"><div class="flex justify-between gap-4"><strong>{p?.title || part.projectId}</strong><span>{money(part.amount)}</span></div><p class="muted mt-2">{count} {count === 1 ? 'pick' : 'picks'} · {shares.get(part.projectId)}%{p && p.target > 0 && ` · ${money(p.target)} aspiration`}</p></li>; })}</ul>
       {review.note && <div class="mb-5"><p class="text-sm font-semibold">Your private note</p><p class="text-sm whitespace-pre-wrap mt-2">{review.note}</p></div>}
-      <p class="muted text-sm mb-4">{review.visibility === 'public' ? 'Your Bluesky profile, amount, and picks will be public. Your note stays private. A Bluesky post is a separate, optional step after payment.' : review.visibility === 'private' ? 'Your Bluesky profile, amount, and note are shared with the creator only. No public post or timeline entry.' : review.announceAnonymously ? 'An anonymous thank-you may appear, without your amount or Bluesky profile. Your picks do not enter public totals.' : 'No Bluesky profile is attached. Your gift stays off public totals and the timeline.'}</p>
+      <p class="muted text-sm mb-4" id="review-privacy">{review.visibility === 'public' ? 'Your Bluesky profile, amount, and picks will be public. Your note stays private. A Bluesky post is a separate, optional step after payment.' : review.visibility === 'private' ? 'Your Bluesky profile, amount, picks, and note are shared with the creator only. No public post or timeline entry.' : review.announceAnonymously ? 'An anonymous thank-you may appear, without your amount or Bluesky profile. Your picks do not enter public totals.' : 'No Bluesky profile is attached. Your gift stays off public totals and the timeline.'}</p>
       {review.visibility === 'anonymous' && <p class="muted text-xs mb-4">No account or sign-in needed. Stripe and the creator may still receive billing details.</p>}
       {!needsLogin && review.visibility !== 'anonymous' && <p class="text-sm mb-4" data-review-identity>Giving as <strong>{person?.handle ? `@${person.handle}` : person?.name || 'your connected Bluesky account'}</strong>.</p>}
       {review.frequency !== 'once' && <p class="notice">{money(review.amount)} repeats {review.frequency}, with these picks and this visibility, until canceled.</p>}
       {changed ? <p class="notice">A selected target is no longer available. Edit and review your gift again.</p> : needsLogin ? <div class="review-identity">
         <h2 class="section-title mb-3">Connect your name to this gift</h2>
-        <p class="muted text-sm mb-4">{review.supporterDid ? 'Sign in with the same Bluesky account that reviewed this gift, or make a new anonymous review below.' : 'You chose a named gift. Sign in with Bluesky so we can attach the right profile. Your picks, amount, and note are saved here while you sign in.'}</p>
+        <p class="muted text-sm mb-4">{review.supporterDid ? 'Sign in with the same Bluesky account that reviewed this gift, or choose Anonymous above.' : 'Private and public tips use your Bluesky profile. Your picks, amount, and note stay saved while you sign in. You can switch to Anonymous above at any time before paying.'}</p>
         <a class="button w-full" href={`/login?returnTo=${encodeURIComponent(`/checkout/review?token=${token}`)}`}>Sign in with Bluesky</a>
-        <form method="post" action="/api/checkout/review" class="mt-3"><input type="hidden" name="editReview" value={token}/><input type="hidden" name="intent" value="anonymous"/><button class="button secondary w-full">Review as an anonymous gift</button></form>
-        <p class="muted text-xs mt-3">Anonymous keeps the same gift with no profile attached or public timeline entry. You’ll review it again before paying.</p>
         <details class="mt-4"><summary>New to Bluesky?</summary><BlueskySignup returnTo={`/checkout/review?token=${token}`}/></details>
       </div> : <form method="post" action="/api/checkout"><input type="hidden" name="reviewId" value={token}/><button class="button w-full">{config().demo ? 'Confirm demo gift' : 'Continue to payment'} <span aria-hidden="true">→</span></button></form>}
-      {!changed && review.visibility === 'anonymous' && <div class="review-profile-option mt-4">
-        <form method="post" action="/api/checkout/review"><input type="hidden" name="editReview" value={token}/><input type="hidden" name="intent" value="attach-profile"/><button class="profile-link">Add my Bluesky profile <span>— optional</span></button></form>
-        <p class="muted text-xs mt-3">Share your profile with {review.creatorName} only. You’ll review the gift again before paying.</p>
-      </div>}
       <p class="muted text-xs mt-3">Your gift goes to the creator, minus payment processing fees. Where you placed it is a suggestion.</p>
       <p class="muted text-xs mt-2">{config().demo ? 'Demo only. No Stripe checkout opens and nothing is charged.' : 'Secure checkout with Stripe. No payment is made until you confirm there.'}</p>
       <form method="post" action="/checkout" class="mt-5"><input type="hidden" name="editReview" value={token}/><button class="button secondary">Edit your gift</button></form>
@@ -54,8 +58,16 @@ const person = user && review && review.visibility !== 'anonymous' ? (await peop
 </Layout>
 
 <style>
-  .profile-link { display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px; min-height:44px; color:var(--color-primary); font-size:13px; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
-  .profile-link span { color:var(--color-muted); }
+  .review-visibility { margin-block:24px; }
+  .review-visibility fieldset { padding:0; border:0; min-width:0; }
+  .review-visibility legend { margin-bottom:10px; font-size:14px; font-weight:500; }
+  .visibility-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .visibility-choices button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; min-height:72px; padding:10px 4px; border:1px solid var(--color-border); border-radius:6px; background:white; cursor:pointer; }
+  .visibility-choices button strong { font-size:13px; font-weight:500; }
+  .visibility-choices button span { font-size:11px; line-height:1.4; color:var(--color-muted); }
+  .visibility-choices button:hover:not(:disabled), .visibility-choices button[aria-pressed='true'] { border-color:var(--color-primary); background:#f2f7ff; }
+  .visibility-choices button[aria-pressed='true'] { color:var(--color-primary); cursor:default; opacity:1; box-shadow:inset 0 0 0 1px var(--color-primary); }
+  .visibility-choices button[aria-pressed='true'] strong { font-weight:600; }
   .review-card { padding:0; overflow:hidden; }
   .review-card > :global(*) { margin-left:24px; margin-right:24px; }
   .review-card > .eyebrow { background:#fafbfc; margin:0; padding:16px 24px; border-bottom:1px solid var(--color-border); }

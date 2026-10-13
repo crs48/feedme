@@ -5,7 +5,7 @@ import type { Subscription } from '../../src/lib/recurring';
 import { initAdminPopovers } from '../../src/lib/admin-popovers';
 import { enhancePickVisits } from '../../src/scripts/pick-visit';
 import { prefillPicks, splitUnits, type Pick } from '../../src/lib/picks';
-import { demoPickGift } from './pick-flow';
+import { changeDemoGiftVisibility, demoPickGift } from './pick-flow';
 
 type Tip = { amount: number; frequency: string; visibility: string; allocations: { projectId: string; amount: number }[]; picks?: Pick[]; note?: string; announceAnonymously?: boolean };
 type State = { projects?: Record<string, Project>; forms?: Record<string, Record<string, string>>; follows?: Record<string, boolean>; draft?: Tip; tip?: Tip; stopped?: boolean };
@@ -199,6 +199,10 @@ if (fixture.projects) {
       const text = (selector: string, value: string) => { review.querySelector(selector)!.textContent = value; };
       text('[data-demo-review-amount]', `${money(gift.amount)} to Alex Rivers`);
       text('[data-demo-review-frequency]', `${gift.frequency === 'once' ? 'One-time' : gift.frequency === 'monthly' ? 'Monthly' : 'Yearly'} · ${gift.visibility}`);
+      review.querySelectorAll<HTMLButtonElement>('[data-review-visibility] button[name=visibility]').forEach(button => {
+        const selected = button.value === gift.visibility;
+        button.setAttribute('aria-pressed', String(selected)); button.disabled = selected;
+      });
       const shares = new Map(gift.picks?.length ? splitUnits(1000, gift.picks).map(p => [p.projectId, p.amount / 10]) : []);
       const list = review.querySelector('[data-demo-review-parts]')!;
       list.replaceChildren(...gift.allocations.map(part => {
@@ -211,7 +215,7 @@ if (fixture.projects) {
       }));
       const note = review.querySelector<HTMLElement>('[data-demo-review-note]')!; note.hidden = !gift.note;
       note.querySelector('p:last-child')!.textContent = gift.note || '';
-      text('[data-demo-review-privacy]', gift.visibility === 'public' ? 'On a live site, your Bluesky profile, amount, and picks are public. Your note stays private. Publishing a Bluesky post is a separate choice.' : gift.visibility === 'private' ? 'On a live site, your Bluesky profile and note are shared only with the creator. No public post or timeline entry.' : gift.announceAnonymously ? 'In a live gift, an anonymous thank-you can appear without your amount.' : 'No account needed. Your gift stays off the public timeline, without a Bluesky profile attached.');
+      text('[data-demo-review-privacy]', gift.visibility === 'public' ? 'On a live site, your Bluesky profile, amount, and picks are public. Your note stays private. Publishing a Bluesky post is a separate choice.' : gift.visibility === 'private' ? 'On a live site, your Bluesky profile, amount, picks, and note are shared only with the creator. No public post or timeline entry.' : gift.announceAnonymously ? 'In a live gift, an anonymous thank-you can appear without your amount.' : 'No account needed. Your gift stays off the public timeline, without a Bluesky profile attached.');
       text('[data-review-identity]', gift.visibility === 'anonymous' ? 'No Bluesky sign-in is needed for an anonymous gift. Stripe and the creator may still receive billing details on a live site.' : 'Using a fictional demo profile. On a live site, named gifts use your Bluesky account.');
       const recurring = review.querySelector<HTMLElement>('[data-demo-review-recurring]')!; recurring.hidden = gift.frequency === 'once';
       recurring.textContent = `On a live site, ${money(gift.amount)} repeats ${gift.frequency} until canceled. This demo takes no payments.`;
@@ -243,6 +247,12 @@ document.addEventListener('submit', (event) => {
   event.preventDefault(); event.stopImmediatePropagation();
   const values = formValues(form), action = values.action, endpoint = form.dataset.demoAction;
   try {
+    if (form.hasAttribute('data-review-visibility')) {
+      const choice = event.submitter;
+      if (!(choice instanceof HTMLButtonElement) || choice.name !== 'visibility') throw new Error('Choose who can see your tip.');
+      state.draft = changeDemoGiftVisibility(state.draft || fixture.sampleGift, choice.value);
+      if (save()) location.assign('/demo/checkout/review/'); return;
+    }
     if (endpoint === '/api/checkout/review') {
       const ids = [...form.querySelectorAll<HTMLInputElement>('[data-pick-input]')].map(input => input.name.slice(5));
       state.draft = demoPickGift(new FormData(form), ids);

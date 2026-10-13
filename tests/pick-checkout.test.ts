@@ -45,6 +45,69 @@ beforeEach(() => {
 afterEach(() => state.db!.close());
 
 describe('browser-bound pick checkout', () => {
+  it.each(['anonymous', 'private', 'public'] as const)('can change a %s review to every visibility without changing the gift or charging', async from => {
+    state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
+    const id = await review({ visibility: from, amount: '20.01', frequency: 'monthly', 'pick:presence': '3', 'pick:x': '2', announceAnonymously: 'yes' });
+    const original = readPickReview(ctx(), id);
+    for (const visibility of ['anonymous', 'private', 'public'] as const) {
+      const response = await reviewPost(ctx({ intent: 'visibility', editReview: id, visibility, amount: '999', frequency: 'yearly', note: 'tampered', 'pick:x': '9', announceAnonymously: 'yes' }));
+      const destination = new URL(response.headers.get('location')!, 'https://feedme.example');
+      expect(destination.pathname).toBe('/checkout/review');
+      const nextId = destination.searchParams.get('token')!;
+      expect(nextId === id).toBe(visibility === from);
+      expect(readPickReview(ctx(), nextId)).toEqual({ ...original, visibility,
+        supporterDid: visibility === 'anonymous' ? undefined : state.user.did,
+        announceAnonymously: visibility === from ? original.announceAnonymously : false });
+      expect(readPickReview(ctx(), id)).toEqual(original);
+    }
+    expect(listRecords(state.db!, 'support')).toEqual([]); expect(state.checkout).not.toHaveBeenCalled();
+  });
+  it.each(['private', 'public'] as const)('lets a guest review %s but requires sign-in before payment and permits switching back', async visibility => {
+    const id = await review({ 'pick:presence': '3' });
+    const changed = await reviewPost(ctx({ intent: 'visibility', editReview: id, visibility }));
+    const nextId = new URL(changed.headers.get('location')!, 'https://feedme.example').searchParams.get('token')!;
+    expect(readPickReview(ctx(), nextId).supporterDid).toBeUndefined();
+    expect((await checkoutPost(ctx({ reviewId: nextId }))).headers.get('location')).toContain('Sign%20in');
+    expect(state.checkout).not.toHaveBeenCalled();
+    const anonymous = await reviewPost(ctx({ intent: 'visibility', editReview: nextId, visibility: 'anonymous' }));
+    const anonymousId = new URL(anonymous.headers.get('location')!, 'https://feedme.example').searchParams.get('token')!;
+    await checkoutPost(ctx({ reviewId: anonymousId }));
+    expect(readRecord<Support>(state.db!, 'support', anonymousId)).toMatchObject({ visibility: 'anonymous', picks: [{ projectId: 'presence', count: 3 }] });
+    expect(readRecord<Support>(state.db!, 'support', anonymousId)?.supporterDid).toBeUndefined();
+  });
+  it('keeps an already-started checkout frozen when visibility changes on a new review', async () => {
+    const id = await review({ amount: '20', frequency: 'monthly', 'pick:x': '3' });
+    await checkoutPost(ctx({ reviewId: id }));
+    const original = readRecord<Support>(state.db!, 'support', id);
+    state.user = { did: 'did:plc:bbbbbbbbbbbbbbbbbbbbbbbb' };
+    const changed = await reviewPost(ctx({ intent: 'visibility', editReview: id, visibility: 'public' }));
+    const nextId = new URL(changed.headers.get('location')!, 'https://feedme.example').searchParams.get('token')!;
+    expect(nextId).not.toBe(id);
+    expect(readPickReview(ctx(), nextId)).toMatchObject({ amount: 2000, frequency: 'monthly', visibility: 'public', picks: [{ projectId: 'x', count: 3 }] });
+    expect(readRecord<Support>(state.db!, 'support', id)).toEqual(original);
+    expect(readRecord<Support>(state.db!, 'support', nextId)).toBeUndefined();
+    expect(state.checkout).toHaveBeenCalledTimes(1);
+  });
+  it.each(['wrong-browser', 'expired', 'unavailable'])('rejects changing visibility of a %s review', async failure => {
+    const id = await review({ 'pick:presence': '3' });
+    if (failure === 'wrong-browser') jar.set('feedme_checkout', 'different');
+    if (failure === 'expired') state.db!.prepare("UPDATE kv SET expires=1 WHERE namespace='pick-review'").run();
+    if (failure === 'unavailable') overrideLibcard(state.db!, 'presence', true);
+    const response = await reviewPost(ctx({ intent: 'visibility', editReview: id, visibility: 'public' }));
+    expect(response.headers.get('location')).toMatch(/^\/checkout\?error=/);
+    expect(state.db!.prepare("SELECT count(*) AS count FROM kv WHERE namespace='pick-review' AND key!=?").get(id)).toEqual({ count: 0 });
+    expect(state.checkout).not.toHaveBeenCalled();
+  });
+  it('rejects invalid and duplicate visibility choices', async () => {
+    const id = await review();
+    for (const visibility of ['', 'friends', 'PUBLIC']) expect((await reviewPost(ctx({ intent: 'visibility', editReview: id, visibility }))).headers.get('location')).toContain('valid%20privacy');
+    for (const field of ['intent', 'editReview', 'visibility']) {
+      const form = new URLSearchParams({ intent: 'visibility', editReview: id, visibility: 'public' }); form.append(field, 'anonymous');
+      const context = ctx(); context.request = new Request('https://feedme.example/api/checkout/review', { method: 'POST', body: form });
+      expect((await reviewPost(context)).headers.get('location')).toContain('each%20form%20field%20once');
+    }
+    expect(readPickReview(ctx(), id).visibility).toBe('anonymous'); expect(state.checkout).not.toHaveBeenCalled();
+  });
   it('restores exact picks after no preference, keeping current amount, schedule and note', async () => {
     const cleared = pickFormState(ctx(), await ctx(fields({ intent: 'creator', 'pick:presence': '3', 'pick:x': '2' })).request.formData());
     expect(cleared.values.picks).toEqual([{ projectId: 'creator', count: 1 }]);
