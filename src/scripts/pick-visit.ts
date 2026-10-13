@@ -15,6 +15,9 @@ export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement
   const inputs = rows.map(row => row.querySelector<HTMLInputElement>('[data-pick-input]')!);
   const amount = form.querySelector<HTMLInputElement>('[data-pick-total]')!;
   const status = form.querySelector<HTMLElement>('[data-pick-status]')!;
+  const undo = form.querySelector<HTMLElement>('[data-pick-undo]')!;
+  let previousPicks: { projectId: string; count: number }[] = JSON.parse(form.dataset.previousPicks || '[]');
+  const clearUndo = () => { previousPicks = []; undo.hidden = true; };
   const text = (selector: string, value: string) => { form.querySelector<HTMLElement>(selector)!.textContent = value; };
   const update = (announce = false, expand = false) => {
     const picks = withDefaultPick(rows.flatMap((row, i) => Number(inputs[i].value) > 0 ? [{ projectId: row.dataset.pickRow!, count: Number(inputs[i].value) }] : []));
@@ -66,17 +69,32 @@ export const enhancePickVisits = () => document.querySelectorAll<HTMLFormElement
     row.querySelector<HTMLElement>('[data-pick-controls]')!.hidden = false;
     const creatorChoice = row.querySelector<HTMLButtonElement>('[data-pick-creator]');
     if (creatorChoice) {
-      creatorChoice.addEventListener('click', () => { inputs.forEach(input => input.value = '0'); update(true); });
+      creatorChoice.addEventListener('click', event => {
+        event.preventDefault();
+        const selected = rows.flatMap((item, index) => item.dataset.pickRow !== 'creator' && Number(inputs[index].value) > 0 ? [{ projectId: item.dataset.pickRow!, count: Number(inputs[index].value) }] : []);
+        if (selected.length) previousPicks = selected;
+        inputs.forEach(input => input.value = '0'); update(true);
+        undo.hidden = !previousPicks.length;
+        if (previousPicks.length) status.textContent += ' Your previous picks were cleared. Undo is available.';
+      });
       return;
     }
     const start = row.querySelector<HTMLButtonElement>('[data-pick-start]')!;
     const add = row.querySelector<HTMLButtonElement>('[data-pick-add]')!;
-    start.addEventListener('click', () => { inputs[i].value = '1'; update(true); add.focus(); });
-    add.addEventListener('click', () => { inputs[i].value = String(Math.min(9, Number(inputs[i].value) + 1)); update(true); if (Number(inputs[i].value) === 9) row.querySelector<HTMLButtonElement>('[data-pick-remove]')!.focus(); });
-    row.querySelector('[data-pick-remove]')!.addEventListener('click', () => { inputs[i].value = String(Math.max(0, Number(inputs[i].value) - 1)); update(true); if (!Number(inputs[i].value)) start.focus(); });
+    start.addEventListener('click', () => { clearUndo(); inputs[i].value = '1'; update(true); add.focus(); });
+    add.addEventListener('click', () => { clearUndo(); inputs[i].value = String(Math.min(9, Number(inputs[i].value) + 1)); update(true); if (Number(inputs[i].value) === 9) row.querySelector<HTMLButtonElement>('[data-pick-remove]')!.focus(); });
+    row.querySelector('[data-pick-remove]')!.addEventListener('click', () => { clearUndo(); inputs[i].value = String(Math.max(0, Number(inputs[i].value) - 1)); update(true); if (!Number(inputs[i].value)) start.focus(); });
+  });
+  form.querySelector('[data-pick-restore]')!.addEventListener('click', event => {
+    event.preventDefault();
+    if (!previousPicks.length) return;
+    inputs.forEach((input, i) => input.value = String(previousPicks.find(pick => pick.projectId === rows[i].dataset.pickRow)?.count || 0));
+    clearUndo(); update(true, true);
+    status.textContent = `Your previous picks were restored. ${status.textContent}`;
+    form.querySelector<HTMLButtonElement>('[data-pick-creator]')!.focus();
   });
   form.querySelectorAll<HTMLButtonElement>('[data-pick-shortcut]').forEach(button => button.addEventListener('click', event => {
-    event.preventDefault(); inputs.forEach((input, i) => input.value = String(button.dataset.pickShortcut === 'all' || rows[i].dataset.pickRow === 'creator' ? 1 : 0)); update(true, true);
+    event.preventDefault(); clearUndo(); inputs.forEach(input => input.value = '1'); update(true, true);
   }));
   form.querySelectorAll<HTMLButtonElement>('[data-pick-amount]').forEach(button => button.addEventListener('click', event => { event.preventDefault(); amount.value = (Number(button.dataset.pickAmount) / 100).toFixed(2); update(true); }));
   form.querySelectorAll<HTMLInputElement>('[name=frequency]').forEach(input => input.addEventListener('change', () => update(true)));

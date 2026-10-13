@@ -21,9 +21,9 @@ const title = creator ? `No preference — just ${creatorName}` : social ? socia
   </div>
   <div class="pick-choice">
     <noscript><output>{share}</output></noscript>
-    <label data-pick-input-label for={`pick-${p.id}`}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input/>
-    <div class="pick-controls" data-pick-controls hidden>
-      {creator ? <button type="button" class="pick-start" data-pick-creator aria-pressed={count > 0} aria-label="Choose no preference">{count > 0 ? 'Selected' : 'Choose'}</button> : <>
+    <label data-pick-input-label for={`pick-${p.id}`} hidden={creator}>Picks for {p.title}</label><input type="number" id={`pick-${p.id}`} name={`pick:${p.id}`} min="0" max="9" step="1" required value={count} data-pick-input hidden={creator}/>
+    <div class="pick-controls" data-pick-controls hidden={!creator}>
+      {creator ? <button type="submit" name="intent" value="creator" formaction="/checkout" class="pick-start" data-pick-creator aria-pressed={count > 0} aria-label="Choose no preference">{count > 0 ? 'Selected' : 'Choose'}</button> : <>
       <button type="button" class="pick-start" data-pick-start aria-label={`Add a pick to ${p.title}`}><span aria-hidden="true">+{!social && ' Pick'}</span></button>
       <div class="pick-stepper" data-pick-stepper hidden>
         <button type="button" data-pick-remove aria-label={`Remove one pick from ${p.title}`}><span aria-hidden="true">−</span></button>

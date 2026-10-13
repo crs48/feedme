@@ -55,6 +55,7 @@ try {
   const defaultSubmit = home('form[data-pick-visit] button').filter((_, el) => !['button', 'reset'].includes(home(el).attr('type'))).first();
   assert.equal(defaultSubmit.attr('name'), 'intent'); assert.equal(defaultSubmit.attr('value'), 'review');
   assert.equal(defaultSubmit.attr('formaction'), undefined, 'Enter must review, never activate a preset or pick shortcut.');
+  assert.equal(home('.pick-catalog [data-pick-row]').first().attr('data-pick-row'), 'creator', 'No preference belongs before specific picks.');
   const initial = fields(home);
   assert.equal(initial.get('amount'),'22.00');
   assert.equal([...initial].filter(([key]) => key.startsWith('pick:')).length,9);
@@ -72,8 +73,15 @@ try {
   assert.ok([...equal].filter(([key]) => key.startsWith('pick:')).every(([key,v]) => v === (key === 'pick:creator' ? '0' : '1')));
   equal.set('intent','amount-4400');
   const larger = fields(await page('/checkout',equal)); assert.equal(larger.get('amount'),'44.00'); assert.equal(larger.get('pick:x'),'1');
-  larger.set('intent','creator');
-  const selected = fields(await page('/checkout',larger)); assert.equal(selected.get('pick:x'),'0'); assert.equal(selected.get('pick:creator'),'1');
+  larger.set('intent','creator'); larger.set('pick:presence','3');
+  const cleared = await page('/checkout',larger);
+  assert.equal(cleared('[data-pick-undo]').is('[hidden]'),false);
+  const selected = fields(cleared); assert.equal(selected.get('pick:x'),'0'); assert.equal(selected.get('pick:creator'),'1');
+  const undoFields = new URLSearchParams(selected); undoFields.set('intent','undo');
+  const restoredPage = await page('/checkout',undoFields), restored = fields(restoredPage);
+  assert.equal(restored.get('pick:presence'),'3'); assert.equal(restored.get('pick:x'),'1'); assert.equal(restored.get('pick:creator'),'0');
+  assert.equal(restored.get('amount'),'44.00'); assert.equal(restored.get('note'),'fixture-private-note');
+  assert.equal(restoredPage('[data-pick-undo]').is('[hidden]'),true);
   selected.set('pick:presence','3'); selected.set('pick:x','1'); selected.set('visibility','public'); selected.set('frequency','monthly'); selected.set('intent','review');
   const posted = await request('/api/checkout/review',selected); assert.equal(posted.status,303);
   const reviewUrl = posted.headers.get('location'); assert.ok(reviewUrl.startsWith('/checkout/review?token=')); assert.ok(!reviewUrl.includes('fixture-private-note'));
