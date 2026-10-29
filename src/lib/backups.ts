@@ -3,11 +3,11 @@ import { backup, DatabaseSync } from 'node:sqlite';
 import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { z } from 'zod';
 import { config } from './config';
-import { getDb, getKv, setKv, seal, unseal } from './db';
+import { deleteKv, getDb, getKv, setKv, seal, unseal } from './db';
 import { backupStore, expiredBackups, type BackupStore } from './backup-store';
 
 const MAGIC = Buffer.from('FMEBK1');
@@ -59,10 +59,12 @@ export const restoreSnapshot = async (body: Buffer, path: string, owner: string,
     db.exec('BEGIN IMMEDIATE');
     try {
       const oldKey = payload.dataKey ? Buffer.from(payload.dataKey, 'hex') : null; const nextKey = newDataKey ? Buffer.from(newDataKey, 'hex') : null;
-      for (const table of ['records', 'kv', 'outbox']) for (const row of db.prepare(`SELECT rowid,value FROM ${table}`).all() as { rowid: number; value: string }[]) if (row.value !== null)
-        db.prepare(`UPDATE ${table} SET value=? WHERE rowid=?`).run(seal(unseal(row.value, oldKey), nextKey), row.rowid);
+      // INTEGER PRIMARY KEY aliases (outbox.id) otherwise rename this result
+      // column to `id`, leaving an undefined parameter during restore.
+      for (const table of ['records', 'kv', 'outbox']) for (const row of db.prepare(`SELECT rowid AS backup_rowid,value FROM ${table}`).all() as { backup_rowid: number; value: string }[]) if (row.value !== null)
+        db.prepare(`UPDATE ${table} SET value=? WHERE rowid=?`).run(seal(unseal(row.value, oldKey), nextKey), row.backup_rowid);
       db.prepare("DELETE FROM kv WHERE namespace IN ('session','login-binding','oauth-state','oauth-session','credentials','checkout-form','checkout-owner','checkout-url')").run();
-      db.exec("DELETE FROM kv WHERE (namespace='recovery' AND key IN ('pending-checkpoint','candidate','spaces','verification','sync-error','reconciled-at','resumed-at')) OR (namespace='backup' AND key='status')");
+      db.exec("DELETE FROM kv WHERE (namespace='recovery' AND key IN ('pending-checkpoint','candidate','spaces','verification','sync-error','reconciled-at','resumed-at')) OR namespace='backup'");
       db.exec('DELETE FROM outbox'); // Never replay stale financial/public projections from an old snapshot.
       db.prepare("INSERT INTO kv VALUES ('recovery','paused',?,NULL) ON CONFLICT(namespace,key) DO UPDATE SET value=excluded.value").run(seal(true, nextKey));
       db.prepare("INSERT INTO kv VALUES ('recovery','restored-at',?,NULL) ON CONFLICT(namespace,key) DO UPDATE SET value=excluded.value").run(seal(new Date().toISOString(), nextKey));
@@ -72,29 +74,77 @@ export const restoreSnapshot = async (body: Buffer, path: string, owner: string,
   } catch (error) { db.close(); await rm(path, { force: true }); throw error; }
   db.close(); return { createdAt: payload.createdAt, owner: payload.owner };
 };
-export type BackupStatus = { attemptedAt: string; verifiedAt?: string; key?: string; remote?: boolean; error?: string };
+export type BackupStatus = { attemptedAt: string; createdAt?: string; verifiedAt?: string; key?: string; remote?: boolean; error?: string; failures?: number; nextAttemptAt?: string };
+const interval = 15 * 60_000;
+export const backupRetryDelay = (failures: number) => Math.min(6 * 3600_000, interval * 2 ** Math.min(5, Math.max(0, failures - 1)));
+type BackupStage = 'snapshot' | 'write' | 'verification' | 'retention' | 'cleanup' | 'destination';
+class BackupFailure extends Error {
+  constructor(readonly stage: BackupStage) { super(`Backup failed during ${stage}. Check the destination, permissions, encryption key, and server disk space, then retry.`); }
+}
+type BackupAttempt = { key: string; destination: string; digest: string; createdAt?: string; verifiedAt?: string };
+const digest = (body: Buffer) => createHash('sha256').update(body).digest('hex');
 let backupPromise: Promise<BackupStatus | undefined> | undefined;
 export const runBackup = (force = false) => backupPromise ??= run(force).finally(() => { backupPromise = undefined; });
 const run = async (force: boolean): Promise<BackupStatus | undefined> => {
   const cfg = config(); if (cfg.demo) return;
   const db = getDb(); const status = getKv<BackupStatus>(db, 'backup', 'status');
-  if (!force && status && Date.now() - Date.parse(status.attemptedAt) < (status.error ? 60_000 : 15 * 60_000)) return status;
+  if (!force && status && Date.now() < Date.parse(status.nextAttemptAt || new Date(Date.parse(status.attemptedAt) + interval).toISOString())) return status;
   const attemptedAt = new Date().toISOString();
   try {
     const store = backupStore(); if (!store) { if (force) throw new Error('Configure an S3 bucket or BACKUP_DIR first.'); return; }
+    // Persist the schedule before I/O so a restart cannot create a retry storm.
+    setKv(db, 'backup', 'status', { ...status, attemptedAt, nextAttemptAt: new Date(Date.now() + interval).toISOString() });
     const result = await performBackup(db, cfg.ownerDid, backupKey(), store);
-    const next = { attemptedAt, ...result }; setKv(db, 'backup', 'status', next); return next;
-  } catch { const next = { ...status, attemptedAt, error: 'Backup failed. Check the destination, permissions, encryption key, and server disk space, then retry.' }; setKv(db, 'backup', 'status', next); return next; }
+    // Finishing delayed retention verifies the old snapshot, not today's data.
+    // Schedule a fresh snapshot on the next worker tick if that one is overdue.
+    const next = { attemptedAt, ...result, failures: 0, nextAttemptAt: new Date(Math.max(Date.now(), Date.parse(result.createdAt) + interval)).toISOString() }; setKv(db, 'backup', 'status', next); return next;
+  } catch (error) {
+    const failures = (status?.failures || 0) + 1;
+    const stage = error instanceof BackupFailure ? error.stage : 'snapshot';
+    const next = { ...status, attemptedAt, failures, nextAttemptAt: new Date(Date.now() + backupRetryDelay(failures)).toISOString(), error: new BackupFailure(stage).message };
+    setKv(db, 'backup', 'status', next);
+    // Bounded, secret-free operator signal; never log provider bodies or keys.
+    console.error(`Backup failed during ${stage}; automatic retry in ${backupRetryDelay(failures) / 60_000} minutes.`);
+    return next;
+  }
 };
 export const performBackup = async (db: DatabaseSync, owner: string, key: Buffer, store: BackupStore) => {
-  const body = await snapshotDatabase(db, owner, key);
-  const name = `feedme-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}.fmbak`;
-  await store.put(name, body);
-  const returned = await store.get(name);
-  if (!returned.equals(body)) throw new Error('Backup readback differed from the uploaded snapshot.');
-  // Exercise authenticated decrypt, SQLite opening, every encrypted row, and rekeying on every backup.
-  const directory = await mkdtemp(join(tmpdir(), 'feedme-verify-')); await chmod(directory, 0o700);
-  try { await restoreSnapshot(returned, join(directory, 'verified.sqlite'), owner, key); } finally { await rm(directory, { recursive: true, force: true }); }
-  for (const old of expiredBackups(await store.list())) await store.remove(old.key);
-  return { key: name, verifiedAt: new Date().toISOString(), remote: store.remote };
+  let attempt = getKv<BackupAttempt>(db, 'backup', 'attempt');
+  if (attempt && attempt.destination !== store.identity) throw new BackupFailure('destination');
+  const cleanup = async (current: BackupAttempt) => {
+    try { await store.remove(current.key); deleteKv(db, 'backup', 'attempt'); }
+    catch { throw new BackupFailure('cleanup'); }
+  };
+  // Only discard this installation's explicitly tracked, unverified attempt.
+  // If cleanup fails, keep its marker and block new files, including after restart.
+  if (attempt && !attempt.verifiedAt) { await cleanup(attempt); attempt = undefined; }
+  let stage: BackupStage = 'snapshot';
+  try {
+    if (!attempt) {
+      const body = await snapshotDatabase(db, owner, key);
+      attempt = { key: `feedme-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}.fmbak`, destination: store.identity, digest: digest(body) };
+      setKv(db, 'backup', 'attempt', attempt);
+      stage = 'write'; await store.put(attempt.key, body);
+    }
+    stage = 'verification';
+    const returned = await store.get(attempt.key);
+    if (digest(returned) !== attempt.digest) throw new BackupFailure(stage);
+    // Reverify the stored object before retrying retention; preserve every
+    // existing backup if readback, authentication, or restore validation fails.
+    const directory = await mkdtemp(join(tmpdir(), 'feedme-verify-'));
+    let createdAt: string;
+    try { await chmod(directory, 0o700); ({ createdAt } = await restoreSnapshot(returned, join(directory, 'verified.sqlite'), owner, key)); }
+    finally { await rm(directory, { recursive: true, force: true }); }
+    attempt = { ...attempt, createdAt, verifiedAt: new Date().toISOString() };
+    setKv(db, 'backup', 'attempt', attempt);
+    stage = 'retention';
+    for (const old of expiredBackups(await store.list())) if (old.key !== attempt.key) await store.remove(old.key);
+    deleteKv(db, 'backup', 'attempt');
+    return { key: attempt.key, createdAt, verifiedAt: attempt.verifiedAt!, remote: store.remote };
+  } catch {
+    if (attempt && !attempt.verifiedAt) await cleanup(attempt);
+    // A verified attempt stays pinned until retention succeeds. Retrying this
+    // phase reuses its file instead of accumulating another verified snapshot.
+    throw new BackupFailure(stage);
+  }
 };

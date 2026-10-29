@@ -3,16 +3,22 @@ import { join, resolve } from 'node:path';
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 export type BackupObject = { key: string; createdAt: string };
-export type BackupStore = { remote: boolean; put: (key: string, body: Buffer) => Promise<void>; get: (key: string) => Promise<Buffer>; list: () => Promise<BackupObject[]>; remove: (key: string) => Promise<void> };
+export type BackupStore = { identity: string; remote: boolean; put: (key: string, body: Buffer) => Promise<void>; get: (key: string) => Promise<Buffer>; list: () => Promise<BackupObject[]>; remove: (key: string) => Promise<void> };
 export const backupName = /^feedme-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9-]{36}\.fmbak$/;
 const safeName = (key: string) => { if (!backupName.test(key)) throw new Error('Invalid backup name.'); return key; };
 export const fileBackupStore = (directory: string): BackupStore => {
   const root = resolve(directory);
-  return { remote: false,
-    put: async (key, body) => { await mkdir(root, { recursive: true, mode: 0o700 }); const path = join(root, safeName(key)); await writeFile(`${path}.partial`, body, { mode: 0o600, flag: 'wx', flush: true }); await rename(`${path}.partial`, path); },
+  return { identity: `file:${root}`, remote: false,
+    put: async (key, body) => {
+      await mkdir(root, { recursive: true, mode: 0o700 }); const path = join(root, safeName(key));
+      // The persisted attempt owns this unique name. Its cleanup also handles a
+      // process interruption between writing the partial and renaming it.
+      try { await writeFile(`${path}.partial`, body, { mode: 0o600, flag: 'wx', flush: true }); await rename(`${path}.partial`, path); }
+      finally { await rm(`${path}.partial`, { force: true }); }
+    },
     get: (key) => readFile(join(root, safeName(key))),
     list: async () => { await mkdir(root, { recursive: true, mode: 0o700 }); return (await readdir(root)).filter(key => backupName.test(key)).map(key => ({ key, createdAt: nameDate(key) })); },
-    remove: (key) => rm(join(root, safeName(key)), { force: true }),
+    remove: async (key) => { const path = join(root, safeName(key)); await Promise.all([rm(path, { force: true }), rm(`${path}.partial`, { force: true })]); },
   };
 };
 const nameDate = (key: string) => `${key.slice(7, 20)}:${key.slice(21, 23)}:${key.slice(24, 26)}.${key.slice(27, 31)}`;
@@ -24,7 +30,7 @@ export const backupStore = (env: NodeJS.ProcessEnv = process.env): BackupStore |
     const client = new S3Client({ region: env.BACKUP_S3_REGION || 'us-east-1', endpoint: env.BACKUP_S3_ENDPOINT || undefined, forcePathStyle: env.BACKUP_S3_PATH_STYLE === 'true',
       ...(env.BACKUP_S3_ACCESS_KEY_ID && env.BACKUP_S3_SECRET_ACCESS_KEY ? { credentials: { accessKeyId: env.BACKUP_S3_ACCESS_KEY_ID, secretAccessKey: env.BACKUP_S3_SECRET_ACCESS_KEY } } : {}), maxAttempts: 2 });
     const requestOptions = () => ({ abortSignal: AbortSignal.timeout(60_000) });
-    return { remote: true,
+    return { identity: JSON.stringify(['s3', env.BACKUP_S3_ENDPOINT || 'aws', env.BACKUP_S3_REGION || 'us-east-1', bucket, prefix]), remote: true,
       put: async (key, body) => { await client.send(new PutObjectCommand({ Bucket: bucket, Key: prefix + safeName(key), Body: body, ContentType: 'application/octet-stream' }), requestOptions()); },
       get: async (key) => { const value = await client.send(new GetObjectCommand({ Bucket: bucket, Key: prefix + safeName(key) }), requestOptions()); if ((value.ContentLength || 0) > 400 * 1024 * 1024) throw new Error('Backup is too large.'); if (!value.Body) throw new Error('Empty backup object.'); return Buffer.from(await value.Body.transformToByteArray()); },
       list: async () => {
