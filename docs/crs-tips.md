@@ -1,6 +1,6 @@
 # Christopher’s Feedme deployment
 
-As of **2026-10-07**, the personal Feedme backend is running on Railway using the real `crs48/LIBCard` catalog. Its canonical address is **https://crs.tips**; Railway has verified the domain and issued its HTTPS certificate. The separate **https://crs.land** LibCard remains on its current host.
+As of **2026-10-29**, the personal Feedme backend is running on Railway using the real `crs48/LIBCard` catalog. Its canonical address is **https://crs.tips**; Railway has verified the domain and issued its HTTPS certificate. The separate **https://crs.land** LibCard remains on its current host.
 
 The [short DNS guide](crs-tips-dns.md) records the Vercel ALIAS and verification records. Some local resolvers may temporarily retain the previous Vercel addresses.
 
@@ -14,7 +14,9 @@ flowchart LR
   Checks -->|Successful check suites| Railway[Railway Docker build]
   Railway --> Health[GET /api/health]
   Health --> Instance[crs.tips · one replica]
-  Disk[(Persistent /data)] --- Instance
+  Disk[(Live SQLite on persistent /data)] --- Instance
+  Instance -->|Encrypted, restore-verified snapshots| Backups[(Private Railway bucket)]
+  Instance -->|stdout and stderr| Logs[Railway log service]
   Card[crs.land LibCard YAML] -->|15-minute import| Instance
   Instance -->|Public picks on card builds| Card
 ```
@@ -33,6 +35,8 @@ This automatic tracking of `main` is specific to Christopher’s instance. Other
 | Environment | `production` · `da0ff641-b2cf-4ee4-af5e-a41777b80e44` |
 | Service | `crs-tips` · `5b273103-7f29-45aa-a5e5-6a97a0ba3860` |
 | Volume | `crs-tips-volume` · `f2efd504-e33b-4ad5-ae0f-e4a22b8f1e06`, mounted at `/data` |
+| Backups | Private `crs-tips-backups` bucket in `sjc`; prefix `feedme/crs-tips/production/` |
+| Logs | Railway application and HTTP logs, outside `/data` |
 | Replicas | One; sleeping disabled for background synchronization |
 | HTTP | Port `4321`, health check `/api/health` |
 | Diagnostic address | `https://crs-tips-production.up.railway.app` |
@@ -53,12 +57,18 @@ HOST=0.0.0.0
 PORT=4321
 HABITAT_URL=https://pear.habitat.network
 TIP_AMOUNTS=11,44,111,222
-BACKUP_DIR=/data/backups
+BACKUP_S3_BUCKET=${{crs-tips-backups.BUCKET}}
+BACKUP_S3_ENDPOINT=${{crs-tips-backups.ENDPOINT}}
+BACKUP_S3_REGION=${{crs-tips-backups.REGION}}
+BACKUP_S3_ACCESS_KEY_ID=${{crs-tips-backups.ACCESS_KEY_ID}}
+BACKUP_S3_SECRET_ACCESS_KEY=${{crs-tips-backups.SECRET_ACCESS_KEY}}
+BACKUP_S3_PREFIX=feedme/crs-tips/production/
+BACKUP_S3_PATH_STYLE=false
 ```
 
 Independent `DATA_ENCRYPTION_KEY` and `BACKUP_ENCRYPTION_KEY` values were generated and stored directly in Railway, without printing or committing them. Save both in your password manager. Never regenerate them during a redeploy: existing encrypted data depends on them.
 
-Local encrypted backups are configured on the same persistent volume. They help recover local changes but do not survive loss of that volume. Configure an off-server S3-compatible destination and verify restore before accepting payments; [data recovery](backups-and-recovery.md) describes the process.
+The `${{...}}` values are Railway references to the bucket credentials; do not replace them with secrets in this document. `BACKUP_DIR` is unset. Encrypted backups run every 15 minutes in the separate private bucket, retaining 96 recent snapshots plus 30 distinct days and 12 distinct months. On 2026-10-29, a new remote backup and all retained historical copies passed download and temporary-restore verification before accumulated local backup files were removed. Application logs remain on stdout/stderr and are captured by Railway, with HTTP logs also available there. See [data recovery](backups-and-recovery.md) for retention, retry behavior, and restore procedures.
 
 ## Verified and remaining
 
@@ -69,10 +79,11 @@ Local encrypted backups are configured on the same persistent volume. They help 
 - [x] Unauthenticated Studio access redirects to sign-in; this is live identity mode, not a shared editable demo.
 - [x] Main-branch deployment trigger has `checkSuites: true`; one replica and persistent volume are configured.
 - [x] Verify custom-domain DNS and Railway’s active HTTPS certificate.
-- [x] Verify the canonical LibCard GET/HEAD contract over TLS using the current public DNS address. The local resolver still caches the previous Vercel addresses; the ordinary `pnpm check:libcard-origin https://crs.tips` command should be rerun after that cache expires.
+- [x] Verify the canonical LibCard GET/HEAD contract over TLS; `pnpm check:libcard-origin https://crs.tips` passed on 2026-10-29.
 - [x] Sign in as `crs.land`, create private Habitat storage, and verify recovery.
 - [ ] Configure restricted Stripe sandbox credentials in an isolated installation, complete webhook setup, and run [payment acceptance](hosting.md#live-acceptance-checklist).
-- [ ] Back up the encryption keys separately; configure and test off-server backups.
+- [ ] Confirm both encryption keys are saved in an operator-controlled password manager outside Railway.
+- [x] Configure off-server backups and verify current and retained historical snapshots by temporary restore (2026-10-29).
 - [ ] Optionally add card-side tip actions: use the existing target IDs shown in Feedme Studio as LibCard `feedme.id` values, enable its `feedme` block pointing to `https://crs.tips`, refresh Feedme, then rebuild LibCard.
 
 Feedme now includes all LibCard links and socials as selectable targets by default, even without source `feedme` objects. Hide exceptions in Studio. `LIBCARD_DEFAULT_SUPPORT=explicit` restores the older behavior where this catalog initially contained only `creator`. No aspirations or support totals are invented. Live Stripe credentials, the signed webhook, and private Habitat recovery are configured. An unpaid Checkout was created and expired, and its real signed expiration webhook was verified. No real money was charged. One-time and monthly sandbox payments, partial/full refunds, and portal cancellation have now been exercised in [test.crs.tips](test-crs-tips.md). Later renewals and the remaining acceptance cases are still pending.
