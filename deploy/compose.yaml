@@ -1,6 +1,6 @@
 services:
   feedme:
-    image: ghcr.io/crs48/feedme:0.1.0 # x-release-please-version
+    image: ghcr.io/crs48/feedme:0.2.0 # x-release-please-version
     restart: unless-stopped
     env_file: .env
     environment:
