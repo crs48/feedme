@@ -20,7 +20,7 @@ const pending = cfg.demo ? 0 : recoveryPending(db);
 const syncError = getKv<{ message: string } | null>(db, 'recovery', 'sync-error');
 const date = (value?: string) => value ? `${new Date(value).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC` : 'Not yet verified';
 const backupConfigured = Boolean(process.env.BACKUP_S3_BUCKET || process.env.BACKUP_DIR);
-const backupStale = !backup?.verifiedAt || Date.now() - Date.parse(backup.verifiedAt) > 30 * 60_000;
+const backupStale = !backup?.verifiedAt || Date.now() - Date.parse(backup.createdAt || backup.verifiedAt) > 30 * 60_000;
 const title = cfg.demo ? 'Your work, protected' : paused ? 'Ready for your review' : checkpoint && !pending && !syncError ? 'Your changes are protected in Habitat' : 'Protect your work';
 ---
 <AdminLayout title="Data & backups" description="Keep your work safe, and take it with you when you move.">
@@ -37,7 +37,9 @@ const title = cfg.demo ? 'Your work, protected' : paused ? 'Ready for your revie
     {!cfg.demo && !privateSpace() && <a href="/studio/settings" class="admin-link mt-5 inline-block">Connect private storage in Settings ↗</a>}
   </section><section class="admin-card"><div class="flex items-center justify-between gap-3"><h2>Versioned backups</h2><span class="status-pill">{cfg.demo ? 'Preview' : !backupConfigured ? 'Not configured' : backupStale ? 'Needs attention' : backup?.remote ? 'Off-server' : 'Local directory'}</span></div>
     <dl class="mt-5"><div class="admin-stat-line"><dt>Last verified restore</dt><dd>{cfg.demo ? 'Example · 12 minutes ago' : date(backup?.verifiedAt)}</dd></div><div class="admin-stat-line"><dt>Schedule</dt><dd>Every 15 minutes</dd></div><div class="admin-stat-line"><dt>History retained</dt><dd>96 recent · 30 daily · 12 monthly</dd></div></dl>
+    {backup?.createdAt && <p class="admin-help mt-3">Snapshot created: {date(backup.createdAt)}. Later changes are not included in this backup.</p>}
     {backup?.error && <p class="admin-warning mt-4">{backup.error}</p>}
+    {backup?.error && backup.nextAttemptAt && <p class="admin-help mt-3">Next automatic retry: {date(backup.nextAttemptAt)}. Back up now retries immediately.</p>}
     {!cfg.demo && backupConfigured && backupStale && <p class="admin-warning mt-4">A recent backup has not been verified. Changes since the last successful backup may need Habitat recovery.</p>}
     <p class="admin-help mt-4">Every backup is encrypted, downloaded again, decrypted, and opened as a temporary SQLite database. Only verified backups count as protected.</p>
     {!cfg.demo && process.env.BACKUP_DIR && !process.env.BACKUP_S3_BUCKET && <p class="admin-help mt-3">A directory on this server does not protect against server loss. Mount independent storage or use an S3-compatible bucket.</p>}

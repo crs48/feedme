@@ -14,7 +14,7 @@ import { importLibcard, libcardSnapshot, libcardTargets, libcardProfile, loadLib
 import { publicLibcard } from '../src/lib/libcard-public';
 import { libcardCatalog } from '../src/lib/libcard-catalog';
 import { projectSchema, type Project, type Support } from '../src/lib/model';
-import { prepareRecovery } from '../src/lib/recovery-tracking';
+import { localCheckpoint, prepareRecovery } from '../src/lib/recovery-tracking';
 import { parsePortableValue, recoveryEnvelope, supportRecoverySchema } from '../src/lib/recovery-model';
 import { queueSupport } from '../src/lib/support-ledger';
 import { picksFromForm, prefillPicks } from '../src/lib/picks';
@@ -186,6 +186,32 @@ describe('LibCard parser and managed import', () => {
 });
 
 describe('refresh and private recovery', () => {
+  it('keeps unchanged refreshes out of recovery while preserving the latest check and ETag', async () => {
+    await refreshLibcard(true, async () => new Response(libcardFixture, { headers: { etag: '"initial"' } }));
+    const owner = 'did:plc:aaaaaaaaaaaaaaaaaaaaaaaa'; const space = 'at://fixture/space';
+    prepareRecovery(state.db!, owner);
+    const count = () => state.db!.prepare('SELECT COUNT(*) AS n FROM outbox').get()?.n;
+    const queued = count(); const saved = libcardSnapshot(); const prior = localCheckpoint(state.db!, owner, space).checkpoint;
+    for (let n = 0; n < 100; n++) {
+      const fetcher = vi.fn<typeof fetch>(async () => n % 2
+        ? new Response(null, { status: 304 })
+        : new Response(`${libcardFixture}\n# Presentation-only change ${n}`, { headers: { etag: `"version-${n}"` } }));
+      const result = await refreshLibcard(true, fetcher);
+      expect(result?.error).toBeUndefined(); expect(result?.checkedAt).toBeTruthy();
+      expect(result?.hash).not.toBe(saved?.hash);
+      expect(prepareRecovery(state.db!, owner)).toBe(0);
+      expect(count()).toBe(queued); expect(libcardSnapshot()).toEqual(saved);
+      expect(localCheckpoint(state.db!, owner, space).checkpoint.digest).toBe(prior.digest);
+      if (n % 2) expect(fetcher.mock.calls[0][1]?.headers).toEqual({ 'If-None-Match': `"version-${n - 1}"` });
+    }
+    const changed = libcardFixture.replace('name: Alex Rivers', 'name: Changed Creator');
+    expect(changed).not.toBe(libcardFixture);
+    await refreshLibcard(true, async () => new Response(changed)); prepareRecovery(state.db!, owner);
+    expect(count()).toBeGreaterThan(Number(queued));
+    expect(localCheckpoint(state.db!, owner, space).checkpoint.digest).not.toBe(prior.digest);
+    // Failed old domain writes remain queued; only new timestamp noise is prevented.
+    expect(pendingWrites(state.db!).some(row => JSON.stringify(row.value).includes('Alex'))).toBe(true);
+  });
   it('upgrades a restored legacy snapshot from cached data even if GitHub is unavailable', async () => {
     importLibcard(state.db!, snapshot());
     const saved = getKv<LibcardSnapshot>(state.db!, 'libcard', 'snapshot')!;

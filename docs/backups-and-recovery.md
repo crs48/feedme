@@ -45,7 +45,7 @@ flowchart LR
 
    Alternatively set `BACKUP_DIR=/mnt/independent-backups`. A directory on the same VPS protects against some mistakes, **not loss of the VPS**. A network mount needs its own availability and durability guarantees. S3 takes precedence when both are configured.
 
-5. Restart, open **Dashboard → Data & backups**, and choose **Back up now**. Check that a verified backup and complete Habitat checkpoint appear. Leave the worker running: snapshots run about every 15 minutes, retries after failures no more than once a minute, and full remote-checkpoint verification about once a day. The development server does not run a timer; use the buttons or an authenticated `/api/sync` scheduler.
+5. Restart, open **Dashboard → Data & backups**, and choose **Back up now**. Check that a verified backup and complete Habitat checkpoint appear. Leave the worker running: snapshots run about every 15 minutes; automatic failure retries back off through 15, 30, 60, 120, 240, then 360 minutes. A successful attempt resets the schedule. The dashboard shows the next retry, and **Back up now** retries immediately. Full remote-checkpoint verification runs about once a day. The development server does not run a timer; use the buttons or an authenticated `/api/sync` scheduler.
 
 No Habitat, Stripe, or backup operations run in the GitHub Pages demo. Its protection screen is explicitly illustrative.
 
@@ -61,6 +61,40 @@ No Habitat, Stripe, or backup operations run in the GitHub Pages demo. Its prote
 A locally saved change is not automatically protected from server loss. Changes after the last complete checkpoint or snapshot may be lost. New Stripe Checkout sessions wait until the complete allocation/privacy intent has reached a verified checkpoint. Already-running subscriptions continue at Stripe during outages; their renewals are recovered by querying Stripe resources after restoration.
 
 Backups retain the **96 most recent files**, plus one per **30 distinct days** and **12 distinct months**. Retention only runs after a newly written file passes restore verification. A bucket's lifecycle policy may shorten that history; configure it accordingly. S3 versioning/object lock can add independent protection, but Feedme does not configure them or delete noncurrent object versions. Failed retention is reported as a backup error.
+
+Each new attempt is tracked durably before upload. Failed write/readback/restore checks remove only that attempt's unique file and local `.partial`; older history is untouched. If cleanup fails, the tracked attempt blocks new uploads until cleanup succeeds, including after a restart. A verified file whose retention pass failed stays pinned: later attempts re-download and restore-check that same file before retrying retention. They do not create additional snapshots. The snapshot creation time remains distinct from its latest verification time; completing delayed retention schedules a fresh snapshot if needed.
+
+The attempt is bound to its destination (local path or S3 endpoint/region/bucket/prefix). Resolve a pending attempt against its original destination before changing that configuration. Destination changes never silently abandon a tracked file or clean up a different store. Never manually erase its database marker to bypass a cleanup failure.
+
+```mermaid
+flowchart TD
+  Snapshot[Consistent encrypted snapshot] --> Track[Persist unique attempt and destination]
+  Track --> Write[Write and read back]
+  Write --> Verify[Authenticate and restore-check]
+  Verify -->|Verified| Pin[Persist verified attempt]
+  Pin --> Retention[Apply recent, daily and monthly retention]
+  Retention -->|Success| Done[Record snapshot and verification times]
+  Write -->|Failure| Cleanup[Remove only the current unverified attempt]
+  Verify -->|Failure| Cleanup
+  Cleanup -->|Cleanup unavailable| Block[Keep marker; block new files]
+  Block -->|After backoff| Cleanup
+  Retention -->|Failure| Reverify[After backoff, reverify the same file]
+  Reverify --> Retention
+```
+
+## Storage placement and disk-growth investigation
+
+Keep the live SQLite database and its WAL on the persistent application volume. Prefer **independent private S3-compatible storage** for durable encrypted backups. A separate directory such as `/data/backups` on the database volume shares both its capacity limit and failure domain; it is a fallback, not an off-server backup. A separately provisioned network mount can isolate capacity, but its host-loss and recovery guarantees still need verification. Use a unique backup prefix and plan bucket lifecycle/versioning together with application retention.
+
+Feedme writes application logs to stdout/stderr; it does not create a production file logger under `/data`. Keep Railway logs in the platform's log service. For Docker or another self-hosted runtime, configure bounded host-side rotation (for example the `json-file` driver with `max-size: "10m"` and `max-file: "3"`) or a log collector with explicit retention. The checked-in Compose file does not configure rotation, so verify the host's effective settings. Do not redirect logs onto the database volume.
+
+Unchanged LibCard refreshes now keep fetch timestamps, ETags and source hashes in the nonportable refresh cache. They do not rewrite the recoverable catalog, including on a 304 or a 200 with only formatting/presentation changes. Real catalog edits and local overrides still enter recovery. Existing immutable recovery versions, queued domain changes, payment records and sync receipts remain intact. Stopping timestamp noise prevents new unnecessary rows; it does not reclaim historical SQLite pages or diagnose which files currently occupy an installation's disk.
+
+Before remediation, collect file metadata: database/WAL sizes, backup directory bytes, `.fmbak`/`.partial` counts, and filename timestamps. If authorized, collect aggregate table/namespace counts and sizes without reading private payment contents. Do not use application initialization for passive inspection: `getDb()` can initialize/migrate, and `getKv()` can delete expired entries. Do not truncate a WAL, vacuum a live database, clear an outbox, or delete backups based only on volume-level metrics.
+
+**Rollout approval must include automatic retention.** After deploying this repair, the first successful backup can immediately prune accumulated history under the existing retention policy. Deployment is therefore not a deletion-free diagnostic step. Before approving rollout, preserve independent recoverable copies and keys, review the destination and historical files, and approve the retention consequence. This release does not automatically sweep untracked legacy `.partial` files or remove queued domain data. Production cleanup, a destination migration and a restore drill remain separate operator actions; this documentation does not provision or reconfigure storage.
+
+During rollout, verify snapshot creation time, restore verification time, backup errors and the next retry in Studio. Confirm new file count/size behavior and volume growth over several worker cycles. A healthy `/api/health` response alone does not prove writable storage or working backups: it currently checks only `SELECT 1`. Snapshot size limits, a blocked private sync destination, and genuine financial/history growth still require operator attention.
 
 Sync and backups serve different purposes. A bad edit can propagate to Habitat; an earlier encrypted snapshot can preserve the previous state. Habitat's immutable data records retain previous values, but only the latest complete checkpoint is advertised. There is currently no automatic Habitat garbage collection or historical-checkpoint browser. Plan private-space retention accordingly.
 
