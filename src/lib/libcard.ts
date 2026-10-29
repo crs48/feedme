@@ -10,7 +10,7 @@ import { libcardCatalog } from './libcard-catalog';
 import { refreshGithubStars } from './libcard-github';
 import { cachedCreatorBluesky } from './creator-bluesky';
 
-export type RefreshStatus = { attemptedAt: string; error?: string; catalogVersion?: 2 | 3 | 4 };
+export type RefreshStatus = { attemptedAt: string; checkedAt?: string; hash?: string; etag?: string; error?: string; catalogVersion?: 2 | 3 | 4 };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 export const storedLibcard = (db: DatabaseSync, source: LibcardSource) => {
   const snapshot = getKv<LibcardSnapshot>(db, 'libcard', 'snapshot');
@@ -113,17 +113,18 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
   const previous = getKv<RefreshStatus>(db, 'libcard-refresh', key);
   if (!force && previous && (!saved || saved.catalogVersion === 4 || previous.catalogVersion === 4) && Date.now() - Date.parse(previous.attemptedAt) < 15 * 60_000) return previous;
   const attemptedAt = new Date().toISOString();
-  setKv(db, 'libcard-refresh', key, { attemptedAt, catalogVersion: 4 });
+  setKv(db, 'libcard-refresh', key, { ...previous, attemptedAt, catalogVersion: 4 });
+  let etag = previous?.checkedAt ? previous.etag : saved?.etag;
+  let sourceHash = previous?.hash || saved?.hash;
   try {
     if (cfg.demo && !cfg.libcardRemoteDemo) {
       importLibcard(db, { source: cfg.libcard, document: parseLibcard(libcardFixture, cfg.libcard), hash: hash(libcardFixture), checkedAt: attemptedAt, catalogVersion: 4 });
     } else {
       const response = await fetcher(`${rawRoot(cfg.libcard)}libcard.config.yaml`, {
-        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 4 && saved.etag ? { 'If-None-Match': saved.etag } : {},
+        redirect: 'error', signal: AbortSignal.timeout(5000), headers: saved?.catalogVersion === 4 && etag ? { 'If-None-Match': etag } : {},
       });
       if (getKv(db, 'recovery', 'paused')) return;
-      if (response.status === 304 && saved) setKv(db, 'libcard', 'snapshot', { ...saved, checkedAt: attemptedAt });
-      else {
+      if (response.status !== 304 || !saved) {
         if (!response.ok || !response.body) throw new LibcardImportError(`GitHub returned HTTP ${response.status}. Check the public repository and ref, or retry later.`);
         const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let size = 0;
         try {
@@ -133,17 +134,25 @@ const refresh = async (force: boolean, fetcher: typeof fetch) => {
         const snapshot = libcardSnapshotSchema.parse({ source: cfg.libcard, document: parseLibcard(text, cfg.libcard), hash: hash(text), etag: response.headers.get('etag') || undefined, checkedAt: attemptedAt, catalogVersion: 4 });
         // A restore pause may have happened while GitHub was responding.
         if (getKv(db, 'recovery', 'paused')) return;
-        importLibcard(db, snapshot);
+        // Refresh metadata is a cache, not a recoverable catalog edit. Rewriting
+        // checkedAt/ETag on unchanged content creates immutable recovery records
+        // indefinitely, including while Habitat is unavailable.
+        if (!saved || saved.catalogVersion !== snapshot.catalogVersion || JSON.stringify(saved.document) !== JSON.stringify(snapshot.document)) importLibcard(db, snapshot);
+        sourceHash = snapshot.hash;
       }
+      const responseEtag = response.headers.get('etag');
+      etag = responseEtag && responseEtag.length <= 512 ? responseEtag : response.status === 304 ? etag : undefined;
       const current = storedLibcard(db, cfg.libcard);
       if (current) await refreshGithubStars(db, current.document.items, fetcher);
     }
-    return { attemptedAt };
+    const status: RefreshStatus = { attemptedAt, checkedAt: attemptedAt, hash: sourceHash, etag, catalogVersion: 4 };
+    setKv(db, 'libcard-refresh', key, status);
+    return status;
   } catch (error) {
     const detail = error instanceof LibcardImportError ? error.message : error instanceof ZodError
       ? `Invalid LibCard fields at ${[...new Set(error.issues.slice(0, 4).map(issue => issue.path.join('.') || 'catalog'))].join(', ')}. ${error.issues.some(issue => issue.message === libcardOptInError) ? libcardOptInError : 'Check field types, unique target IDs, allowed URLs, and import limits.'}`
       : 'Check GitHub availability, YAML without aliases, unique target IDs, allowed URLs, and import limits.';
-    const status = { attemptedAt, catalogVersion: 4 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
+    const status = { ...previous, attemptedAt, catalogVersion: 4 as const, error: `LibCard refresh failed. ${detail} ${saved ? 'The last good snapshot is unchanged.' : 'No catalog has been imported yet.'}` };
     setKv(db, 'libcard-refresh', key, status); return status;
   }
 };
